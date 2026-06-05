@@ -1,0 +1,152 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:demandium/feature/splash/controller/splash_controller.dart';
+import 'package:demandium/common/widgets/custom_image.dart';
+import 'package:demandium/util/app_constants.dart';
+import 'package:demandium/util/images.dart';
+
+/// Resolves menu / branding icons from admin `mobile_app_icons` API or bundled assets.
+class MobileAppIconHelper {
+  static const String appLogoKey = 'customer_app_logo';
+
+  static const String heroTag = 'app_logo';
+  static Map<String, Map<String, String?>>? get _icons {
+    final raw = Get.find<SplashController>().configModel.content?.mobileAppIcons;
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    return raw;
+  }
+
+  static bool get _isDark => Get.isDarkMode;
+
+  static String get _apiBase {
+    var base = AppConstants.baseUrl.trim();
+    if (base.endsWith('/')) {
+      base = base.substring(0, base.length - 1);
+    }
+    return base;
+  }
+
+  /// Align icon URLs with [AppConstants.baseUrl] (fixes APP_URL vs local API host mismatch).
+  static String? normalizeMediaUrl(String? url) {
+    if (url == null) {
+      return null;
+    }
+    final trimmed = url.trim();
+    if (trimmed.isEmpty || trimmed == 'null') {
+      return null;
+    }
+
+    if (trimmed.startsWith('/storage/')) {
+      return '$_apiBase$trimmed';
+    }
+    if (trimmed.startsWith('storage/')) {
+      return '$_apiBase/$trimmed';
+    }
+
+    try {
+      final parsed = Uri.parse(trimmed);
+      var path = parsed.path;
+      if (path.startsWith('/public/storage/')) {
+        path = path.replaceFirst('/public/storage/', '/storage/');
+      }
+      if (path.startsWith('/storage/')) {
+        return '$_apiBase$path';
+      }
+      final base = Uri.parse(AppConstants.baseUrl);
+      if (parsed.host != base.host || parsed.port != base.port) {
+        return Uri(
+          scheme: base.scheme,
+          host: base.host,
+          port: base.hasPort ? base.port : null,
+          path: path,
+        ).toString();
+      }
+    } catch (_) {
+      //
+    }
+    return trimmed;
+  }
+
+  static String? remoteUrl(String key) {
+    final entry = _icons?[key];
+    if (entry == null) {
+      return null;
+    }
+    final url = _isDark ? (entry['dark'] ?? entry['light']) : (entry['light'] ?? entry['dark']);
+    return normalizeMediaUrl(url);
+  }
+
+  /// Admin mobile app logo → business logo → bundled asset.
+  static String? appLogoUrl() {
+    final custom = remoteUrl(appLogoKey);
+    if (custom != null && custom.isNotEmpty) {
+      return custom;
+    }
+    final business = normalizeMediaUrl(
+      Get.find<SplashController>().configModel.content?.logoFullPath,
+    );
+    if (business != null && business.isNotEmpty) {
+      return business;
+    }
+    return null;
+  }
+
+  static Widget appLogo({
+    required double width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+    bool useHero = false,
+    String? heroTag,
+    String? fallbackAsset,
+  }) {
+    final h = height ?? width;
+    final remote = appLogoUrl();
+    final fallback = fallbackAsset ?? Images.logo;
+
+    Widget child = remote != null
+        ? CustomImage(
+            image: remote,
+            width: width,
+            height: h,
+            fit: fit,
+            placeholder: fallback,
+          )
+        : Image.asset(fallback, width: width, height: h, fit: fit);
+
+    if (useHero) {
+      child = Hero(tag: heroTag ?? MobileAppIconHelper.heroTag, child: child);
+    }
+
+    return child;
+  }
+
+  static Widget icon({
+    required String key,
+    required String fallbackAsset,
+    double height = 30,
+    double width = 30,
+    BoxFit fit = BoxFit.contain,
+    Color? color,
+  }) {
+    final remote = remoteUrl(key);
+    if (remote != null) {
+      return CustomImage(
+        image: remote,
+        height: height,
+        width: width,
+        fit: fit,
+        placeholder: fallbackAsset,
+      );
+    }
+
+    return Image.asset(
+      fallbackAsset,
+      height: height,
+      width: width,
+      fit: fit,
+      color: color,
+    );
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "development-5dc25",
+    "staging": "development-5dc25"
+  },
+  "targets": {},
+  "etags": {}
+}
