@@ -111,7 +111,7 @@ class BookingDetailsTopCard extends StatelessWidget {
             Text("${'service_scheduled_date'.tr} : ",
               style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color: Theme.of(context).textTheme.bodyLarge!.color),
             ),
-             Text(DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.tryParse(bookingDetailsContent.serviceSchedule!)!),
+             Text(DateConverter.scheduleStringToDisplay(bookingDetailsContent.serviceSchedule),
               style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeDefault),
               textDirection:  TextDirection.ltr,),
           ],

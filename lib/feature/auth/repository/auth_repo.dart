@@ -56,8 +56,10 @@ class AuthRepo {
     }
 
     if(!GetPlatform.isWeb){
-      if(Get.find<LocationController>().getUserAddress() != null){
-        FirebaseMessaging.instance.subscribeToTopic('${AppConstants.topic}-${Get.find<LocationController>().getUserAddress()!.zoneId!}');
+      final address = Get.find<LocationController>().getUserAddress();
+      final zoneId = address?.zoneId?.trim();
+      if (zoneId != null && zoneId.isNotEmpty) {
+        FirebaseMessaging.instance.subscribeToTopic('${AppConstants.topic}-$zoneId');
       }
       FirebaseMessaging.instance.subscribeToTopic(AppConstants.topic);
       if (kDebugMode) {
@@ -202,25 +204,26 @@ class AuthRepo {
 
   bool clearSharedData({Response? response}) {
     if(GetPlatform.isAndroid && !GetPlatform.isWeb){
-      if(Get.find<LocationController>().getUserAddress() != null){
-        if(Get.find<LocationController>().getUserAddress()!.zoneId != null){
-          FirebaseMessaging.instance.unsubscribeFromTopic(AppConstants.topic);
-          FirebaseMessaging.instance.unsubscribeFromTopic('${AppConstants.topic}-${Get.find<LocationController>().getUserAddress()!.zoneId!}');
-        }
+      final address = Get.find<LocationController>().getUserAddress();
+      final zoneId = address?.zoneId?.trim();
+      if (zoneId != null && zoneId.isNotEmpty) {
+        FirebaseMessaging.instance.unsubscribeFromTopic(AppConstants.topic);
+        FirebaseMessaging.instance.unsubscribeFromTopic('${AppConstants.topic}-$zoneId');
       }
     }
     apiClient.postData(AppConstants.tokenUri, {"_method": "put", "fcm_token": '@'});
     sharedPreferences.remove(AppConstants.token);
     sharedPreferences.remove(AppConstants.referredBottomSheet);
-    Get.find<AuthController>().updateSavedLocalAddress(saveContactPersonInfo: false);
+    sharedPreferences.remove(AppConstants.isContinueZone);
+    clearSharedAddress();
     Get.find<AllSearchController>().removeHistory();
     Get.find<UserController>().setUserInfoModelData(null);
     sharedPreferences.setStringList(AppConstants.searchHistory, []);
     apiClient.token = null;
     if(response !=null && response.body['response_code'] != null && response.statusCode == 401 && response.body['response_code'] == "zone_404"){
-      AddressModel? address = Get.find<LocationController>().getUserAddress();
-      address?.zoneId = "";
-      Get.find<LocationController>().saveUserAddress( address ?? AddressModel());
+      if (Get.isRegistered<LocationController>()) {
+        Get.find<LocationController>().refreshSavedAddressZone();
+      }
     }
     return true;
   }
@@ -273,6 +276,12 @@ class AuthRepo {
 
   bool clearSharedAddress(){
     sharedPreferences.remove(AppConstants.userAddress);
+    apiClient.updateHeader(
+      sharedPreferences.getString(AppConstants.token),
+      null,
+      sharedPreferences.getString(AppConstants.languageCode),
+      sharedPreferences.getString(AppConstants.guestId),
+    );
     return true;
   }
 }

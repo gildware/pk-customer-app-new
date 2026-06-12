@@ -1,4 +1,6 @@
 
+import 'dart:convert';
+
 import 'package:demandium/api/local/cache_response.dart';
 import 'package:demandium/helper/analytics/analytics_helper.dart';
 import 'package:demandium/helper/validation_helper.dart';
@@ -21,6 +23,7 @@ class CartController extends GetxController implements GetxService {
   List<CartModel> _initialCartList = [];
   bool _isLoading = false;
   bool _isCartLoading = false;
+  bool _cartLoadFailed = false;
   double _amount = 0.0;
   final bool _isOthersInfoValid = false;
   bool _isButton = false;
@@ -30,6 +33,7 @@ class CartController extends GetxController implements GetxService {
   double get amount => _amount;
   bool get isLoading => _isLoading;
   bool get isCartLoading  => _isCartLoading ;
+  bool get cartLoadFailed => _cartLoadFailed;
   bool get isOthersInfoValid => _isOthersInfoValid;
 
   bool get isButton => _isButton;
@@ -158,14 +162,30 @@ class CartController extends GetxController implements GetxService {
     bool forceFromServer = false,
   }) async {
     if (forceFromServer) {
+      _isCartLoading = true;
+      _cartLoadFailed = false;
+      if (shouldUpdate) update();
+      await Get.find<LocationController>().refreshSavedAddressZone();
       await cartRepo.clearCartListCache();
       final clientResponse = await cartRepo.getCartListFromServer(source: DataSourceEnum.client);
       if (clientResponse.isSuccess &&
           clientResponse.response?.statusCode == 200 &&
           clientResponse.response?.body != null) {
         _applyCartListPayload(clientResponse.response!.body);
-        if (shouldUpdate) update();
+      } else {
+        _cartLoadFailed = true;
+        final localResponse = await cartRepo.getCartListFromServer<CacheResponseData>(source: DataSourceEnum.local);
+        if (localResponse.isSuccess && localResponse.response != null) {
+          final body = localResponse.response is CacheResponseData
+              ? jsonDecode((localResponse.response as CacheResponseData).response)
+              : localResponse.response;
+          if (body != null) {
+            _applyCartListPayload(body);
+          }
+        }
       }
+      _isCartLoading = false;
+      if (shouldUpdate) update();
       return;
     }
 
@@ -500,10 +520,41 @@ class CartController extends GetxController implements GetxService {
     update();
   }
 
+  Future<void> clearLocalSession({bool notify = true}) async {
+    _cartList = [];
+    _initialCartList = [];
+    _selectedProvider = null;
+    _cartServiceInfo = null;
+    _pendingBookingAddress = null;
+    _pendingBookingSchedule = null;
+    _pendingBookingProvider = null;
+    _filteredBookingProviders = null;
+    _totalPrice = 0;
+    _walletBalance = 0;
+    _referralAmount = 0;
+    _additionalChargeTotal = 0;
+    _additionalChargeLines = [];
+    _amount = 0;
+    _cartLoadFailed = false;
+    subcategoryId = '';
+    selectedProviderIndex = -1;
+    await cartRepo.clearCartListCache();
+    if (notify) {
+      update();
+    }
+  }
+
   void setInitialCartList(Service service) {
     _totalPrice = 0;
     _initialCartList = [];
     for (final variation in service.bookableVariations) {
+      if (service.id == null ||
+          service.categoryId == null ||
+          service.subCategoryId == null ||
+          variation.variantKey == null ||
+          variation.price == null) {
+        continue;
+      }
       _initialCartList.add(CartModel(
         service.id!,
         service.id!,
@@ -569,9 +620,15 @@ class CartController extends GetxController implements GetxService {
     if(reload || _providerList == null){
       _providerList = null;
     }
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    _syncPendingBookingAddress();
+    final zoneId = _pendingBookingAddress?.zoneId ??
+        Get.find<LocationController>().getUserAddress()?.zoneId ??
+        '';
     final origin = _providerListOriginCoordinates();
     Response response = await cartRepo.getProviderBasedOnSubcategory(
       subcategoryId,
+      zoneId: zoneId.isNotEmpty ? zoneId : null,
       originLatitude: origin.latitude,
       originLongitude: origin.longitude,
     );
@@ -645,37 +702,48 @@ class CartController extends GetxController implements GetxService {
   }
 
   Future<void> loadProvidersForBooking(String subcategoryId) async {
-    final zoneId = _pendingBookingAddress?.zoneId ?? '';
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    _syncPendingBookingAddress();
+    final zoneId = _pendingBookingAddress?.zoneId ??
+        Get.find<LocationController>().getUserAddress()?.zoneId ??
+        '';
     final origin = _providerListOriginCoordinates();
     _isLoading = true;
     update();
-    Response response = await cartRepo.getProviderBasedOnSubcategory(
-      subcategoryId,
-      zoneId: zoneId,
-      originLatitude: origin.latitude,
-      originLongitude: origin.longitude,
-    );
-    List<ProviderData> allProviders = [];
-    if (response.statusCode == 200) {
-      for (var element in response.body['content']) {
-        allProviders.add(ProviderData.fromJson(element));
+    try {
+      Response response = await cartRepo.getProviderBasedOnSubcategory(
+        subcategoryId,
+        zoneId: zoneId,
+        originLatitude: origin.latitude,
+        originLongitude: origin.longitude,
+      );
+      List<ProviderData> allProviders = [];
+      if (response.statusCode == 200) {
+        for (var element in response.body['content']) {
+          allProviders.add(ProviderData.fromJson(element));
+        }
+        _sortProvidersByDistance(allProviders);
       }
-      _sortProvidersByDistance(allProviders);
+      if (_pendingBookingSchedule != null && allProviders.isNotEmpty) {
+        final scheduleDate = DateConverter.tryParseScheduleDateTime(_pendingBookingSchedule!);
+        if (scheduleDate != null) {
+          final filtered = ProviderAvailabilityHelper.filterBySchedule(allProviders, scheduleDate);
+          _filteredBookingProviders = filtered.isNotEmpty ? filtered : allProviders;
+        } else {
+          _filteredBookingProviders = allProviders;
+        }
+      } else {
+        _filteredBookingProviders = allProviders;
+      }
+      if (_filteredBookingProviders != null && _filteredBookingProviders!.isNotEmpty) {
+        _sortProvidersByDistance(_filteredBookingProviders!);
+      }
+      selectedProviderIndex = -1;
+      _pendingBookingProvider = null;
+    } finally {
+      _isLoading = false;
+      update();
     }
-    if (_pendingBookingSchedule != null && allProviders.isNotEmpty) {
-      final scheduleDate = DateFormat('yyyy-MM-dd HH:mm:ss').parse(_pendingBookingSchedule!);
-      final filtered = ProviderAvailabilityHelper.filterBySchedule(allProviders, scheduleDate);
-      _filteredBookingProviders = filtered.isNotEmpty ? filtered : allProviders;
-    } else {
-      _filteredBookingProviders = allProviders;
-    }
-    if (_filteredBookingProviders != null && _filteredBookingProviders!.isNotEmpty) {
-      _sortProvidersByDistance(_filteredBookingProviders!);
-    }
-    selectedProviderIndex = -1;
-    _pendingBookingProvider = null;
-    _isLoading = false;
-    update();
   }
 
   void _syncPendingBookingAddress() {
@@ -807,6 +875,7 @@ class CartController extends GetxController implements GetxService {
       );
 
       final locationController = Get.find<LocationController>();
+      address.zoneId = zoneId;
       locationController.updateSelectedAddress(address, shouldUpdate: false);
       await locationController.saveUserAddress(address);
       final scheduleController = Get.find<ScheduleController>();
@@ -840,9 +909,7 @@ class CartController extends GetxController implements GetxService {
       _showAddedToCartDialog(bookingDetailsSaved: otherInfoSaved);
       onSuccess();
     } catch (e, stack) {
-      if (kDebugMode) {
-        debugPrint('completeBookingAndAddToCart failed: $e\n$stack');
-      }
+      ErrorLogger.record(e, stack, reason: 'CartController.completeBookingAndAddToCart');
       customSnackBar('failed_to_add_to_cart'.tr, type: ToasterMessageType.error, aboveOverlays: true);
     } finally {
       _isLoading = false;
@@ -1143,7 +1210,8 @@ class CartController extends GetxController implements GetxService {
         customSnackBar('failed_to_update_schedule'.tr, type: ToasterMessageType.error, aboveOverlays: true);
       }
       return false;
-    } catch (_) {
+    } catch (e, stack) {
+      ErrorLogger.record(e, stack, reason: 'CartController.updateCartItemSchedule');
       customSnackBar('failed_to_update_schedule'.tr, type: ToasterMessageType.error, aboveOverlays: true);
       return false;
     } finally {

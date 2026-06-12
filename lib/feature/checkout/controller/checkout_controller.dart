@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:demandium/common/widgets/confirmation_widget.dart';
 import 'package:demandium/feature/checkout/model/placed_booking_summary.dart';
 import 'package:demandium/feature/checkout/model/payment_response_model.dart';
+import 'package:demandium/helper/validation_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
@@ -180,7 +181,13 @@ class CheckOutController extends GetxController implements GetxService{
    String? paymentAmountType,
  })async{
 
-   String zoneId = Get.find<LocationController>().getUserAddress()!.zoneId.toString();
+   String zoneId = address.zoneId?.trim().isNotEmpty == true
+       ? address.zoneId!
+       : (Get.find<LocationController>().getUserAddress()?.zoneId ?? '');
+   if (!ValidationHelper.isValidUuid(zoneId)) {
+     customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.info);
+     return;
+   }
    var scheduleController = Get.find<ScheduleController>();
 
    ServiceType serviceType = scheduleController.selectedServiceType;
@@ -200,6 +207,16 @@ class CheckOutController extends GetxController implements GetxService{
    _isLoading = true;
    _placedBookingSummaries = [];
    update();
+
+   if (serviceType == ServiceType.repeat &&
+       (repeatBookingDates == null ||
+           repeatBookingDates.isEmpty ||
+           repeatBookingDates == '[]')) {
+     _isLoading = false;
+     update();
+     customSnackBar('select_your_preferable_booking_time'.tr, type: ToasterMessageType.info);
+     return;
+   }
 
    if(Get.find<CartController>().cartList.isNotEmpty){
      final serviceNamesBeforePlace = Get.find<CartController>().cartList
@@ -292,13 +309,17 @@ class CheckOutController extends GetxController implements GetxService{
    if(isActivePhoneVerification){
     if(paymentMethod != "offline_payment"){
       Future.delayed(const Duration(seconds: 1), (){
-        if(ResponsiveHelper.isDesktop(Get.context!)){
-          Get.dialog( Center(child: _guestCreateAccountPhoneVerificationTitle(userInfo: userInfo)));
-        }else{
-          showModalBottomSheet(backgroundColor: Colors.transparent, context: Get.context!, builder: (_){
-            return _guestCreateAccountPhoneVerificationTitle(userInfo: userInfo);
-          });
-        }
+        SafeContext.whenAvailable((context) {
+          if(ResponsiveHelper.isDesktop(context)){
+            Get.dialog(Center(child: _guestCreateAccountPhoneVerificationTitle(userInfo: userInfo, context: context)));
+          }else{
+            showModalBottomSheet(
+              backgroundColor: Colors.transparent,
+              context: context,
+              builder: (_) => _guestCreateAccountPhoneVerificationTitle(userInfo: userInfo, context: context),
+            );
+          }
+        });
       });
     }
    }else{
@@ -310,7 +331,7 @@ class CheckOutController extends GetxController implements GetxService{
 
  }
 
- Widget _guestCreateAccountPhoneVerificationTitle({SignUpBody? userInfo}){
+ Widget _guestCreateAccountPhoneVerificationTitle({SignUpBody? userInfo, required BuildContext context}){
     return ConfirmationWidget(
       icon: Images.otp,
       iconSize: 100,
@@ -318,23 +339,23 @@ class CheckOutController extends GetxController implements GetxService{
       subtitleWidget: RichText(
         textAlign: TextAlign.center,
         text: TextSpan(
-          style: DefaultTextStyle.of(Get.context!).style,
+          style: DefaultTextStyle.of(context).style,
           children: [
             TextSpan(text: 'account_created_successfully_verify_your_phone'.tr, style: robotoRegular.copyWith(
-                color: Theme.of(Get.context!).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5),
                 height: 1.5
             )),
             TextSpan(text: StringParser.obfuscateMiddle("${userInfo?.phone}"), style: robotoMedium.copyWith(
-                color: Theme.of(Get.context!).textTheme.bodyLarge!.color,height: 1.5),
+                color: Theme.of(context).textTheme.bodyLarge!.color,height: 1.5),
             ),
 
             TextSpan(text: 'you_can_skip_now_but_later'.tr, style: robotoRegular.copyWith(
-                color: Theme.of(Get.context!).textTheme.bodySmall?.color?.withValues(alpha: 0.5), height: 1.5
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.5), height: 1.5
             )),
           ],
         ),
       ),
-      yesButtonColor: Theme.of(Get.context!).colorScheme.primary,
+      yesButtonColor: Theme.of(context).colorScheme.primary,
       yesButtonText: 'verify_now'.tr,
       noButtonText: "not_now".tr,
       onYesPressed: () async {
@@ -424,11 +445,13 @@ class CheckOutController extends GetxController implements GetxService{
        Get.offNamed(RouteHelper.getOrderSuccessRoute('success'));
      } else{
        await Get.find<BookingDetailsController>().getBookingDetails(bookingId: bookingId);
-      if(Navigator.canPop(Get.context!)){
-        Get.back();
-      }else{
-        Get.offAllNamed(RouteHelper.getMainRoute('home'));
-      }
+      SafeContext.whenAvailable((context) {
+        if (Navigator.canPop(context)) {
+          Get.back();
+        } else {
+          Get.offAllNamed(RouteHelper.getMainRoute('home'));
+        }
+      });
      }
 
     if(fromPage == "checkout" && Get.find<SplashController>().configModel.content?.phoneVerification == 1 && !Get.find<AuthController>().isLoggedIn()){
@@ -585,10 +608,10 @@ class CheckOutController extends GetxController implements GetxService{
   void parseToken(String token) async {
     try{
       _bookingReadableId = StringParser.parseString(utf8.decode(base64Url.decode(token)), "attribute_id");
-    }catch(e){
-      if (kDebugMode) {
-        print(e);
-      }
+    }catch(e, stack){
+      ErrorLogger.record(e, stack, reason: 'CheckOutController.parseToken.decode');
+      customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
+      return;
     }
 
     String? transactionId;
@@ -609,12 +632,15 @@ class CheckOutController extends GetxController implements GetxService{
           if(phone != null){
             _saveTokenAndHandelPhoneVerification(token: loginToken , userInfo: newUserInfo, paymentMethod: "");
           }
+        } else {
+          customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
         }
+      } else {
+        customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
       }
-    }catch(e){
-      if (kDebugMode) {
-        print(e);
-      }
+    }catch(e, stack){
+      ErrorLogger.record(e, stack, reason: 'CheckOutController.parseToken.verify');
+      customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
     }
 
   }

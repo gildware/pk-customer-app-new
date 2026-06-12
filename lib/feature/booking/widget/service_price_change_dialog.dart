@@ -9,6 +9,7 @@ class ServicePriceChangeDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<ServiceBookingController>(
       builder: (serviceBookingController) {
+        final services = serviceBookingController.serviceAvailability?.content?.services ?? [];
         return Container(
           width: ResponsiveHelper.isDesktop(context) ? 350 : Dimensions.webMaxWidth,
           padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
@@ -36,15 +37,16 @@ class ServicePriceChangeDialog extends StatelessWidget {
 
 
             ListView.builder(
-              itemCount: serviceBookingController.serviceAvailability!.content!.services!.length,
+              itemCount: services.length,
               shrinkWrap: true,
               itemBuilder: (context, index) {
+                final service = services[index];
                 return Center(
                   child: ServicePriceItemWidget(
                     index: index+1,
-                    serviceName : '${serviceBookingController.serviceAvailability!.content!.services![index].serviceName!}-${serviceBookingController.serviceAvailability!.content!.services![index].variantKey!}',
-                    previousPrice: serviceBookingController.serviceAvailability!.content!.services![index].bookingServiceCost!,
-                    updatedPrice: serviceBookingController.serviceAvailability!.content!.services![index].serviceCost ?? 0,
+                    serviceName : '${service.serviceName ?? ''}-${service.variantKey ?? ''}',
+                    previousPrice: service.bookingServiceCost ?? 0,
+                    updatedPrice: service.serviceCost ?? 0,
                   )
                 );
               }
@@ -96,7 +98,7 @@ class ServicePriceItemWidget extends StatelessWidget {
         ),
         const SizedBox(width: Dimensions.paddingSizeDefault),
 
-        Expanded(child: Text(serviceName!, style: robotoRegular, maxLines: 1, overflow: TextOverflow.ellipsis)),
+        Expanded(child: Text(serviceName ?? '', style: robotoRegular, maxLines: 1, overflow: TextOverflow.ellipsis)),
         const SizedBox(width: Dimensions.paddingSizeDefault),
 
         Column(

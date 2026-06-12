@@ -16,6 +16,29 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
 
   final tooltipController = JustTheController();
+  bool _isHydratingCart = false;
+
+  Future<void> _hydrateCheckoutCart() async {
+    if (_isHydratingCart) return;
+    _isHydratingCart = true;
+    if (mounted) setState(() {});
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    await Get.find<CartController>().getCartListFromServer(shouldUpdate: false, forceFromServer: true);
+    final cartController = Get.find<CartController>();
+    if (!mounted) return;
+    if (cartController.cartList.isEmpty) {
+      if (cartController.cartLoadFailed) {
+        customSnackBar('connection_to_api_server_failed'.tr, type: ToasterMessageType.error);
+      }
+      Get.offAllNamed(RouteHelper.home);
+      return;
+    }
+    if (cartController.hasCartServiceInfo) {
+      await cartController.syncCheckoutFromCartServiceInfo();
+    }
+    _isHydratingCart = false;
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
@@ -29,13 +52,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     if(widget.pageState == 'orderDetails'){
-      Get.find<CartController>().getCartListFromServer(shouldUpdate: false, forceFromServer: true).then((value) async {
-        if(Get.find<CartController>().cartList.isEmpty) {
-          Get.offAllNamed(RouteHelper.home);
-        } else if (Get.find<CartController>().hasCartServiceInfo) {
-          await Get.find<CartController>().syncCheckoutFromCartServiceInfo();
-        }
-      });
+      _hydrateCheckoutCart();
       Get.find<ScheduleController>().resetScheduleData(shouldUpdate: false);
       Get.find<ScheduleController>().updateSelectedBookingType(type: ServiceType.regular);
       Get.find<CheckOutController>().resetCreateAccountWithExistingInfo();
@@ -82,7 +99,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               }
             }
           ),
-          body: SafeArea(child: FooterBaseView( child: WebShadowWrap(
+          body: SafeArea(child: _isHydratingCart && widget.pageState == 'orderDetails'
+              ? const Center(child: CustomLoader())
+              : FooterBaseView( child: WebShadowWrap(
             child: SizedBox(width: Dimensions.webMaxWidth, child:  Column(mainAxisAlignment: MainAxisAlignment.start, children: [
 
               const SizedBox(height: Dimensions.paddingSizeDefault,),

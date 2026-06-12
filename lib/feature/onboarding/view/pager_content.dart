@@ -136,17 +136,21 @@ void _checkPermissionAndNavigate() async {
     permission = await Geolocator.requestPermission();
   }
   if(permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-    Get.offAllNamed(RouteHelper.getPickMapRoute("",false,"",null,null));
+    Get.offAllNamed(RouteHelper.getAccessLocationRoute('home'));
   }else {
     Get.dialog(const CustomLoader(), barrierDismissible: false);
-    AddressModel address = await Get.find<LocationController>().getCurrentLocation(true);
-    ZoneResponseModel response = await Get.find<LocationController>().getZone(address.latitude!, address.longitude!, false);
-
-    if(response.isSuccess) {
-      Get.find<LocationController>().saveAddressAndNavigate(address, false, '', false, true);
-    }else {
+    final address = await Get.find<LocationController>().getCurrentLocation(true, deviceCurrentLocation: true);
+    final applied = await AddressSessionHelper.applySelectedAddress(
+      address,
+      redirectRoute: RouteHelper.getMainRoute('home'),
+      canRoute: true,
+      closeOverlays: true,
+    );
+    if (!applied && Get.isDialogOpen == true) {
       Get.back();
-      Get.offAllNamed(RouteHelper.getPickMapRoute("",false,"",null,null));
+    }
+    if (!applied) {
+      Get.offAllNamed(RouteHelper.getAccessLocationRoute('home'));
     }
   }
 }

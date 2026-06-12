@@ -20,6 +20,7 @@ class CustomTextField extends StatefulWidget {
   final TextCapitalization? capitalization;
   final Function(String text)? onChanged;
   final String? countryDialCode;
+  final bool isCountryPickerEnabled;
   final String? suffixIconUrl;
   final Function(CountryCode countryCode)? onCountryChanged;
   final String? Function(String?)? onValidate;
@@ -47,6 +48,7 @@ class CustomTextField extends StatefulWidget {
     this.isShowBorder,
     this.isAutoFocus = false,
     this.countryDialCode,
+    this.isCountryPickerEnabled = true,
     this.onCountryChanged,
     this.suffixIconUrl,
     this.onChanged,
@@ -187,7 +189,8 @@ class CustomTextFieldState extends State<CustomTextField> {
               onChanged: widget.onCountryChanged,
               initialSelection: widget.countryDialCode,
               favorite: [widget.countryDialCode ?? ""],
-              showDropDownButton: true,
+              enabled: widget.isCountryPickerEnabled,
+              showDropDownButton: widget.isCountryPickerEnabled,
               padding: EdgeInsets.zero,
               showFlagMain: true,
               dialogSize: Size(Dimensions.webMaxWidth / 2, Get.height * 0.6),

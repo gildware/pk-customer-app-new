@@ -23,6 +23,9 @@ class NotificationController extends GetxController implements GetxService{
   Future<void> getNotifications(int offset, {bool reload = true})async{
     _offset = offset;
 
+    if (offset == 1 && Get.isRegistered<LocationController>()) {
+      await Get.find<LocationController>().refreshSavedAddressZone();
+    }
 
     _isLoading = true;
     Response response = await notificationRepo.getNotificationList(offset);

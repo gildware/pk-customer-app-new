@@ -21,7 +21,7 @@ class BannerController extends GetxController implements GetxService {
 
 
     if(_banners == null || reload){
-      DataSyncHelper.fetchAndSyncData(
+      await DataSyncHelper.fetchAndSyncData(
         fetchFromLocal: ()=> bannerRepo.getBannerList<CacheResponseData>( source: DataSourceEnum.local),
         fetchFromClient: ()=> bannerRepo.getBannerList(source: DataSourceEnum.client),
         onResponse: (data, source) {
@@ -84,7 +84,7 @@ class BannerController extends GetxController implements GetxService {
   }
 
 
-  Future<void> navigateFromBanner(String resourceType, String bannerID, String link, String resourceID, {String categoryName = ''})async {
+  Future<void> navigateFromBanner(String resourceType, String bannerID, String link, String resourceID, {String categoryName = '', String? serviceSlug})async {
     switch (resourceType){
       case 'category':
         Get.toNamed(RouteHelper.subCategoryScreenRoute(categoryName,bannerID,0));
@@ -98,9 +98,20 @@ class BannerController extends GetxController implements GetxService {
         }
         break;
       case 'service':
-        Get.toNamed(RouteHelper.getServiceRoute(resourceID));
+        if (serviceSlug != null && serviceSlug.isNotEmpty) {
+          Get.toNamed(RouteHelper.getServiceRoute(serviceSlug));
+        } else {
+          customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
+        }
         break;
       default:
     }
+  }
+
+  void clearSessionData({bool notify = true}) {
+    _banners = null;
+    _curatedBannersBySection.clear();
+    _currentIndex = 0;
+    if (notify) update();
   }
 }

@@ -28,7 +28,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
   }
 
   Future<void> _loadDart() async {
-
+    await Get.find<LocationController>().refreshSavedAddressZone();
     Get.find<AllSearchController>().clearAllFilterValue(shouldUpdate: false);
     Get.find<AllSearchController>().updateSortByType(widget.fromPage, shouldUpdate: false);
     Get.find<AllSearchController>().searchData(query:widget.queryText!, offset: 1, shouldUpdate: false);

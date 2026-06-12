@@ -6,6 +6,7 @@ import 'package:demandium/feature/booking/widget/booking_ignored_bottom_sheet.da
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:demandium/firebase_options.dart';
 import 'package:demandium/util/core_export.dart';
 
 class NotificationHelper {
@@ -76,6 +77,8 @@ class NotificationHelper {
             Get.toNamed(RouteHelper.getPrivacyPolicyRoute());
           }else if(notificationBody.notificationType=='terms_and_conditions' && notificationBody.title!=null && notificationBody.title!=''){
               Get.toNamed(RouteHelper.getTermsAndConditionsRoute());
+          }else if(NotificationHelper.isServiceNotification(notificationBody)){
+            await NotificationHelper.navigateToServiceNotification(notificationBody);
           }else{
               Get.toNamed(RouteHelper.getNotificationRoute());
           }
@@ -218,7 +221,7 @@ class NotificationHelper {
       }
     });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage? message) {
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage? message) async {
       printLog("onMessageOpenApp: ${message?.notification!.title}/${message?.notification!.body}/${message?.notification!.titleLocKey} || ${message?.data}");
 
      try{
@@ -274,6 +277,9 @@ class NotificationHelper {
          else if(notificationBody.notificationType == 'logout'){
            Get.find<AuthController>().clearSharedData();
            Get.offNamed(RouteHelper.getSignInRoute());
+         }
+         else if(NotificationHelper.isServiceNotification(notificationBody)){
+           await NotificationHelper.navigateToServiceNotification(notificationBody);
          }
          else{
            Get.toNamed(RouteHelper.getNotificationRoute());
@@ -403,10 +409,33 @@ class NotificationHelper {
   static NotificationBody convertNotification(Map<String, dynamic> data){
    return NotificationBody.fromJson(data);
   }
+
+  static String resolveServiceSlug(NotificationBody body) {
+    final slug = body.serviceSlug?.trim();
+    if (slug != null && slug.isNotEmpty) return slug;
+    return body.serviceId?.trim() ?? '';
+  }
+
+  static bool isServiceNotification(NotificationBody body) {
+    return body.notificationType == 'service' && resolveServiceSlug(body).isNotEmpty;
+  }
+
+  static Future<void> navigateToServiceNotification(NotificationBody body) async {
+    final slug = resolveServiceSlug(body);
+    if (slug.isEmpty) {
+      Get.toNamed(RouteHelper.getNotificationRoute());
+      return;
+    }
+    if (Get.isRegistered<LocationController>()) {
+      await Get.find<LocationController>().refreshSavedAddressZone();
+    }
+    Get.toNamed(RouteHelper.getServiceRoute(slug, fromPage: 'fromNotification'));
+  }
 }
 
 @pragma('vm:entry-point')
 Future<dynamic> myBackgroundMessageHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (kDebugMode) {
     print("onBackground: ${message.notification?.title}/${message.notification?.body}/${message.notification?.titleLocKey}");
   }

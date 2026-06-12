@@ -58,6 +58,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   var otpLogin = config?.customerLogin?.loginOption?.otpLogin;
                   var manualLogin = config?.customerLogin?.loginOption?.manualLogin ?? 1;
                   var socialLogin = config?.customerLogin?.loginOption?.socialMediaLogin;
+                  final isPhoneInput = authController.selectedLoginMedium == LoginMedium.otp
+                      || (manualLogin == 0 && otpLogin == 1)
+                      || authController.isNumberLogin;
 
                   return Form(
                     autovalidateMode: ResponsiveHelper.isDesktop(context) ? AutovalidateMode.onUserInteraction:AutovalidateMode.disabled,
@@ -78,14 +81,16 @@ class _SignInScreenState extends State<SignInScreen> {
 
                         manualLogin == 1 || otpLogin == 1 ? CustomTextField(
                           onCountryChanged: (countryCode) => authController.countryDialCode = countryCode.dialCode!,
-                          countryDialCode: authController.isNumberLogin || (manualLogin == 0 && otpLogin ==1) ? authController.countryDialCode : null,
+                          countryDialCode: isPhoneInput ? authController.countryDialCode : null,
+                          isCountryPickerEnabled: false,
                           title: 'email_phone'.tr,
                           hintText: authController.selectedLoginMedium == LoginMedium.otp || (manualLogin == 0 && otpLogin ==1)
                               ? "please_enter_phone_number".tr : 'enter_email_or_phone'.tr,
                           controller: signInPhoneController,
                           focusNode: _phoneFocus,
                           nextFocus: _passwordFocus,
-                          capitalization: TextCapitalization.words,
+                          inputType: isPhoneInput ? TextInputType.phone : TextInputType.emailAddress,
+                          capitalization: isPhoneInput ? TextCapitalization.none : TextCapitalization.words,
                           onChanged: (String text){
                             if(authController.selectedLoginMedium != LoginMedium.otp){
 

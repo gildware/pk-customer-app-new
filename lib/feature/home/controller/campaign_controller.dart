@@ -21,7 +21,7 @@ class CampaignController extends GetxController implements GetxService {
   Future<void> getCampaignList(bool reload) async {
     if(_campaignList == null || reload){
 
-      DataSyncHelper.fetchAndSyncData(
+      await DataSyncHelper.fetchAndSyncData(
         fetchFromLocal: ()=>campaignRepo.getCampaignList<CacheResponseData>( source: DataSourceEnum.local),
         fetchFromClient: ()=> campaignRepo.getCampaignList(source: DataSourceEnum.client),
         onResponse: (data, source) {
@@ -55,5 +55,12 @@ class CampaignController extends GetxController implements GetxService {
     }
     _isLoading = false;
     update();
+  }
+
+  void clearSessionData({bool notify = true}) {
+    _campaignList = null;
+    _itemCampaignList = null;
+    _currentIndex = 0;
+    if (notify) update();
   }
 }

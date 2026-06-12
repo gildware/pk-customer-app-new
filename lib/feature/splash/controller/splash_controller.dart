@@ -9,7 +9,7 @@ class SplashController extends GetxController implements GetxService {
 
   ConfigModel? _configModel = ConfigModel();
   bool _firstTimeConnectionCheck = true;
-  final bool _hasConnection = true;
+  bool _hasConnection = true;
   bool _isLoading = false;
   DataSourceEnum _currentDataSource = DataSourceEnum.local;
 
@@ -24,49 +24,64 @@ class SplashController extends GetxController implements GetxService {
   bool savedCookiesData = false;
 
   Future<bool> getConfigData() async {
+    _hasConnection = true;
+    bool configLoaded = false;
 
-    DataSyncHelper.fetchAndSyncData(
+    await DataSyncHelper.fetchAndSyncData(
       fetchFromLocal: ()=>  splashRepo.getConfigData<CacheResponseData>( source: DataSourceEnum.local),
       fetchFromClient: ()=>  splashRepo.getConfigData(source: DataSourceEnum.client),
       onResponse: (data, source) {
-        // Update current data source
+        configLoaded = true;
         _currentDataSource = source;
-        
-        _configModel = ConfigModel.fromJson(data);
 
-        bool isWebMaintenanceDisabled = (_configModel?.content?.maintenanceMode?.maintenanceStatus == 0 || _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 0) && kIsWeb;
-        bool isAppMaintenanceDisabled = (_configModel?.content?.maintenanceMode?.maintenanceStatus == 0 || _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 0) && !kIsWeb;
+        try {
+          _configModel = ConfigModel.fromJson(data);
 
-        if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 1
-            && _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1 && source == DataSourceEnum.client  && !AppConstants.avoidMaintenanceMode && !kIsWeb ){
-          Get.offAllNamed(RouteHelper.getMaintenanceRoute());
-        } else if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 1
-            && _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 1 && source == DataSourceEnum.client  && !AppConstants.avoidMaintenanceMode && kIsWeb ){
-          Get.offAllNamed(RouteHelper.getMaintenanceRoute());
-        }
-        else if((Get.currentRoute.contains(RouteHelper.maintenance) &&  (isAppMaintenanceDisabled || isWebMaintenanceDisabled))) {
-          Get.offAllNamed(RouteHelper.getInitialRoute());
-        }
-        else if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 0){
-          if((_configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1 && !kIsWeb) ||( _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 1 && kIsWeb)){
-            if(_configModel?.content?.maintenanceMode?.maintenanceTypeAndDuration?.maintenanceDuration == 'customize'){
+          bool isWebMaintenanceDisabled = (_configModel?.content?.maintenanceMode?.maintenanceStatus == 0 || _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 0) && kIsWeb;
+          bool isAppMaintenanceDisabled = (_configModel?.content?.maintenanceMode?.maintenanceStatus == 0 || _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 0) && !kIsWeb;
 
-              DateTime now = DateTime.now();
-              DateTime specifiedDateTime = DateTime.parse(_configModel!.content!.maintenanceMode!.maintenanceTypeAndDuration!.startDate!);
+          if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 1
+              && _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1 && source == DataSourceEnum.client  && !AppConstants.avoidMaintenanceMode && !kIsWeb ){
+            Get.offAllNamed(RouteHelper.getMaintenanceRoute());
+          } else if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 1
+              && _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 1 && source == DataSourceEnum.client  && !AppConstants.avoidMaintenanceMode && kIsWeb ){
+            Get.offAllNamed(RouteHelper.getMaintenanceRoute());
+          }
+          else if((Get.currentRoute.contains(RouteHelper.maintenance) &&  (isAppMaintenanceDisabled || isWebMaintenanceDisabled))) {
+            Get.offAllNamed(RouteHelper.getInitialRoute());
+          }
+          else if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 0){
+            if((_configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1 && !kIsWeb) ||( _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 1 && kIsWeb)){
+              final startDate = _configModel?.content?.maintenanceMode?.maintenanceTypeAndDuration?.startDate;
+              if(_configModel?.content?.maintenanceMode?.maintenanceTypeAndDuration?.maintenanceDuration == 'customize'
+                  && startDate != null && startDate.isNotEmpty){
 
-              Duration difference = specifiedDateTime.difference(now);
-
-              if(difference.inMinutes > 0 && (difference.inMinutes < 60 || difference.inMinutes == 60)){
-                _startTimer(specifiedDateTime);
+                final now = DateTime.now();
+                final specifiedDateTime = DateTime.tryParse(startDate);
+                if (specifiedDateTime != null) {
+                  final difference = specifiedDateTime.difference(now);
+                  if(difference.inMinutes > 0 && (difference.inMinutes < 60 || difference.inMinutes == 60)){
+                    _startTimer(specifiedDateTime);
+                  }
+                }
               }
             }
           }
+        } catch (e, stack) {
+          ErrorLogger.record(e, stack, reason: 'SplashController config onResponse');
         }
 
         update();
         update(['home_layout']);
       },
+      suppressErrorWhenLocalSucceeded: true,
     );
+
+    if (!configLoaded) {
+      _hasConnection = false;
+      update();
+      return false;
+    }
 
     return true;
   }
@@ -88,8 +103,8 @@ class SplashController extends GetxController implements GetxService {
     return splashRepo.initSharedData();
   }
 
-  void setGuestId(String guestId){
-    splashRepo.setGuestId(guestId);
+  Future<void> setGuestId(String guestId) {
+    return splashRepo.setGuestId(guestId);
   }
 
   String getGuestId (){

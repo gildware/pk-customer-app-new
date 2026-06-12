@@ -19,14 +19,21 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCart();
+  }
+
+  Future<void> _loadCart() async {
+    await Get.find<LocationController>().refreshSavedAddressZone();
     final cartController = Get.find<CartController>();
-    cartController.getCartListFromServer(forceFromServer: true).then((_) async {
-      if (cartController.hasCartServiceInfo) {
-        await cartController.syncCheckoutFromCartServiceInfo();
-      }
-      Future.delayed(const Duration(milliseconds: 500)).then((_) {
-        cartController.showMinimumAndMaximumOrderValueToaster();
-      });
+    await cartController.getCartListFromServer(forceFromServer: true);
+    if (cartController.hasCartServiceInfo) {
+      await cartController.syncCheckoutFromCartServiceInfo();
+    }
+    if (cartController.cartLoadFailed && cartController.cartList.isEmpty) {
+      customSnackBar('connection_to_api_server_failed'.tr, type: ToasterMessageType.error);
+    }
+    Future.delayed(const Duration(milliseconds: 500)).then((_) {
+      cartController.showMinimumAndMaximumOrderValueToaster();
     });
   }
 

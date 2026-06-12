@@ -31,7 +31,9 @@ class ProviderDetailsScreenState extends State<ProviderDetailsScreen> with Ticke
 
     providerBookingController.updateTabBarPinned(false);
 
-    providerBookingController.getProviderDetailsData(widget.providerId, true).then((value){
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Get.find<LocationController>().refreshSavedAddressZone();
+      await providerBookingController.getProviderDetailsData(widget.providerId, true);
       _initServiceTabController();
       Get.find<CartController>().updatePreselectedProvider(null);
       if (mounted) setState(() {});

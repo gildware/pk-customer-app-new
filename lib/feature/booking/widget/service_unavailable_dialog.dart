@@ -12,6 +12,7 @@ class ServiceUnavailableDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<ServiceBookingController>(
       builder: (serviceBookingController) {
+        final services = serviceBookingController.serviceAvailability?.content?.services ?? [];
         return Container(
           width: ResponsiveHelper.isDesktop(context) ? 550 : Dimensions.webMaxWidth,
           padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
@@ -39,16 +40,17 @@ class ServiceUnavailableDialog extends StatelessWidget {
 
 
             ListView.builder(
-              itemCount: serviceBookingController.serviceAvailability!.content!.services!.length,
+              itemCount: services.length,
               shrinkWrap: true,
               itemBuilder: (context, index) {
+                final service = services[index];
                 return Padding( padding:  const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeExtraSmall), child:
                   ServiceItemWidget(
                     index: index+1,
-                    serviceName : '${serviceBookingController.serviceAvailability?.content?.services?[index].serviceName??""}-${serviceBookingController.serviceAvailability?.content?.services?[index].variantKey??""}',
-                    previousPrice: serviceBookingController.serviceAvailability?.content?.services?[index].bookingServiceCost??0,
-                    updatedPrice: serviceBookingController.serviceAvailability?.content?.services?[index].serviceCost ?? 0,
-                    isNotActive: serviceBookingController.serviceAvailability?.content?.services?[index].isAvailable == 0,
+                    serviceName : '${service.serviceName ?? ''}-${service.variantKey ?? ''}',
+                    previousPrice: service.bookingServiceCost ?? 0,
+                    updatedPrice: service.serviceCost ?? 0,
+                    isNotActive: service.isAvailable == 0,
                   )
                 );
               }
@@ -109,7 +111,7 @@ class ServiceItemWidget extends StatelessWidget {
           ),
           const SizedBox(width: Dimensions.paddingSizeDefault),
 
-          Expanded(child: Text(serviceName!, style: robotoRegular.copyWith(color: isNotActive ? Theme.of(context).disabledColor : Theme.of(context).textTheme.bodyLarge!.color, decoration: isNotActive ? TextDecoration.lineThrough : TextDecoration.none), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(serviceName ?? '', style: robotoRegular.copyWith(color: isNotActive ? Theme.of(context).disabledColor : Theme.of(context).textTheme.bodyLarge!.color, decoration: isNotActive ? TextDecoration.lineThrough : TextDecoration.none), maxLines: 1, overflow: TextOverflow.ellipsis)),
           const SizedBox(width: Dimensions.paddingSizeDefault),
 
           serviceBookingController.isPriceChanged ?

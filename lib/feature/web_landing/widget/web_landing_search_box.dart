@@ -297,13 +297,15 @@ class _WebLandingSearchSectionState extends State<WebLandingSearchSection> {
                                             );
 
                                             if(response.isSuccess) {
-                                              Get.find<LocationController>().saveAddressAndNavigate(
-                                                _address!, widget.fromSignUp!, widget.route, false , true
+                                              await AddressSessionHelper.applySelectedAddress(
+                                                _address!,
+                                                redirectRoute: widget.route ?? RouteHelper.getMainRoute('home'),
+                                                canRoute: false,
+                                                closeOverlays: true,
                                               );
-
                                             }else {
                                               Get.back();
-                                              customSnackBar('service_not_available_in_current_location'.tr, type: ToasterMessageType.info);
+                                              Get.toNamed(RouteHelper.getAreaNotServiceableRoute());
                                             }}
                                           else {
                                             customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);

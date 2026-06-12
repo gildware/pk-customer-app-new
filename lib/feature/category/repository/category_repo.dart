@@ -7,7 +7,7 @@ class CategoryRepo extends DataSyncRepo {
   CategoryRepo({required super.apiClient, required SharedPreferences super.sharedPreferences});
 
   Future<ApiResponseModel<T>> getCategoryList<T>({required DataSourceEnum source}) async {
-    return await fetchData<T>('${AppConstants.categoryUrl}&limit=100&offset=1', source);
+    return await fetchData<T>('${AppConstants.categoryUrl}?limit=100&offset=1', source);
   }
 
   Future<ApiResponseModel<T>> getMobileAppHomeSectionCategories<T>({

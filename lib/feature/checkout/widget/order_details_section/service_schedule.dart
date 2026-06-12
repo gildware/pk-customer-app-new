@@ -11,6 +11,21 @@ class ServiceSchedule extends StatefulWidget {
 
 class _ServiceScheduleState extends State<ServiceSchedule> {
 
+  String _formatScheduleDisplay(ScheduleController scheduleController) {
+    if (scheduleController.selectedScheduleType == ScheduleType.asap) {
+      return 'ASAP'.tr;
+    }
+    if (scheduleController.selectedScheduleType == ScheduleType.schedule &&
+        scheduleController.scheduleTime != null) {
+      final parsed = DateConverter.tryParseScheduleDateTime(scheduleController.scheduleTime!);
+      if (parsed != null) {
+        return DateConverter.dateMonthYearTimeTwentyFourFormat(parsed);
+      }
+      return scheduleController.scheduleTime!;
+    }
+    return 'select_schedule_time'.tr;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<CartController>(builder: (cartController){
@@ -40,9 +55,7 @@ class _ServiceScheduleState extends State<ServiceSchedule> {
                 Expanded( flex: 7, child: Row( children: [
 
                   Text(
-                    scheduleController.selectedScheduleType == ScheduleType.asap ?'ASAP'.tr :
-                    scheduleController.selectedScheduleType == ScheduleType.schedule && scheduleController.scheduleTime != null ?
-                    DateConverter.dateMonthYearTimeTwentyFourFormat(DateConverter.dateTimeStringToDate(scheduleController.scheduleTime!)) : "select_schedule_time".tr,
+                    _formatScheduleDisplay(scheduleController),
                     style: robotoMedium,
                   ),
                 ])),

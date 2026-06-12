@@ -31,7 +31,7 @@ class NoInternetScreen extends StatelessWidget {
               child: CustomButton(
                 onPressed: () async {
                   List<ConnectivityResult> result = await Connectivity().checkConnectivity();
-                  if( result.first != ConnectivityResult.none) {
+                  if (!result.every((status) => status == ConnectivityResult.none)) {
                     Navigator.pushReplacement(Get.context!, MaterialPageRoute(builder: (_) => child!));
                   }
                 },

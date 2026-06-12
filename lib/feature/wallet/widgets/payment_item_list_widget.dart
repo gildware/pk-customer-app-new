@@ -238,7 +238,11 @@ class _PaymentMethodListWidgetState extends State<PaymentMethodListWidget> {
       html.window.open(url, "_self");
     } else {
       printLog("url_with_digital_payment_mobile:$url");
-      Get.to(()=> PaymentScreen(url:url, fromPage: "add-fund",));
+      DigitalPaymentLauncher.start(
+        paymentUrl: url,
+        fromPage: 'add-fund',
+        gateway: paymentGateway,
+      );
     }
   }
 }

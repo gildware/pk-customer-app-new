@@ -111,7 +111,12 @@ class ProviderDetailsCard extends StatelessWidget {
                       children: <TextSpan>[
                         if(timeSlotAvailable && cartController.cartList[0].provider?.serviceAvailability == 1)
                         TextSpan(
-                          text: " : ${DateConverter.convertStringDateTimeToTime(cartController.cartList[0].provider!.timeSchedule!.startTime!)} ${'to'.tr} ${DateConverter.convertStringDateTimeToTime(cartController.cartList[0].provider!.timeSchedule!.endTime!)}",
+                          text: () {
+                            final start = cartController.cartList[0].provider?.timeSchedule?.startTime;
+                            final end = cartController.cartList[0].provider?.timeSchedule?.endTime;
+                            if (start == null || end == null) return '';
+                            return " : ${DateConverter.convertStringDateTimeToTime(start)} ${'to'.tr} ${DateConverter.convertStringDateTimeToTime(end)}";
+                          }(),
                           style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault,  color: Theme.of(context).textTheme.bodyLarge!.color),
                         )
 

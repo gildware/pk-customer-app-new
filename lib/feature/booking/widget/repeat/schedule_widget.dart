@@ -37,7 +37,12 @@ class ScheduleWidget extends StatelessWidget {
 
          ) : Text(
           bookingDetailsContent.bookingType?.toLowerCase() == "daily"  ?
-          "${"daily_at".tr } ${DateConverter.convert24HourTimeTo12HourTime(DateTime.tryParse(bookingDetailsContent.time!)!)}": "within_the_selected_days".tr ,
+          "${"daily_at".tr } ${() {
+            final parsed = DateConverter.tryParseScheduleDateTime(bookingDetailsContent.time ?? '');
+            return parsed != null
+                ? DateConverter.convert24HourTimeTo12HourTime(parsed)
+                : (bookingDetailsContent.time ?? '');
+          }()}": "within_the_selected_days".tr ,
           style:robotoLight.copyWith(color: Theme.of(context).textTheme.bodyLarge!.color!),
         ),
         const SizedBox(height: Dimensions.paddingSizeExtraSmall),

@@ -71,9 +71,7 @@ class BookingHistory extends StatelessWidget {
                                ),
                              ),
                              Text(
-                               DateConverter.dateMonthYearTimeTwentyFourFormat(
-                                 DateTime.tryParse(bookingDetails.serviceSchedule!)!,
-                               ),
+                               DateConverter.scheduleStringToDisplay(bookingDetails.serviceSchedule),
                                style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeDefault),
                                textDirection: TextDirection.ltr,
                              ),
@@ -243,8 +241,8 @@ class HistoryStatus extends StatelessWidget {
 
                       const SizedBox(height: Dimensions.paddingSizeSmall,),
 
-                      if (scheduleHistories[index+1].schedule != null && DateTime.tryParse(scheduleHistories[index+1].schedule!) != null)
-                      Text(DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.tryParse(scheduleHistories[index+1].schedule!)!),
+                      if (scheduleHistories[index+1].schedule != null)
+                      Text(DateConverter.scheduleStringToDisplay(scheduleHistories[index+1].schedule),
                         style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall,
                             color: Theme.of(context).secondaryHeaderColor),
                         textDirection: TextDirection.ltr,

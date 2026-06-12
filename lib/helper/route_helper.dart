@@ -3,7 +3,9 @@ import 'package:demandium/feature/auth/view/update_profile_screen.dart';
 import 'package:demandium/feature/booking/view/repeat_booking_details_screen.dart';
 import 'package:demandium/feature/checkout/view/offline_payment_screen.dart';
 import 'package:demandium/feature/home/all_category_screen.dart';
+import 'package:demandium/feature/location/view/area_not_serviceable_screen.dart';
 import 'package:demandium/feature/provider/view/nearby_provider/near_by_provider_screen.dart';
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -81,6 +83,7 @@ class RouteHelper {
   static const String updateProfile = '/update-profile';
   static const String offlinePayment = '/offline-payment';
   static const String allCategoriesScreen = '/all-categories';
+  static const String areaNotServiceable = '/area-not-serviceable';
 
 
 
@@ -199,9 +202,8 @@ class RouteHelper {
   static String getUpdateRoute(String fromPage) => '$update?update=$fromPage';
   static String getCartRoute() => cart;
   static String getAddAddressRoute(bool fromCheckout) => '$addAddress?page=${fromCheckout ? 'checkout' : 'address'}';
-  static String getEditAddressRoute(AddressModel address,bool fromCheckout) {
-    String data = base64Url.encode(utf8.encode(jsonEncode(address.toJson())));
-    return '$editAddress?data=$data&page=${fromCheckout ? 'checkout' : 'address'}';
+  static String getEditAddressRoute(AddressModel address, bool fromCheckout) {
+    return '$editAddress?page=${fromCheckout ? 'checkout' : 'address'}';
   }
   static String getChatScreenRoute(String channelId,String name,String image,String phone,String userType, {String? fromNotification}) =>
       '$chatScreen?channelID=$channelId&name=$name&image=$image&phone=$phone&userType=$userType&fromNotification=$fromNotification';
@@ -291,15 +293,19 @@ class RouteHelper {
     return "$offlinePayment?amount=$totalAmount&index=$index&id=$bookingId&readable_id=$readableId&partial=$isPartialPayment&page=$fromPage&data=$userData&offline=$offlineData&offline_id=$offlinePaymentId";
   }
   static String getAllCategoriesScreen() => allCategoriesScreen;
+  static String getAreaNotServiceableRoute() => areaNotServiceable;
 
 
   static List<GetPage> routes = [
     GetPage(
       name: initial,
-      page: () => getRoute(ResponsiveHelper.isDesktop(Get.context)
-          ? AccessLocationScreen(fromSignUp: false,route: RouteHelper.getMainRoute('home'))
-          : const BottomNavScreen(pageIndex: 0, previousAddress: null, showServiceNotAvailableDialog: true,)),
+      page: () => getRoute(const BottomNavScreen(
+        pageIndex: 0,
+        previousAddress: null,
+        showServiceNotAvailableDialog: false,
+      )),
     ),
+    GetPage(name: areaNotServiceable, page: () => const AreaNotServiceableScreen()),
     GetPage(name: splash, page: () {
       NotificationBody? data;
       if(Get.parameters['data'] != 'null') {
@@ -542,14 +548,21 @@ class RouteHelper {
     GetPage(name: cart, page: () => getRoute(const CartScreen(fromNav: false))),
     GetPage(name: addAddress, page: () => AddAddressScreen(fromCheckout: Get.parameters['page'] == 'checkout')),
     GetPage(name: editAddress, page: () {
-
       AddressModel? address;
-
-      try{
-        address = AddressModel.fromJson(jsonDecode(utf8.decode(base64Url.decode(Get.parameters['data']!.replaceAll(' ', '+')))));
-      }catch(e){
-        if (kDebugMode) {
-          print(e);
+      if (Get.arguments is AddressModel) {
+        address = Get.arguments as AddressModel;
+      } else {
+        final encoded = Get.parameters['data'];
+        if (encoded != null && encoded.isNotEmpty) {
+          try {
+            address = AddressModel.fromJson(
+              jsonDecode(utf8.decode(base64Url.decode(encoded.replaceAll(' ', '+')))),
+            );
+          } catch (e) {
+            if (kDebugMode) {
+              print(e);
+            }
+          }
         }
       }
       return getRoute(AddAddressScreen(
@@ -610,7 +623,7 @@ class RouteHelper {
     }),
     GetPage(
         name: bookingListScreen,
-        page: ()=> BookingListScreen( isFromMenu: Get.parameters['isFromMenu'] == "true"? true: false),
+        page: () => getRoute(BookingListScreen( isFromMenu: Get.parameters['isFromMenu'] == "true"? true: false)),
         middlewares: [AuthMiddleware(pageTitle: 'my_bookings')]
     ),
     GetPage(name: notLoggedScreen, page: ()=> NotLoggedInScreen(
@@ -619,11 +632,11 @@ class RouteHelper {
     )),
     GetPage(binding: SuggestServiceBinding(),name:suggestService, page:() => getRoute(const SuggestServiceScreen(),)),
     GetPage(binding: SuggestServiceBinding(),name:suggestServiceList, page:() => getRoute(const SuggestedServiceListScreen(),)),
-    GetPage(binding: WalletBinding(), name: myWallet, page:() =>
-        WalletScreen(status: Get.parameters['flag'], token: Get.parameters['token'], fromNotification: Get.parameters['fromNotification'],)),
-    GetPage(binding: LoyaltyPointBinding(),name:loyaltyPoint, page:() => LoyaltyPointScreen(
+    GetPage(binding: WalletBinding(), name: myWallet, page:() => getRoute(
+        WalletScreen(status: Get.parameters['flag'], token: Get.parameters['token'], fromNotification: Get.parameters['fromNotification'],))),
+    GetPage(binding: LoyaltyPointBinding(),name:loyaltyPoint, page:() => getRoute(LoyaltyPointScreen(
       fromNotification: Get.parameters['fromNotification'],
-    )),
+    ))),
     GetPage(
       name: referAndEarn,
       page:() => const ReferAndEarnScreen(),
@@ -710,9 +723,7 @@ class RouteHelper {
     GetPage(
       name: favorite,
       middlewares: [AuthMiddleware(pageTitle: 'my_favorite')],
-      page:() {
-        return const MyFavoriteScreen();
-      },
+      page:() => getRoute(const MyFavoriteScreen()),
     ),
     GetPage(name: maintenance, page: () => const MaintenanceScreen()),
     GetPage(name: updateProfile, page: () {
@@ -787,8 +798,13 @@ class RouteHelper {
 
     var config = Get.find<SplashController>().configModel.content?.maintenanceMode;
     bool maintenance = config?.maintenanceStatus == 1 && config?.selectedMaintenanceSystem?.webApp == 1 && kIsWeb && !AppConstants.avoidMaintenanceMode;
-    return !isRouteExist ?  const NotFoundScreen() : maintenance ? const MaintenanceScreen() : Get.find<LocationController>().getUserAddress() != null ? navigateTo
-        : AccessLocationScreen(fromSignUp: false, route: Get.currentRoute);
+    return !isRouteExist
+        ? const NotFoundScreen()
+        : maintenance
+            ? const MaintenanceScreen()
+            : AddressSessionHelper.hasValidActiveAddress()
+                ? navigateTo
+                : AccessLocationScreen(fromSignUp: false, route: Get.currentRoute);
   }
 
   static ({String path, Map<String, String>? parameters}) parseRedirectRouteToNavigate(String redirectRoute) {

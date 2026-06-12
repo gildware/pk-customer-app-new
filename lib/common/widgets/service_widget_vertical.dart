@@ -155,11 +155,15 @@ class ServiceWidgetVertical extends StatelessWidget {
               ),
             ),
             Positioned.fill(child: RippleButton(onTap: () {
-
+              final slug = service.slug;
+              if (slug == null || slug.isEmpty) {
+                customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
+                return;
+              }
               if(fromPage=="search_page"){
-                Get.toNamed(RouteHelper.getServiceRoute(service.slug!,fromPage:"search_page"),);
+                Get.toNamed(RouteHelper.getServiceRoute(slug,fromPage:"search_page"),);
               }else{
-                Get.toNamed(RouteHelper.getServiceRoute(service.slug!),);
+                Get.toNamed(RouteHelper.getServiceRoute(slug),);
               }
             }))
           ],),

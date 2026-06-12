@@ -50,6 +50,7 @@ class BannerView extends StatelessWidget {
                           link,
                           bannerModel.resourceId ?? '',
                           categoryName: name,
+                          serviceSlug: bannerModel.service?.slug,
                         );
                       },
                       child: Padding(

@@ -158,7 +158,7 @@ class CategoryController extends GetxController implements GetxService {
   Future<void> getCategoryList(bool reload ) async {
 
     if(_categoryList == null || reload){
-      DataSyncHelper.fetchAndSyncData(
+      await DataSyncHelper.fetchAndSyncData(
         fetchFromLocal: ()=> categoryRepo.getCategoryList<CacheResponseData>( source: DataSourceEnum.local),
         fetchFromClient: ()=> categoryRepo.getCategoryList(source: DataSourceEnum.client),
         onResponse: (data, source) {
@@ -232,4 +232,13 @@ class CategoryController extends GetxController implements GetxService {
     update();
   }
 
+  void clearSessionData({bool notify = true}) {
+    _categoryList = null;
+    _curatedCategoriesBySection.clear();
+    _homeSubCategoryList = null;
+    _subCategoryList = null;
+    _searchProductList = [];
+    _campaignBasedCategoryList = null;
+    if (notify) update();
+  }
 }

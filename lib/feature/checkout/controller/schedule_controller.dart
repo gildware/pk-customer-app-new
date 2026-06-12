@@ -111,12 +111,17 @@ class ScheduleController extends GetxController implements GetxService{
   }
 
   DateTime? getSelectedDateTime(){
-     return _selectedScheduleType == ScheduleType.schedule &&  scheduleTime !=null ? DateFormat('yyyy-MM-dd HH:mm:ss').parse(scheduleTime!) : null;
+     if (_selectedScheduleType != ScheduleType.schedule || scheduleTime == null) {
+       return null;
+     }
+     return DateConverter.tryParseScheduleDateTime(scheduleTime!);
   }
 
   String? checkValidityOfTimeRestriction( AdvanceBooking advanceBooking){
+    final selected = DateConverter.tryParseScheduleDateTime('$selectedDate $selectedTime');
+    if (selected == null) return 'select_schedule_time'.tr;
 
-    Duration  difference = DateConverter.dateTimeStringToDate("$selectedDate $selectedTime").difference(DateTime.now());
+    Duration  difference = selected.difference(DateTime.now());
 
     if(advanceBooking.advancedBookingRestrictionType == "day" && difference.inDays < advanceBooking.advancedBookingRestrictionValue!){
       return "${'you_can_not_select_schedule_before'.tr} ${DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.now().add(Duration(days: advanceBooking.advancedBookingRestrictionValue!)))}";

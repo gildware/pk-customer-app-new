@@ -44,14 +44,12 @@ class MenuButton extends StatelessWidget {
                   icon: Images.logoutIcon,
                   title: 'are_you_sure_to_logout'.tr,
                   description: "if_you_logged_out_your_cart_will_be_removed".tr,
-                  onYesPressed: () {
-                    Get.find<AuthController>().clearSharedData();
-                Get.find<AuthController>().logOut();
-                Get.find<AuthController>().googleLogout();
-                Get.find<AuthController>().signOutWithFacebook();
-                Get.find<LocationController>().updateSelectedAddress(null);
-                Get.offAllNamed(RouteHelper.getInitialRoute());
-                // customSnackBar("logged_out_successfully".tr, type : ToasterMessageType.success);
+                  onYesPressed: () async {
+                    await Get.find<AuthController>().logOut();
+                    await Get.find<AuthController>().clearSharedData();
+                    await Get.find<AuthController>().googleLogout();
+                    await Get.find<AuthController>().signOutWithFacebook();
+                    Get.offAllNamed(RouteHelper.getInitialRoute());
               }), useSafeArea: false);
             }else {
               Get.toNamed(RouteHelper.getSignInRoute());

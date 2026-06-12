@@ -46,7 +46,11 @@ class CartSummery extends StatelessWidget {
                       itemBuilder: (context,index){
                         double totalCost = (cartList.elementAt(index).serviceCost.toDouble() * cartList.elementAt(index).quantity) * scheduleDaysCount;
                         return Column( mainAxisAlignment: MainAxisAlignment.start,  crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          RowText(title: cartList.elementAt(index).service!.name!, quantity: cartList.elementAt(index).quantity, price: totalCost),
+                          RowText(
+                            title: cartList.elementAt(index).service?.name ?? 'service'.tr,
+                            quantity: cartList.elementAt(index).quantity,
+                            price: totalCost,
+                          ),
                           SizedBox( width:Get.width / 2.5,
                             child: Text( cartList.elementAt(index).variantKey,
                               style: robotoMedium.copyWith( color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .4), fontSize: Dimensions.fontSizeSmall),

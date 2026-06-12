@@ -50,8 +50,8 @@ class AddressModel {
     address = json['address'];
     addressType = json['address_type'];
     addressLabel = json['address_label'];
-    latitude = json['lat'];
-    longitude = json['lon'];
+    latitude = json['lat']?.toString() ?? json['latitude']?.toString();
+    longitude = json['lon']?.toString() ?? json['longitude']?.toString();
     city = json['city'];
     zipCode = json['zip_code'];
     country = json['country'];

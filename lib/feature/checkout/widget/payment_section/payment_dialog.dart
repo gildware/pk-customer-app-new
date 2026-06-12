@@ -200,7 +200,11 @@ class _PaymentDialogState extends State<PaymentDialog> {
     } else {
       Get.back();
       printLog("url_with_digital_payment_mobile:$url");
-      await Get.to(()=> PaymentScreen(url:url, fromPage: "switch-payment-method",));
+      await DigitalPaymentLauncher.start(
+        paymentUrl: url,
+        fromPage: 'switch-payment-method',
+        gateway: paymentMethod?.gateway,
+      );
       Get.find<BookingDetailsController>().getBookingDetails(bookingId: bookingId);
     }
   }

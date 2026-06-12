@@ -61,8 +61,11 @@ class _ServiceNotAvailableDialogState extends State<ServiceNotAvailableDialog> {
                   }
                 )),
                 const SizedBox(width: Dimensions.paddingSizeSmall),
-                Expanded(child: CustomButton(buttonText: 'continue'.tr,
-                  onPressed: widget.onBackPressed,
+                Expanded(child: CustomButton(buttonText: 'change_address'.tr,
+                  onPressed: () {
+                    Get.back();
+                    AddressSessionHelper.openAddressPicker(mandatory: true);
+                  },
                 )),
               ]) : const SizedBox(),
               widget.showButton ? const SizedBox(height: Dimensions.paddingSizeLarge) : const SizedBox(),

@@ -1,4 +1,5 @@
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
@@ -70,9 +71,13 @@ class _AccessLocationScreenState extends State<AccessLocationScreen> {
                                     fromAddress: false,
                                     onTap: () async {
                                       Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                      AddressModel address = locationController.addressList![index];
-                                      await locationController.setAddressIndex(address,fromAddressScreen: false);
-                                      locationController.saveAddressAndNavigate(address, widget.fromSignUp!, widget.route, widget.route != null, true);
+                                      final address = locationController.addressList![index];
+                                      await AddressSessionHelper.applySelectedAddress(
+                                        address,
+                                        redirectRoute: widget.route ?? RouteHelper.getMainRoute('home'),
+                                        canRoute: widget.route != null,
+                                      );
+                                      if (Get.isDialogOpen == true) Get.back();
                                     },
                                     selectedUserAddressId: locationController.getUserAddress()?.id,
                                   )));
@@ -162,11 +167,14 @@ class BottomButton extends StatelessWidget {
             ZoneResponseModel response = await locationController.getZone(address.latitude!, address.longitude!, false);
 
             if(response.isSuccess) {
-              locationController.saveAddressAndNavigate(address, fromSignUp, route != null ? route! : '', route != null, true);
+              await AddressSessionHelper.applySelectedAddress(
+                address,
+                redirectRoute: route ?? RouteHelper.getMainRoute('home'),
+                canRoute: route != null,
+              );
             }else {
               Get.back();
-              //Get.toNamed(RouteHelper.getPickMapRoute(route == null ? RouteHelper.accessLocation : route!, route != null, 'false', null, previousAddress));
-              customSnackBar(response.message);
+              Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
             }
           });
         },

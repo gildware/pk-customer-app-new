@@ -1,7 +1,7 @@
 name: demandium
 description: A new Flutter application.
 publish_to: 'none' #
-version: 1.0.0+0
+version: 3.7.2+372
 
 environment:
   sdk: ^3.9.2
@@ -43,6 +43,7 @@ dependencies:
   flutter_local_notifications: ^21.0.0
   universal_html: ^2.3.0
   flutter_inappwebview: ^6.1.5
+  razorpay_flutter: ^1.4.0
   timeago: ^3.7.1
   pdf: ^3.12.0
   diffutil_dart: ^4.0.1
@@ -84,6 +85,7 @@ dependencies:
   facebook_app_events: ^0.26.0
   tiktok_events_sdk: ^1.1.3
   dotted_line: ^3.2.3
+  firebase_crashlytics: ^5.2.3
 
 
 
@@ -94,6 +96,16 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.30.0
   build_runner: ^2.10.4
+  change_package_name: ^1.1.1
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "user-app.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "user-app.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

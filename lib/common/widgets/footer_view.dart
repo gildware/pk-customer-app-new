@@ -37,7 +37,7 @@ class _FooterViewState extends State<FooterView> {
       List<SocialMedia>? socialMediaList = config.content?.socialMedia;
       final activeSocialMediaList = socialMediaList?.where((item) => item.isActive ?? false).toList() ?? [];
 
-      bool pickedAddress = Get.find<LocationController>().getUserAddress() != null;
+      bool pickedAddress = AddressSessionHelper.hasValidActiveAddress();
       return Column(children: [
 
         Stack(alignment: Alignment.center, children: [

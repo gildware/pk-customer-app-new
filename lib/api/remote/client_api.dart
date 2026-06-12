@@ -22,11 +22,14 @@ class ApiClient extends GetxService {
     printLog('Token: $token');
     AddressModel? addressModel;
     try {
-      addressModel = AddressModel.fromJson(jsonDecode(sharedPreferences.getString(AppConstants.userAddress)!));
-      printLog( addressModel.toJson());
-    }catch(e) {
+      final addressJson = sharedPreferences.getString(AppConstants.userAddress);
+      if (addressJson != null && addressJson.isNotEmpty) {
+        addressModel = AddressModel.fromJson(jsonDecode(addressJson));
+        printLog(addressModel.toJson());
+      }
+    } catch (e) {
       if (kDebugMode) {
-        print('');
+        print(e);
       }
     }
 
@@ -41,9 +44,11 @@ class ApiClient extends GetxService {
       'Content-Type': 'application/json; charset=UTF-8',
       AppConstants.zoneId: zoneIDs ?? '',
       AppConstants.localizationKey: languageCode ?? AppConstants.languages[0].languageCode!,
-      'Authorization': 'Bearer $token',
       AppConstants.guestId : guestID ?? "",
     };
+    if (token != null && token.isNotEmpty && token != 'null') {
+      _mainHeaders['Authorization'] = 'Bearer $token';
+    }
   }
 
   Future<Response> getData(String uri, {Map<String, dynamic>? query, Map<String, String>? headers}) async {
@@ -67,12 +72,12 @@ class ApiClient extends GetxService {
     printLog('====> body : ${body.toString()}');
 
 
-    http.Response response = await http.post(
-      Uri.parse(appBaseUrl! + uri!),
-      body: jsonEncode(body),
-      headers: headers ?? _mainHeaders,
-    ).timeout(Duration(seconds: timeoutSeconds ?? timeoutInSeconds));
     try {
+      http.Response response = await http.post(
+        Uri.parse(appBaseUrl! + uri!),
+        body: jsonEncode(body),
+        headers: headers ?? _mainHeaders,
+      ).timeout(Duration(seconds: timeoutSeconds ?? timeoutInSeconds));
       return handleResponse(response, uri);
     } catch (e) {
       return Response(statusCode: 1, statusText: noInternetMessage);

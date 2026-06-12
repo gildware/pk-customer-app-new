@@ -91,7 +91,7 @@ class ServiceController extends GetxController implements GetxService {
     super.onInit();
     if(Get.find<AuthController>().isLoggedIn()) {
      await Get.find<UserController>().getUserInfo();
-
+     await Get.find<LocationController>().refreshSavedAddressZone();
      await Get.find<CartController>().getCartListFromServer();
     }
   }
@@ -139,7 +139,7 @@ class ServiceController extends GetxController implements GetxService {
 
       if(offset ==1){
 
-        DataSyncHelper.fetchAndSyncData(
+        await DataSyncHelper.fetchAndSyncData(
           fetchFromLocal: ()=> serviceRepo.getPopularServiceList<CacheResponseData>( source: DataSourceEnum.local),
           fetchFromClient: ()=> serviceRepo.getPopularServiceList(source: DataSourceEnum.client),
           onResponse: (data, source) {
@@ -175,7 +175,7 @@ class ServiceController extends GetxController implements GetxService {
 
       if(offset == 1){
 
-        DataSyncHelper.fetchAndSyncData(
+        await DataSyncHelper.fetchAndSyncData(
           fetchFromLocal: ()=> serviceRepo.getTrendingServiceList<CacheResponseData>( source: DataSourceEnum.local),
           fetchFromClient: ()=> serviceRepo.getTrendingServiceList(source: DataSourceEnum.client),
           onResponse: (data, source) {
@@ -212,7 +212,7 @@ class ServiceController extends GetxController implements GetxService {
    if(offset != 1 || _recommendedServiceList == null || reload){
 
      if(offset == 1){
-       DataSyncHelper.fetchAndSyncData(
+       await DataSyncHelper.fetchAndSyncData(
          fetchFromLocal: ()=> serviceRepo.getRecommendedServiceList<CacheResponseData>( source: DataSourceEnum.local),
          fetchFromClient: ()=> serviceRepo.getRecommendedServiceList(source: DataSourceEnum.client),
          onResponse: (data, source) {
@@ -245,7 +245,7 @@ class ServiceController extends GetxController implements GetxService {
     if(offset != 1 || _recentlyViewServiceList == null || reload ){
 
       if(offset == 1){
-        DataSyncHelper.fetchAndSyncData(
+        await DataSyncHelper.fetchAndSyncData(
           fetchFromLocal: ()=> serviceRepo.getRecentlyViewedServiceList<CacheResponseData>( source: DataSourceEnum.local),
           fetchFromClient: ()=> serviceRepo.getRecentlyViewedServiceList(source: DataSourceEnum.client),
           onResponse: (data, source) {
@@ -315,7 +315,7 @@ class ServiceController extends GetxController implements GetxService {
         _featheredCategoryContent = null;
       }
 
-      DataSyncHelper.fetchAndSyncData(
+      await DataSyncHelper.fetchAndSyncData(
         fetchFromLocal: ()=> serviceRepo.getFeatheredCategoryServiceList<CacheResponseData>( source: DataSourceEnum.local),
         fetchFromClient: ()=> serviceRepo.getFeatheredCategoryServiceList(source: DataSourceEnum.client),
         onResponse: (data, source) {
@@ -599,6 +599,27 @@ class ServiceController extends GetxController implements GetxService {
     update();
   }
 
-
-
+  void clearSessionData({bool notify = true}) {
+    _serviceContent = null;
+    _offerBasedServiceContent = null;
+    _popularBasedServiceContent = null;
+    _recommendedServiceContent = null;
+    _trendingServiceContent = null;
+    _recentlyViewServiceContent = null;
+    _subcategoryBasedServiceContent = null;
+    _featheredCategoryContent = null;
+    _popularServiceList = null;
+    _curatedServicesBySection.clear();
+    _trendingServiceList = null;
+    _recentlyViewServiceList = null;
+    _recommendedServiceList = null;
+    _recommendedSearchList = null;
+    _subCategoryBasedServiceList = null;
+    _campaignBasedServiceList = null;
+    _offerBasedServiceList = null;
+    _allService = null;
+    _categoryList = null;
+    _curatedFeatheredBySection.clear();
+    if (notify) update();
+  }
 }

@@ -35,7 +35,8 @@ class WebBannerView extends GetView<BannerController> {
                             id,
                             link,
                             bannerModel.resourceId != null ? bannerModel.resourceId! : '',
-                            categoryName: name
+                            categoryName: name,
+                            serviceSlug: bannerModel.service?.slug,
                         );
                       },
                       child: ClipRRect(
@@ -74,7 +75,8 @@ class WebBannerView extends GetView<BannerController> {
                                               id,
                                               link,
                                               bannerModel.resourceId != null ? bannerModel.resourceId! : '',
-                                              categoryName: name);},
+                                              categoryName: name,
+                                              serviceSlug: bannerModel.service?.slug);},
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                                           child: CustomImage(
@@ -99,7 +101,8 @@ class WebBannerView extends GetView<BannerController> {
                                             id,
                                             link,
                                             bannerModel.resourceId != null ? bannerModel.resourceId! : '',
-                                            categoryName: name);},
+                                            categoryName: name,
+                                            serviceSlug: bannerModel.service?.slug);},
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                                         child: CustomImage(
@@ -120,7 +123,8 @@ class WebBannerView extends GetView<BannerController> {
                                             id,
                                             link,
                                             bannerModel.resourceId != null ? bannerModel.resourceId! : '',
-                                            categoryName: name);},
+                                            categoryName: name,
+                                            serviceSlug: bannerModel.service?.slug);},
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                                         child: CustomImage(

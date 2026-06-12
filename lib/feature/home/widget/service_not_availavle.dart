@@ -1,3 +1,4 @@
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -27,18 +28,25 @@ class ServiceNotAvailableScreen extends StatelessWidget {
           const SizedBox(height: Dimensions.paddingSizeLarge),
 
           fromPage != "search_page"?
-          InkWell(
-            onTap: () {
-              Get.toNamed(RouteHelper.getServiceArea());
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(Dimensions.radiusExtraLarge),
-                border: Border.all(color: Theme.of(context).colorScheme.primary),
+          Column(
+            children: [
+              CustomButton(
+                buttonText: 'change_address'.tr,
+                onPressed: () => AddressSessionHelper.openAddressPicker(mandatory: true),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeExtraSmall),
-              child: Text("view_available_areas".tr, style: robotoMedium.copyWith( fontSize: Dimensions.fontSizeExtraLarge, color: Theme.of(context).colorScheme.primary)),
-            ),
+              const SizedBox(height: Dimensions.paddingSizeDefault),
+              InkWell(
+                onTap: () => Get.toNamed(RouteHelper.getServiceArea()),
+                child: Text(
+                  "view_available_areas".tr,
+                  style: robotoMedium.copyWith(
+                    fontSize: Dimensions.fontSizeDefault,
+                    color: Theme.of(context).colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ) : const SizedBox(),
 
         ]

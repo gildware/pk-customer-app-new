@@ -21,7 +21,17 @@ class _AllServiceViewState extends State<AllServiceView> {
   void initState() {
     super.initState();
     if(Get.find<LocationController>().getUserAddress() !=null){
-      availableServiceCount = Get.find<LocationController>().getUserAddress()!.availableServiceCountInZone!;
+      availableServiceCount = Get.find<LocationController>().getUserAddress()?.availableServiceCountInZone ?? 0;
+    }
+    _syncZone();
+  }
+
+  Future<void> _syncZone() async {
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    if (!mounted) return;
+    final count = Get.find<LocationController>().getUserAddress()?.availableServiceCountInZone;
+    if (count != null) {
+      setState(() => availableServiceCount = count);
     }
   }
 

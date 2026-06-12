@@ -1,9 +1,13 @@
+import 'package:demandium/helper/silent_api_context.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
 
 class ApiChecker {
   static void checkApi(Response response, {bool showDefaultToaster = true}) {
+    if (!showDefaultToaster || (SilentApiContext.isActive && response.statusCode != 401)) {
+      return;
+    }
 
     if(response.statusCode == 401) {
       Get.find<AuthController>().clearSharedData(response: response);

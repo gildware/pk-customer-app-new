@@ -117,11 +117,11 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
              title: 'are_you_sure_to_logout'.tr,
              description: "if_you_logged_out_your_cart_will_be_removed".tr,
              yesButtonColor: Theme.of(Get.context!).colorScheme.primary,
-             onYesPressed: () {
-           Get.find<AuthController>().logOut();
-           Get.find<AuthController>().clearSharedData();
-           Get.find<AuthController>().googleLogout();
-           Get.find<AuthController>().signOutWithFacebook();
+             onYesPressed: () async {
+           await Get.find<AuthController>().logOut();
+           await Get.find<AuthController>().clearSharedData();
+           await Get.find<AuthController>().googleLogout();
+           await Get.find<AuthController>().signOutWithFacebook();
            Get.offAllNamed(RouteHelper.getInitialRoute());
            customSnackBar("logged_out_successfully".tr, type : ToasterMessageType.success);
          }), useSafeArea: false);

@@ -26,9 +26,13 @@ class CouponController extends GetxController implements GetxService{
   CouponTabState get couponTabCurrentState => __couponTabCurrentState;
 
   Future<void> getCouponList({bool reload = true}) async {
-    if(reload){
+    if (reload){
       _activeCouponList = null;
       _expiredCouponList = null;
+    }
+
+    if (Get.isRegistered<LocationController>()) {
+      await Get.find<LocationController>().refreshSavedAddressZone();
     }
 
     Response response = await couponRepo.getCouponList();

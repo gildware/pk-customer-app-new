@@ -258,8 +258,10 @@ class ProviderBookingController extends GetxController implements GetxService {
   }
 
   void _calculateDistance (){
+    final address = Get.find<LocationController>().getUserAddress();
+    if (address == null) return;
     _providerList?.forEach((element) {
-      double distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(Get.find<LocationController>().getUserAddress()!, element);
+      double distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(address, element);
       element.distance = distance;
     });
   }
@@ -569,7 +571,14 @@ class ProviderBookingController extends GetxController implements GetxService {
     }
   }
 
-
-
-
+  void clearSessionData({bool notify = true}) {
+    _providerModel = null;
+    _providerDetailsContent = null;
+    categoryItemList = [];
+    _providerList = null;
+    _curatedProvidersBySection.clear();
+    _reviewList = null;
+    markers = HashSet<Marker>();
+    if (notify) update();
+  }
 }

@@ -486,6 +486,14 @@ class _PreviewStep extends StatelessWidget {
   final VoidCallback onComplete;
   const _PreviewStep({required this.service, required this.onComplete});
 
+  String _formatPreviewSchedule(String schedule) {
+    final parsed = DateConverter.tryParseScheduleDateTime(schedule);
+    if (parsed != null) {
+      return DateConverter.dateMonthYearTimeTwentyFourFormat(parsed);
+    }
+    return schedule;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<CartController>(builder: (cartController) {
@@ -511,7 +519,7 @@ class _PreviewStep extends StatelessWidget {
           _PreviewRow(
             icon: Icons.calendar_today,
             label: schedule != null
-                ? DateConverter.dateMonthYearTimeTwentyFourFormat(DateConverter.dateTimeStringToDate(schedule))
+                ? _formatPreviewSchedule(schedule)
                 : '',
           ),
           _PreviewRow(

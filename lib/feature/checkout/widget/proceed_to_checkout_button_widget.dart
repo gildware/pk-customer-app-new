@@ -27,6 +27,11 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
         );
         final bool requiresUpfront = CheckoutHelper.requiresBookingUpfrontPayment() && !isRepeatBooking;
         String? schedule = scheduleController.scheduleTime;
+        if (cartController.hasCartServiceInfo && cartController.cartList.isNotEmpty) {
+          schedule = CartBookingDisplayHelper.resolveRawScheduleForCartItem(cartController.cartList.first)
+              ?? cartController.cartServiceInfo?.serviceSchedule
+              ?? schedule;
+        }
 
         ConfigModel configModel = Get.find<SplashController>().configModel;
         bool isLoggedIn  = Get.find<AuthController>().isLoggedIn();
@@ -85,14 +90,18 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                       Future.delayed(const Duration(milliseconds: 50)).then((value){
 
                         Future.delayed(const Duration(milliseconds: 500)).then((value){
-                          showModalBottomSheet(
-                            useRootNavigator: true,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            context: Get.context!, builder: (context) =>  AvailableProviderWidget(
-                            subcategoryId:Get.find<CartController>().cartList.first.subCategoryId,
-                            showUnavailableError: true,
-                          ),);
+                          SafeContext.whenAvailable((sheetContext) {
+                            showModalBottomSheet(
+                              useRootNavigator: true,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              context: sheetContext,
+                              builder: (context) => AvailableProviderWidget(
+                                subcategoryId:Get.find<CartController>().cartList.first.subCategoryId,
+                                showUnavailableError: true,
+                              ),
+                            );
+                          });
                         });
 
                         customSnackBar("your_selected_provider_is_unavailable_right_now".tr,duration: 3, type: ToasterMessageType.info);
@@ -132,6 +141,9 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                       }
                       else if(scheduleController.selectedServiceType == ServiceType.repeat && scheduleController.selectedRepeatBookingType == RepeatBookingType.weekly && scheduleController.pickedWeeklyRepeatTime == null){
                         customSnackBar("select_time_hint".tr,type: ToasterMessageType.info);
+                      }
+                      else if(scheduleController.selectedServiceType == ServiceType.repeat && scheduleController.selectedRepeatBookingType == RepeatBookingType.weekly && (scheduleController.pickedWeeklyRepeatBookingDateRange == null || !scheduleController.isFinalRepeatWeeklyBooking)){
+                        customSnackBar("weekly_select_time_and_date_hint".tr,type: ToasterMessageType.info);
                       }
                       else if(scheduleController.selectedServiceType == ServiceType.repeat && scheduleController.selectedRepeatBookingType == RepeatBookingType.custom && scheduleController.pickedCustomRepeatBookingDateTimeList.isEmpty){
                         customSnackBar("custom_select_time_and_date_hint".tr,type: ToasterMessageType.info);
@@ -179,6 +191,11 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                     }
                     else if(checkoutController.currentPageState == PageState.payment || PageState.payment.name == widget.pageState){
 
+                      if ((schedule == null || schedule.isEmpty) && !isRepeatBooking) {
+                        customSnackBar("select_your_preferable_booking_time".tr, type: ToasterMessageType.info);
+                        return;
+                      }
+
                       final String? paymentAmountType = showPaymentAmountOptions
                           ? (checkoutController.paymentAmountType ?? 'full')
                           : null;
@@ -210,7 +227,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                       else if(checkoutController.selectedPaymentMethod == PaymentMethodName.cos && !requiresUpfront){
                         checkoutController.placeBookingRequest(
                           paymentMethod: "cash_after_service",
-                          schedule: schedule!,
+                          schedule: schedule,
                           isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
                           address: addressModel!,
                           paymentAmountType: paymentAmountType,
@@ -219,7 +236,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                       else if(checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
                         checkoutController.placeBookingRequest(
                             paymentMethod: "wallet_payment",
-                            schedule: schedule!,
+                            schedule: schedule,
                             isPartial:  isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
                             address: addressModel!,
                             paymentAmountType: paymentAmountType,
@@ -287,7 +304,11 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
       html.window.open(url, "_self");
     } else {
       printLog("url_with_digital_payment_mobile:$url");
-      Get.to(()=> PaymentScreen(url:url, fromPage: "checkout",));
+      DigitalPaymentLauncher.start(
+        paymentUrl: url,
+        fromPage: 'checkout',
+        gateway: paymentMethod?.gateway,
+      );
     }
   }
 }

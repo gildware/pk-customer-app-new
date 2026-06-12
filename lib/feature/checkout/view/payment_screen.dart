@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
@@ -8,247 +7,191 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
-
 class PaymentScreen extends StatefulWidget {
   final String url;
   final String? fromPage;
-  const PaymentScreen({super.key, required this.url,this.fromPage});
+  const PaymentScreen({super.key, required this.url, this.fromPage});
 
   @override
   PaymentScreenState createState() => PaymentScreenState();
 }
 
 class PaymentScreenState extends State<PaymentScreen> {
-  String? selectedUrl;
-  double value = 0.0;
-  final bool _isLoading = true;
-  PullToRefreshController? pullToRefreshController;
-  late MyInAppBrowser browser;
+  final GlobalKey _webViewKey = GlobalKey();
+  bool _isLoading = true;
+  bool _canRedirect = true;
+  bool _paymentCompleted = false;
+
+  static final InAppWebViewSettings _webViewSettings = InAppWebViewSettings(
+    javaScriptEnabled: true,
+    domStorageEnabled: true,
+    useShouldOverrideUrlLoading: true,
+    useOnLoadResource: true,
+    supportMultipleWindows: true,
+    javaScriptCanOpenWindowsAutomatically: true,
+    mediaPlaybackRequiresUserGesture: false,
+    allowsInlineMediaPlayback: true,
+    isInspectable: kDebugMode,
+  );
 
   @override
   void initState() {
     super.initState();
-    selectedUrl = widget.url;
-    _initData(widget.fromPage ?? "" );
-
-
+    _initWebView();
     log(widget.url);
   }
 
-  void _initData(String fromPage) async {
-    browser = MyInAppBrowser(fromPage: fromPage);
-
-    if(GetPlatform.isAndroid){
+  Future<void> _initWebView() async {
+    if (GetPlatform.isAndroid) {
       await InAppWebViewController.setWebContentsDebuggingEnabled(kDebugMode);
 
-    bool swAvailable = await WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE);
-    bool swInterceptAvailable = await WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST);
+      final swAvailable = await WebViewFeature.isFeatureSupported(
+        WebViewFeature.SERVICE_WORKER_BASIC_USAGE,
+      );
+      final swInterceptAvailable = await WebViewFeature.isFeatureSupported(
+        WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST,
+      );
 
       if (swAvailable && swInterceptAvailable) {
-        ServiceWorkerController serviceWorkerController = ServiceWorkerController.instance();
-        await serviceWorkerController.setServiceWorkerClient(ServiceWorkerClient(
-          shouldInterceptRequest: (request) async {
-            if (kDebugMode) {
-              print(request);
-            }
-            return null;
-          },
-        ));
+        final serviceWorkerController = ServiceWorkerController.instance();
+        await serviceWorkerController.setServiceWorkerClient(
+          ServiceWorkerClient(
+            shouldInterceptRequest: (request) async {
+              if (kDebugMode) {
+                print(request);
+              }
+              return null;
+            },
+          ),
+        );
       }
     }
+  }
 
-    await browser.openUrlRequest(
-      urlRequest: URLRequest(url: WebUri(selectedUrl!)),
-      settings: InAppBrowserClassSettings(
-        webViewSettings: InAppWebViewSettings(useShouldOverrideUrlLoading: true, useOnLoadResource: true),
-        browserSettings: InAppBrowserSettings(hideUrlBar: true, hideToolbarTop: GetPlatform.isAndroid),
-      ),
+  void _onUserExit() {
+    if (_paymentCompleted) {
+      Get.back();
+      return;
+    }
+
+    if (!_canRedirect) {
+      Get.back();
+      return;
+    }
+
+    SafeContext.whenAvailable((context) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return CustomPopWidget(
+            child: AlertDialog(
+              contentPadding: EdgeInsets.all(Dimensions.paddingSizeSmall),
+              content: PaymentFailedDialog(
+                isAddFound: widget.fromPage == 'add-fund',
+              ),
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  void _pageRedirect(String? url) {
+    if (url == null || !_canRedirect) {
+      return;
+    }
+
+    printLog('url:$url');
+
+    final isSuccess = url.contains('success') &&
+        url.contains(AppConstants.baseUrl) &&
+        url.contains('flag');
+    final isFailed = url.contains('fail') &&
+        url.contains(AppConstants.baseUrl) &&
+        url.contains('flag');
+    final isCancel = url.contains('cancel') &&
+        url.contains(AppConstants.baseUrl) &&
+        url.contains('flag');
+
+    if (!isSuccess && !isFailed && !isCancel) {
+      return;
+    }
+
+    _canRedirect = false;
+    _paymentCompleted = true;
+
+    PaymentRedirectHandler.handleRedirectUrl(
+      fromPage: widget.fromPage ?? '',
+      url: url,
+      closeCurrentRoute: true,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      appBar: CustomAppBar(title: 'payment'.tr,),
-      body: Center(
-        child: Stack(
-          children: [
-            _isLoading ? Center(
-              child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary)),
-            ) : const SizedBox.shrink(),
-          ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _onUserExit();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: CustomAppBar(
+          title: 'payment'.tr,
+          onBackPressed: _onUserExit,
+        ),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              InAppWebView(
+                key: _webViewKey,
+                initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+                initialSettings: _webViewSettings,
+                onLoadStart: (controller, url) {
+                  setState(() => _isLoading = true);
+                  _pageRedirect(url?.toString());
+                },
+                onLoadStop: (controller, url) {
+                  setState(() => _isLoading = false);
+                  _pageRedirect(url?.toString());
+                },
+                onReceivedError: (controller, request, error) {
+                  setState(() => _isLoading = false);
+                  if (kDebugMode) {
+                    print("Can't load [${request.url}] Error: ${error.description}");
+                  }
+                },
+                onProgressChanged: (controller, progress) {
+                  if (progress == 100) {
+                    setState(() => _isLoading = false);
+                  }
+                },
+                shouldOverrideUrlLoading: (controller, navigationAction) async {
+                  return NavigationActionPolicy.ALLOW;
+                },
+                onCreateWindow: (controller, createWindowAction) async {
+                  final url = createWindowAction.request.url;
+                  if (url != null) {
+                    await controller.loadUrl(urlRequest: URLRequest(url: url));
+                  }
+                  return true;
+                },
+              ),
+              if (_isLoading)
+                Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-class MyInAppBrowser extends InAppBrowser {
-  final String fromPage;
-
-  MyInAppBrowser({required  this.fromPage});
-
-  bool _canRedirect = true;
-
-  @override
-  Future onBrowserCreated() async {
-    if (kDebugMode) {
-      print("\n\nBrowser Created!\n\n");
-    }
-  }
-
-  @override
-  Future onLoadStart(url) async {
-    if (kDebugMode) {
-      print("\n\nStarted: $url\n\n");
-    }
-    _pageRedirect(url.toString());
-  }
-
-  @override
-  Future onLoadStop(url) async {
-    pullToRefreshController?.endRefreshing();
-    if (kDebugMode) {
-      print("\n\nStopped: $url\n\n");
-    }
-    _pageRedirect(url.toString());
-  }
-
-  @override
-  void onLoadError(url, code, message) {
-    pullToRefreshController?.endRefreshing();
-    if (kDebugMode) {
-      print("Can't load [$url] Error: $message");
-    }
-  }
-
-  @override
-  void onProgressChanged(progress) {
-    if (progress == 100) {
-      pullToRefreshController?.endRefreshing();
-    }
-    if (kDebugMode) {
-      print("Progress: $progress");
-    }
-  }
-
-  @override
-  void onExit() {
-    if(_canRedirect) {
-      showDialog(
-        context: Get.context!,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return CustomPopWidget(
-            child: AlertDialog(
-              contentPadding: EdgeInsets.all(Dimensions.paddingSizeSmall),
-              content: PaymentFailedDialog(isAddFound: fromPage == 'add-fund'),
-            ),
-          );
-        },
-      );
-
-    }
-
-    if (kDebugMode) {
-      print("\n\nBrowser closed!\n\n");
-    }
-  }
-
-  @override
-  Future<NavigationActionPolicy> shouldOverrideUrlLoading(navigationAction) async {
-    if (kDebugMode) {
-      print("\n\nOverride ${navigationAction.request.url}\n\n");
-    }
-    return NavigationActionPolicy.ALLOW;
-  }
-
-  @override
-  void onLoadResource(resource) {
-  }
-
-  @override
-  void onConsoleMessage(consoleMessage) {
-    if (kDebugMode) {
-      print("""
-    console output:
-      message: ${consoleMessage.message}
-      messageLevel: ${consoleMessage.messageLevel.toValue()}
-   """);
-    }
-  }
-
-  void _pageRedirect(String url) async {
-    if (kDebugMode) {
-      print("inside_page_redirect");
-    }
-    printLog("url:$url");
-    if(_canRedirect) {
-      bool isSuccess = url.contains('success') && url.contains(AppConstants.baseUrl) && url.contains("flag");
-      bool isFailed = url.contains('fail') && url.contains(AppConstants.baseUrl) && url.contains("flag");
-      bool isCancel = url.contains('cancel') && url.contains(AppConstants.baseUrl) && url.contains("flag");
-
-
-      if (kDebugMode) {
-        print('This_called_1::::$url');
-      }
-      if (isSuccess || isFailed || isCancel) {
-        _canRedirect = false;
-        close();
-      }
-
-      if (isSuccess) {
-        if(fromPage == "checkout"){
-
-          String token = StringParser.parseString(url, "token");
-          Get.find<CartController>().getCartListFromServer();
-          Get.back();
-
-          Get.offNamed(RouteHelper.getCheckoutRoute(RouteHelper.checkout,'complete','null',token: token));
-        }else if(fromPage=="custom-checkout"){
-          Get.offNamed(RouteHelper.getOrderSuccessRoute('success'));
-        } else if(fromPage == "add-fund"){
-          Get.back();
-          String uuid = const Uuid().v1();
-          Get.offNamed(RouteHelper.getMyWalletScreen(flag : 'success', token: uuid));
-        }else if(fromPage == "switch-payment-method"){
-          Get.back();
-          customSnackBar('your_payment_confirm_successfully'.tr, toasterTitle: 'payment_status'.tr, type: ToasterMessageType.success, duration: 4);
-        }
-        else if(fromPage == "repeat-booking"){
-          Get.back();
-
-          String? subBookingId;
-          String? token = StringParser.parseString(url, "token");
-
-          try{
-            subBookingId = StringParser.parseString(utf8.decode(base64Url.decode(token)), "booking_repeat_id");
-          }catch(e){
-            if (kDebugMode) {
-              print(e);
-            }
-          }
-          if(subBookingId !=null){
-            Get.find<BookingDetailsController>().getSubBookingDetails(bookingId: subBookingId);
-          }
-          customSnackBar("paid_successfully".tr, type: ToasterMessageType.success);
-        }
-      } else if (isFailed || isCancel) {
-        if(fromPage=="add-fund"){
-          Get.offNamed(RouteHelper.getMyWalletScreen(flag : 'failed'));
-        }else if(fromPage == "repeat-booking"){
-          Get.back();
-          customSnackBar("payment_failed_try_again".tr, type: ToasterMessageType.error, showDefaultSnackBar: false);
-        }else{
-          Get.offNamed(RouteHelper.getOrderSuccessRoute('fail'));
-        }
-      }
-    }
-  }
-}
-
-
-
-

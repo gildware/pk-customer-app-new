@@ -28,8 +28,11 @@ class LocalizationController extends GetxController implements GetxService {
     }
     AddressModel? addressModel;
     try {
-      addressModel = AddressModel.fromJson(jsonDecode(sharedPreferences.getString(AppConstants.userAddress)!));
-    }catch(e) {
+      final addressJson = sharedPreferences.getString(AppConstants.userAddress);
+      if (addressJson != null && addressJson.isNotEmpty) {
+        addressModel = AddressModel.fromJson(jsonDecode(addressJson));
+      }
+    } catch (e) {
       if (kDebugMode) {
         print(e);
       }
@@ -40,7 +43,7 @@ class LocalizationController extends GetxController implements GetxService {
       locale.languageCode, Get.find<SplashController>().getGuestId(),
     );
     saveLanguage(_locale);
-    if(Get.find<LocationController>().getUserAddress() != null) {
+    if(AddressSessionHelper.hasValidActiveAddress()) {
       Get.find<ServiceAreaController>().getZoneList();
     }
     Get.find<SplashController>().updateLanguage(isInitial);

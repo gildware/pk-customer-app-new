@@ -172,8 +172,10 @@ class NearbyProviderController extends GetxController implements GetxService {
 // }
 
   void _sortProviderListAndInitMap({ LatLng? initialPosition}){
+    final address = Get.find<LocationController>().getUserAddress();
+    if (address == null) return;
     _providerList?.forEach((element) {
-      double distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(Get.find<LocationController>().getUserAddress()!, element);
+      double distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(address, element);
       element.distance = distance;
     });
 
@@ -458,4 +460,13 @@ class NearbyProviderController extends GetxController implements GetxService {
     _mapController = controller;
   }
 
+  void clearSessionData({bool notify = true}) {
+    _providerModel = null;
+    categoryItemList = [];
+    _providerList = null;
+    _curatedProvidersBySection.clear();
+    _predictionList.clear();
+    _firstPredictionModel = null;
+    if (notify) update();
+  }
 }

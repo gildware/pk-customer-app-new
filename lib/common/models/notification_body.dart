@@ -13,9 +13,11 @@ class NotificationBody {
   String? userPhone;
   String? userName;
   String? userType;
+  String? serviceSlug;
+  String? serviceId;
 
   NotificationBody(
-      {this.title, this.body, this.bookingId, this.notificationType, this.notificationImage,this.userProfileImage,this.channelId,this.userName,this.userPhone,this.userType, this.bookingType, this.repeatBookingType});
+      {this.title, this.body, this.bookingId, this.notificationType, this.notificationImage,this.userProfileImage,this.channelId,this.userName,this.userPhone,this.userType, this.bookingType, this.repeatBookingType, this.serviceSlug, this.serviceId});
 
   NotificationBody.fromJson(Map<String, dynamic> json) {
     title = json['title'];
@@ -31,6 +33,8 @@ class NotificationBody {
     userType = json['user_type'];
     userName = json['user_name'];
     userPhone = json['user_phone'];
+    serviceSlug = json['service_slug'];
+    serviceId = json['service_id'];
   }
 
   Map<String, dynamic> toJson() {
@@ -48,6 +52,8 @@ class NotificationBody {
     data['user_name'] = userName;
     data['user_phone'] = userPhone;
     data['user_type'] = userType;
+    data['service_slug'] = serviceSlug;
+    data['service_id'] = serviceId;
     return data;
   }
 }

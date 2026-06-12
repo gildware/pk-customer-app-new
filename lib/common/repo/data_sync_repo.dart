@@ -15,9 +15,30 @@ class DataSyncRepo {
 
   DataSyncRepo({required this.apiClient, required this.sharedPreferences});
 
-  Future<ApiResponseModel<T>> fetchData<T>(String uri, DataSourceEnum source, {dynamic body, ApiMethodType method = ApiMethodType.get} ) async {
+  String _cacheKeyFor(String uri) {
     try {
-      return source == DataSourceEnum.client || _isACachesDisable() ? await _fetchFromClient<T>(uri, method: method, body: body) : await _fetchFromLocalCache<T>(uri);
+      final addressJson = sharedPreferences?.getString(AppConstants.userAddress);
+      if (addressJson != null) {
+        final address = AddressModel.fromJson(jsonDecode(addressJson));
+        final zoneId = address.zoneId?.trim();
+        if (zoneId != null && zoneId.isNotEmpty) {
+          return '$uri::zone:$zoneId';
+        }
+      }
+    } catch (_) {}
+    return uri;
+  }
+
+  Future<ApiResponseModel<T>> fetchData<T>(String uri, DataSourceEnum source, {dynamic body, ApiMethodType method = ApiMethodType.get} ) async {
+    final cacheKey = _cacheKeyFor(uri);
+    try {
+      if (source == DataSourceEnum.local) {
+        if (_isACachesDisable()) {
+          return ApiResponseModel.withError("No local data found for $uri");
+        }
+        return await _fetchFromLocalCache<T>(cacheKey, uri);
+      }
+      return await _fetchFromClient<T>(cacheKey, uri, method: method, body: body);
     } catch (e) {
       debugPrint('DataSyncRepo: ===> $source $e ($uri)');
 
@@ -25,27 +46,27 @@ class DataSyncRepo {
     }
   }
 
-  Future<ApiResponseModel<T>> _fetchFromClient<T>(String uri, {dynamic body,ApiMethodType method = ApiMethodType.get}) async {
+  Future<ApiResponseModel<T>> _fetchFromClient<T>(String cacheKey, String uri, {dynamic body,ApiMethodType method = ApiMethodType.get}) async {
     final response = await _fetchResponseFromClient(uri, body: body, method: method);
-    if(response.statusCode == 200) {
-      final cacheData = CacheResponseCompanion(
-        endPoint: Value(uri),
-        header: Value(jsonEncode(response.headers)),
-        response: Value(jsonEncode(response.body)),
-      );
+    if (response.statusCode == 200) {
+      try {
+        final cacheData = CacheResponseCompanion(
+          endPoint: Value(cacheKey),
+          header: Value(jsonEncode(response.headers)),
+          response: Value(jsonEncode(response.body)),
+        );
 
-      // Cache the data based on the platform
-      if (kIsWeb && _isWebCachesActive()) {
-        _cacheResponseWeb(uri, cacheData);
-      }
+        if (kIsWeb && _isWebCachesActive()) {
+          _cacheResponseWeb(cacheKey, cacheData);
+        }
 
-      if(!kIsWeb && _isAppCachesActive()) {
-        await DbHelper.insertOrUpdate(id: uri, data: cacheData);
+        if (!kIsWeb && _isAppCachesActive()) {
+          await DbHelper.insertOrUpdate(id: cacheKey, data: cacheData);
+        }
+      } catch (e) {
+        debugPrint('DataSyncRepo: cache write skipped for $uri ($e)');
       }
     }
-
-    // Prepare the cache data
-
 
     return ApiResponseModel.withSuccess(response as T);
   }
@@ -72,22 +93,26 @@ class DataSyncRepo {
     sharedPreferences?.setString(uri, jsonEncode(cacheJson));
   }
 
-  Future<ApiResponseModel<T>> _fetchFromLocalCache<T>(String uri) async {
-    CacheResponseData? cacheData;
+  Future<ApiResponseModel<T>> _fetchFromLocalCache<T>(String cacheKey, String uri) async {
+    try {
+      CacheResponseData? cacheData;
 
-    if (kIsWeb) {
-      final cachedJson = sharedPreferences?.getString(uri);
-      if (cachedJson != null) {
-        cacheData = CacheResponseData.fromJson(jsonDecode(cachedJson));
+      if (kIsWeb) {
+        final cachedJson = sharedPreferences?.getString(cacheKey);
+        if (cachedJson != null) {
+          cacheData = CacheResponseData.fromJson(jsonDecode(cachedJson));
+        }
+      } else {
+        cacheData = await database.getCacheResponseById(cacheKey);
       }
-    } else {
-      cacheData = await database.getCacheResponseById(uri);
+
+      if (cacheData != null && jsonDecode(cacheData.response) != null) {
+        return ApiResponseModel.withSuccess(cacheData as T);
+      }
+    } catch (e) {
+      debugPrint('DataSyncRepo: local cache read skipped for $uri ($e)');
     }
 
-    if (cacheData != null && jsonDecode(cacheData.response) != null) {
-      return ApiResponseModel.withSuccess(cacheData as T);
-    } else {
-      return ApiResponseModel.withError("No local data found for $uri");
-    }
+    return ApiResponseModel.withError("No local data found for $uri");
   }
 }

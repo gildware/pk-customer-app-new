@@ -112,6 +112,9 @@ class _NewRequestDialogState extends State<PushNotificationDialog> {
                 else if(widget.notificationBody?.notificationType == "bid-withdraw"){
                   Get.toNamed(RouteHelper.getMyPostScreen(fromNotification: 'fromNotification'));
                 }
+                else if(widget.notificationBody != null && NotificationHelper.isServiceNotification(widget.notificationBody!)){
+                  NotificationHelper.navigateToServiceNotification(widget.notificationBody!);
+                }
                 else{
                   Get.toNamed(RouteHelper.getNotificationRoute());
                 }

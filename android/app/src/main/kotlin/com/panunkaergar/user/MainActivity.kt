@@ -1,4 +1,4 @@
-package com.sixamtech.on_demand
+package com.panunkaergar.user
 
 import android.content.Intent
 import android.net.Uri

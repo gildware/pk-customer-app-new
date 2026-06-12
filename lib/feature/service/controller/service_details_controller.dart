@@ -23,6 +23,8 @@ class ServiceDetailsController extends GetxController implements GetxService{
   Future<void> getServiceDetails(String serviceID, {String fromPage = ""}) async {
     _service = null;
 
+    await Get.find<LocationController>().refreshSavedAddressZone();
+
     Response response = await serviceDetailsRepo.getServiceDetails(serviceID, fromPage);
     final body = response.body;
     if (response.statusCode == 200 && body is Map && body['response_code'] == 'default_200') {
@@ -35,6 +37,8 @@ class ServiceDetailsController extends GetxController implements GetxService{
       _service = Service();
       if (response.statusCode != 200) {
         ApiChecker.checkApi(response);
+      } else if (body is Map && body['response_code'] == 'default_204') {
+        customSnackBar(body['message']?.toString() ?? 'no_service_available'.tr, type: ToasterMessageType.info);
       }
     }
     _isLoading = false;

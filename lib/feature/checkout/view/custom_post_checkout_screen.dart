@@ -328,7 +328,11 @@ class _CustomPostCheckoutScreenState extends State<CustomPostCheckoutScreen> {
             html.window.open(url, "_self");
           } else {
             printLog("url_with_digital_payment_mobile:$url");
-            Get.to(()=> PaymentScreen(url:url, fromPage: "custom-checkout",));
+            DigitalPaymentLauncher.start(
+              paymentUrl: url,
+              fromPage: 'custom-checkout',
+              gateway: checkoutController.selectedDigitalPaymentMethod?.gateway,
+            );
           }
         }
       }

@@ -21,7 +21,7 @@ class AdvertisementController extends GetxController implements GetxService {
   Future<void> getAdvertisementList(bool reload) async {
 
     if(_advertisementList == null || reload){
-      DataSyncHelper.fetchAndSyncData(
+      await DataSyncHelper.fetchAndSyncData(
         fetchFromLocal: ()=> advertisementRepo.getAdvertisementList<CacheResponseData>( source: DataSourceEnum.local),
         fetchFromClient: ()=> advertisementRepo.getAdvertisementList(source: DataSourceEnum.client),
         onResponse: (data, source) {

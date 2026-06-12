@@ -1,11 +1,17 @@
 import 'package:demandium/feature/home/helper/mobile_app_home_helper.dart';
 import 'package:demandium/feature/home/widget/customer_home_sections.dart';
+import 'package:demandium/feature/home/widget/home_search_widget.dart';
+import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/silent_api_context.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
 
 
 class HomeScreen extends StatefulWidget {
+  /// Reloads home content while keeping [_HomeScreenState] loading flags in sync.
+  static Future<void> Function({required bool reload})? reloadHomeContent;
+
   static Future<void> _safeLoad(Future<void> future) {
     return future.catchError((error, stack) {
       if (kDebugMode) {
@@ -14,14 +20,51 @@ class HomeScreen extends StatefulWidget {
     });
   }
 
+  static Future<void>? _ongoingLoad;
+  static bool _reloadQueued = false;
+
   static Future<void> loadData(bool reload, {int availableServiceCount = 1}) async {
+    if (_ongoingLoad != null) {
+      if (reload) {
+        _reloadQueued = true;
+      }
+      await _ongoingLoad;
+      if (_reloadQueued) {
+        _reloadQueued = false;
+        return loadData(true, availableServiceCount: availableServiceCount);
+      }
+      return;
+    }
+
+    final loadFuture = SilentApiContext.run(
+      () => _loadDataImpl(reload, availableServiceCount: availableServiceCount),
+    );
+    _ongoingLoad = loadFuture;
+    try {
+      await loadFuture;
+    } finally {
+      if (identical(_ongoingLoad, loadFuture)) {
+        _ongoingLoad = null;
+      }
+    }
+
+    if (_reloadQueued) {
+      _reloadQueued = false;
+      await loadData(true, availableServiceCount: availableServiceCount);
+    }
+  }
+
+  static Future<void> _loadDataImpl(bool reload, {int availableServiceCount = 1}) async {
+    if (Get.isRegistered<LocationController>()) {
+      await _safeLoad(Get.find<LocationController>().refreshSavedAddressZone());
+    }
     if (Get.isRegistered<SplashController>()) {
       await _safeLoad(Get.find<SplashController>().getConfigData());
     }
 
-    if(availableServiceCount==0){
+    if (availableServiceCount == 0) {
       await _safeLoad(Get.find<BannerController>().getBannerList(reload));
-    }else{
+    } else {
       await Future.wait([
         _safeLoad(Get.find<ServiceController>().getRecommendedSearchList()),
         _safeLoad(Get.find<BannerController>().getBannerList(reload)),
@@ -32,16 +75,18 @@ class HomeScreen extends StatefulWidget {
             reload,
             limit: _defaultHomeSubCategoryLimit(),
           )),
-        _safeLoad(Get.find<ServiceController>().getPopularServiceList(1,reload)),
-        _safeLoad(Get.find<ServiceController>().getTrendingServiceList(1,reload)),
-        _safeLoad(Get.find<ProviderBookingController>().getProviderList(1,reload)),
-        _safeLoad(Get.find<NearbyProviderController>().getProviderList(1,reload)),
+        _safeLoad(Get.find<ServiceController>().getPopularServiceList(1, reload)),
+        _safeLoad(Get.find<ServiceController>().getTrendingServiceList(1, reload)),
+        _safeLoad(Get.find<ProviderBookingController>().getProviderList(1, reload)),
+        _safeLoad(Get.find<NearbyProviderController>().getProviderList(1, reload)),
         _safeLoad(Get.find<CampaignController>().getCampaignList(reload)),
         _safeLoad(Get.find<ServiceController>().getRecommendedServiceList(1, reload)),
         _safeLoad(Get.find<CheckOutController>().getOfflinePaymentMethod(false, shouldUpdate: false)),
         _safeLoad(Get.find<ServiceController>().getFeatherCategoryList(reload)),
-        if(Get.find<AuthController>().isLoggedIn()) _safeLoad(Get.find<AuthController>().updateToken()),
-        if(Get.find<AuthController>().isLoggedIn()) _safeLoad(Get.find<ServiceController>().getRecentlyViewedServiceList(1,reload)),
+        if (Get.find<AuthController>().isLoggedIn())
+          _safeLoad(Get.find<AuthController>().updateToken()),
+        if (Get.find<AuthController>().isLoggedIn())
+          _safeLoad(Get.find<ServiceController>().getRecentlyViewedServiceList(1, reload)),
       ]);
 
       await _safeLoad(_loadCuratedHomeSections(reload));
@@ -131,11 +176,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin {
-  AddressModel? _previousAddress;
   int _availableServiceCount = 0;
   bool _homeDataLoaded = false;
   bool _zoneRefreshInFlight = false;
-  bool _homeLoadInFlight = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -151,8 +194,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   }
 
   Future<void> _loadHomeContent({bool reload = false}) async {
-    if (_homeLoadInFlight) return;
-
     final count = _serviceCountFromAddress();
     // Before zone count is known, load sections once so home is not blank.
     final effectiveCount = count > 0 ? count : (!_homeDataLoaded ? 1 : 0);
@@ -161,18 +202,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       return;
     }
 
-    _homeLoadInFlight = true;
     _availableServiceCount = count;
     try {
       await HomeScreen.loadData(reload, availableServiceCount: effectiveCount);
-      _homeDataLoaded = true;
     } catch (error, stack) {
-      _homeDataLoaded = true;
-      if (kDebugMode) {
-        debugPrint('HomeScreen._loadHomeContent: $error\n$stack');
-      }
+      ErrorLogger.record(error, stack, reason: 'HomeScreen._loadHomeContent');
     } finally {
-      _homeLoadInFlight = false;
+      _homeDataLoaded = true;
       if (mounted) {
         setState(() {});
         if (Get.isRegistered<SplashController>()) {
@@ -195,17 +231,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         return;
       }
 
-      final zoneResponse = await locationController.getZone(
-        address.latitude.toString(),
-        address.longitude.toString(),
-        false,
-        isLoading: true,
-      );
-      address.availableServiceCountInZone = zoneResponse.totalServiceCount;
-      await locationController.saveUserAddress(address);
+      final zoneSynced = await locationController.refreshSavedAddressZone();
+      if (!zoneSynced) return;
 
       if (!mounted) return;
-      final newCount = zoneResponse.totalServiceCount;
+      final newCount = locationController.getUserAddress()?.availableServiceCountInZone;
       if (newCount != _availableServiceCount || !_homeDataLoaded) {
         await _loadHomeContent(reload: _homeDataLoaded);
       } else if (mounted) {
@@ -219,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   @override
   void initState() {
     super.initState();
+    HomeScreen.reloadHomeContent = ({required bool reload}) => _loadHomeContent(reload: reload);
 
     Get.find<LocalizationController>().filterLanguage(shouldUpdate: false);
     if(Get.find<AuthController>().isLoggedIn()) {
@@ -227,31 +258,39 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     }
 
     _availableServiceCount = _serviceCountFromAddress();
-    _previousAddress = widget.addressModel;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      await _loadHomeContent();
-      if (!mounted) return;
-      await _refreshZoneCountInBackground();
-    });
 
-    if (_previousAddress != null && _displayServiceCount == 0 && widget.showServiceNotAvailableDialog) {
-      Future.delayed(const Duration(microseconds: 1000), () {
-        if (!mounted) return;
-        Get.dialog(
-          ServiceNotAvailableDialog(
-            address: _previousAddress,
-            forCard: false,
-            showButton: true,
-            onBackPressed: () {
-              Get.back();
-              Get.find<LocationController>().setZoneContinue('false');
-            },
-          )
-        );
-      });
+      if (!AddressSessionHelper.hasValidActiveAddress()) {
+        await AddressSessionHelper.openAddressPicker(mandatory: true);
+        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) return;
+      }
+
+      final valid = await AddressSessionHelper.validateAndRefreshActiveAddress();
+      if (!mounted) return;
+
+      if (!valid) {
+        await AddressSessionHelper.openAddressPicker(mandatory: true);
+        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) return;
+      }
+
+      final address = Get.find<LocationController>().getUserAddress();
+      if (!AddressSessionHelper.isServiceableAddress(address)) {
+        if (mounted) Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
+        return;
+      }
+
+      await _loadHomeContent();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (HomeScreen.reloadHomeContent != null) {
+      HomeScreen.reloadHomeContent = null;
     }
+    super.dispose();
   }
 
   PreferredSizeWidget homeAppBar({GlobalKey<CustomShakingWidgetState>? signInShakeKey}){
@@ -303,8 +342,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                     );
 
                     if (!_homeDataLoaded) {
+                      final searchIndex = slivers.indexWhere((s) => s is HomeSearchWidget);
+                      final insertIndex = searchIndex >= 0 ? searchIndex + 1 : 1;
                       slivers.insert(
-                        1,
+                        insertIndex,
                         const SliverToBoxAdapter(child: _HomeInitialLoadingView()),
                       );
                     }

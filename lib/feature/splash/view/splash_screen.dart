@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -13,16 +16,16 @@ class SplashScreen extends StatefulWidget {
 class SplashScreenState extends State<SplashScreen> {
   final GlobalKey<ScaffoldState> _globalKey = GlobalKey();
   StreamSubscription<List<ConnectivityResult>>? _onConnectivityChanged;
+  bool _configFailed = false;
 
   @override
   void initState() {
     super.initState();
-    Get.find<AuthController>().updateToken();
 
     bool firstTime = true;
     _onConnectivityChanged = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
       if(!firstTime) {
-        bool isNotConnected = result.first != ConnectivityResult.wifi && result.first != ConnectivityResult.mobile;
+        bool isNotConnected = result.every((status) => status == ConnectivityResult.none);
         isNotConnected ? const SizedBox() : ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
         ScaffoldMessenger.of(Get.context!).showSnackBar(SnackBar(
           backgroundColor: isNotConnected ? Colors.red : Colors.green,
@@ -39,14 +42,35 @@ class SplashScreenState extends State<SplashScreen> {
       firstTime = false;
     });
 
-    if( Get.find<SplashController>().getGuestId().isEmpty){
-      var uuid = const Uuid().v1();
-      Get.find<SplashController>().setGuestId(uuid);
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    final splashController = Get.find<SplashController>();
+    await splashController.initSharedData();
+
+    if (splashController.getGuestId().isEmpty) {
+      await splashController.setGuestId(const Uuid().v1());
     }
 
-    Get.find<SplashController>().initSharedData();
-    _route();
+    final prefs = Get.find<SharedPreferences>();
+    AddressModel? addressModel;
+    try {
+      final addressJson = prefs.getString(AppConstants.userAddress);
+      if (addressJson != null && addressJson.isNotEmpty) {
+        addressModel = AddressModel.fromJson(jsonDecode(addressJson));
+      }
+    } catch (_) {}
 
+    Get.find<ApiClient>().updateHeader(
+      prefs.getString(AppConstants.token),
+      addressModel?.zoneId,
+      prefs.getString(AppConstants.languageCode),
+      splashController.getGuestId(),
+    );
+
+    Get.find<AuthController>().updateToken();
+    _route();
   }
 
   @override
@@ -56,44 +80,52 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   void _route() {
+    if (mounted) {
+      setState(() => _configFailed = false);
+    }
     Get.find<SplashController>().getConfigData().then((isSuccess) async {
-
-      if(Get.find<LocationController>().getUserAddress() != null){
-        AddressModel addressModel = Get.find<LocationController>().getUserAddress()!;
-        ZoneResponseModel responseModel = await Get.find<LocationController>().getZone(addressModel.latitude.toString(), addressModel.longitude.toString(), false);
-        addressModel.availableServiceCountInZone = responseModel.totalServiceCount;
-        Get.find<LocationController>().saveUserAddress(addressModel);
+      if (!isSuccess) {
+        if (mounted) setState(() => _configFailed = true);
+        return;
       }
 
+      try {
+        await Get.find<LocationController>().refreshSavedAddressZone();
+      } catch (e, stack) {
+        ErrorLogger.record(e, stack, reason: 'splash refreshSavedAddressZone');
+      }
 
-      if(isSuccess) {
-        Timer(const Duration(seconds: 1), () async {
+      Timer(const Duration(seconds: 1), () async {
+        if (!mounted) return;
 
-          if(_checkAvailableUpdate()) {
+        try {
+          if (_checkAvailableUpdate()) {
             Get.offNamed(RouteHelper.getUpdateRoute('update'));
-          }
-          else if(_checkMaintenanceModeActive() && !AppConstants.avoidMaintenanceMode){
+          } else if (_checkMaintenanceModeActive() && !AppConstants.avoidMaintenanceMode) {
             Get.offAllNamed(RouteHelper.getMaintenanceRoute());
-          }
-          else {
-            if(widget.body != null) {
+          } else {
+            if (widget.body != null) {
               _notificationRoute();
-            }
-            else {
-              if(Get.find<SplashController>().isShowInitialLanguageScreen()){
+            } else {
+              if (Get.find<SplashController>().isShowInitialLanguageScreen()) {
                 Get.offNamed(RouteHelper.getLanguageScreen('fromOthers'));
-              } else if(Get.find<SplashController>().isShowOnboardingScreen()){
+              } else if (Get.find<SplashController>().isShowOnboardingScreen()) {
                 Get.offAllNamed(RouteHelper.onBoardScreen);
-              }else{
+              } else {
+                final canContinue = await AddressSessionHelper.ensureAddressBeforeContinue();
+                if (!mounted || !canContinue) return;
                 Get.offNamed(RouteHelper.getInitialRoute());
               }
-
             }
           }
-        });
-      }else{
-
-      }
+        } catch (e, stack) {
+          ErrorLogger.record(e, stack, reason: 'splash navigation');
+          if (mounted) setState(() => _configFailed = true);
+        }
+      });
+    }).catchError((e, stack) {
+      ErrorLogger.record(e, stack, reason: 'splash getConfigData');
+      if (mounted) setState(() => _configFailed = true);
     });
   }
 
@@ -103,6 +135,25 @@ class SplashScreenState extends State<SplashScreen> {
       key: _globalKey,
       body: GetBuilder<SplashController>(builder: (splashController) {
         PriceConverter.getCurrency();
+        if (_configFailed) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'failed_to_load_configuration'.tr,
+                    textAlign: TextAlign.center,
+                    style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeLarge),
+                  ),
+                  const SizedBox(height: Dimensions.paddingSizeLarge),
+                  CustomButton(buttonText: 'retry'.tr, onPressed: _route),
+                ],
+              ),
+            ),
+          );
+        }
         return Center(
           child: splashController.hasConnection ? SplashLogoWidget() : NoInternetScreen(child: SplashScreen(body: widget.body)),
         );
@@ -167,6 +218,14 @@ class SplashScreenState extends State<SplashScreen> {
 
       case "loyalty_point": {
         Get.toNamed(RouteHelper.getLoyaltyPointScreen(fromNotification: "fromNotification"));
+      } break;
+
+      case "service": {
+        if (widget.body != null && NotificationHelper.isServiceNotification(widget.body!)) {
+          NotificationHelper.navigateToServiceNotification(widget.body!);
+        } else {
+          Get.toNamed(RouteHelper.getNotificationRoute());
+        }
       } break;
 
       default: {

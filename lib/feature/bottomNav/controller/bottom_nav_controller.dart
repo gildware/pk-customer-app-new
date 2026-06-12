@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 
 enum BnbItem {homePage, bookings, biddings, aiChat, more}
@@ -10,6 +13,10 @@ class BottomNavController extends GetxController implements GetxService{
 
     if(shouldUpdate){
       update();
+    }
+
+    if (bnbItem == BnbItem.homePage) {
+      unawaited(AddressSessionHelper.performPendingHomeRefreshIfHomeVisible());
     }
   }
 

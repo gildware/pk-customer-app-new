@@ -1,4 +1,6 @@
 import 'package:demandium/feature/auth/controller/facebook_login_controller.dart';
+import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/db_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
@@ -89,7 +91,7 @@ class AuthController extends GetxController implements GetxService {
 
         }else{
           await _saveTokenAndNavigate(
-            redirectRoute: redirectUrl ?? (Get.find<LocationController>().getUserAddress() !=null ?  RouteHelper.home : RouteHelper.pickMap),
+            redirectRoute: redirectUrl ?? RouteHelper.home,
             token: response.body['content']['token'], emailPhone: "", password: "",
           );
         }
@@ -163,10 +165,16 @@ class AuthController extends GetxController implements GetxService {
     String? emailPhone,
     String? password
   }) async {
+    final wasLoggedIn = authRepo.isLoggedIn();
+    if (wasLoggedIn) {
+      await resetCustomerSession(clearAddress: true);
+    } else {
+      await resetCustomerSession(clearAddress: false);
+    }
+
     authRepo.saveUserToken(token);
 
     Get.find<SplashController>().updateLanguage(true);
-    Get.find<LocationController>().getAddressList();
 
     if (_isActiveRememberMe) {
       saveUserNumberAndPassword(number: emailPhone ?? "", password: password ?? "");
@@ -174,15 +182,23 @@ class AuthController extends GetxController implements GetxService {
       clearUserNumberAndPassword();
     }
 
+    final navigationHandled = await AddressSessionHelper.navigateAfterAuth(
+      redirectRoute: redirectRoute,
+    );
+    if (navigationHandled) {
+      return;
+    }
+
+    if (Get.find<LocationController>().getUserAddress() != null) {
+      updateSavedLocalAddress();
+    }
+
     if (redirectRoute != null) {
-      if (Get.find<LocationController>().getUserAddress() != null) {
-        updateSavedLocalAddress();
-      }
-
       final routeData = RouteHelper.parseRedirectRouteToNavigate(redirectRoute);
-
-      Get.offAllNamed(routeData.path, parameters: (routeData.parameters?.isEmpty ?? true) ? null : routeData.parameters);
-
+      Get.offAllNamed(
+        routeData.path,
+        parameters: (routeData.parameters?.isEmpty ?? true) ? null : routeData.parameters,
+      );
     } else {
       Get.offAllNamed(RouteHelper.getMainRoute('home'));
     }
@@ -190,7 +206,9 @@ class AuthController extends GetxController implements GetxService {
 
   Future<void> updateSavedLocalAddress({bool saveContactPersonInfo = true}) async {
 
-    AddressModel addressModel = Get.find<LocationController>().getUserAddress()!;
+    final savedAddress = Get.find<LocationController>().getUserAddress();
+    if (savedAddress == null) return;
+    AddressModel addressModel = savedAddress;
 
     if(saveContactPersonInfo){
       if(Get.find<UserController>().userInfoModel == null){
@@ -464,7 +482,7 @@ class AuthController extends GetxController implements GetxService {
         }
       }else{
         await _saveTokenAndNavigate(
-          redirectRoute: redirectUrl ?? (Get.find<LocationController>().getUserAddress() !=null ?  RouteHelper.home : RouteHelper.pickMap),
+          redirectRoute: redirectUrl ?? RouteHelper.home,
           token: response.body['content']['token'], emailPhone: "", password: "",
         );
       }
@@ -556,7 +574,7 @@ class AuthController extends GetxController implements GetxService {
         ), redirectUrl: redirectUrl));
       }else{
         if(response.body['content']['token'] !=null){
-          await _saveTokenAndNavigate(redirectRoute: redirectUrl ?? (Get.find<LocationController>().getUserAddress() !=null ?  RouteHelper.home : RouteHelper.pickMap), token: response.body['content']['token'], emailPhone: phone);
+          await _saveTokenAndNavigate(redirectRoute: redirectUrl ?? RouteHelper.home, token: response.body['content']['token'], emailPhone: phone);
         } else if(response.body['content']['temporary_token'] !=null){
           Get.offNamed(RouteHelper.getUpdateProfileRoute(phone: phone ??"", redirectUrl: redirectUrl));
         }
@@ -580,9 +598,7 @@ class AuthController extends GetxController implements GetxService {
     if (response.statusCode == 200) {
       if(response.body['content']['token'] !=null){
         await _saveTokenAndNavigate(
-          redirectRoute: redirectUrl
-              ?? ( Get.find<LocationController>().getUserAddress() !=null
-                  ?  RouteHelper.home : RouteHelper.pickMap),
+          redirectRoute: redirectUrl ?? RouteHelper.home,
           token: response.body['content']['token'], emailPhone: phone, password: "",
         );
       }
@@ -602,7 +618,7 @@ class AuthController extends GetxController implements GetxService {
     if (response.statusCode == 200) {
       if(response.body['content']['token'] !=null){
         await _saveTokenAndNavigate(
-          redirectRoute: redirectUrl ?? (Get.find<LocationController>().getUserAddress() !=null ?  RouteHelper.home : RouteHelper.pickMap),
+          redirectRoute: redirectUrl ?? RouteHelper.home,
           token: response.body['content']['token'], emailPhone: "", password: "",
         );
       }
@@ -640,7 +656,7 @@ class AuthController extends GetxController implements GetxService {
     if (response.statusCode == 200) {
 
       if(response.body['content']['token'] !=null){
-       await _saveTokenAndNavigate(redirectRoute: redirectUrl ?? (Get.find<LocationController>().getUserAddress() !=null ?  RouteHelper.home : RouteHelper.pickMap), token: response.body['content']['token']);
+       await _saveTokenAndNavigate(redirectRoute: redirectUrl ?? RouteHelper.home, token: response.body['content']['token']);
       }else if(response.body['content']['temporary_token'] !=null){
 
         Get.offNamed(RouteHelper.getUpdateProfileRoute(
@@ -780,7 +796,34 @@ class AuthController extends GetxController implements GetxService {
       authRepo.saveUserNumberAndPassword(number, password, countryDialCode);
   Future<bool> clearUserNumberAndPassword() async => authRepo.clearUserNumberAndPassword();
 
-  bool clearSharedData({Response? response}) => authRepo.clearSharedData(response: response);
+  /// Drops cached customer data so the next login does not reuse another account's state.
+  Future<void> resetCustomerSession({bool clearAddress = true}) async {
+    if (clearAddress) {
+      authRepo.clearSharedAddress();
+    }
+    if (Get.isRegistered<LocationController>()) {
+      Get.find<LocationController>().clearSessionData();
+    }
+    await DbHelper.clearAllCache();
+    if (Get.isRegistered<CartController>()) {
+      await Get.find<CartController>().clearLocalSession();
+    }
+    if (Get.isRegistered<UserController>()) {
+      Get.find<UserController>().setUserInfoModelData(null);
+    }
+  }
+
+  Future<void> clearSharedData({Response? response}) async {
+    if (authRepo.isLoggedIn() && Get.isRegistered<CartController>()) {
+      try {
+        await Get.find<CartController>().removeAllCartItem();
+      } catch (_) {}
+    }
+    authRepo.clearSharedData(response: response);
+    AddressSessionHelper.regenerateGuestId();
+    await resetCustomerSession(clearAddress: false);
+    await AddressSessionHelper.resetHomeData();
+  }
   String getUserToken() => authRepo.getUserToken();
 
 

@@ -78,23 +78,31 @@ class _AddressFormBottomSheetState extends State<AddressFormBottomSheet> {
   double _maxChildSize = 0.85; // Default fallback
   bool _isCalculated = false;
 
-  late final List<double> _snapSizes;
+  late List<double> _snapSizes;
 
   @override
   void initState() {
     super.initState();
 
-    // Measure height after the first frame renders
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _calculateInitialHeight();
-    });
+    if (widget.isUpdate) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _applyDefaultSheetSizes();
+        }
+      });
+    } else {
+      // Measure height after the first frame renders
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _calculateInitialHeight();
+      });
 
-    // Fallback if layout measurement never succeeds (prevents full-screen touch blocker)
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted && !_isCalculated) {
-        _applyDefaultSheetSizes();
-      }
-    });
+      // Fallback if layout measurement never succeeds (prevents full-screen touch blocker)
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && !_isCalculated) {
+          _applyDefaultSheetSizes();
+        }
+      });
+    }
 
     _dragController.addListener(() {
       if (_dragController.size != _currentExtent) {

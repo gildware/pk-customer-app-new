@@ -1,7 +1,6 @@
 {
   "projects": {
-    "default": "development-5dc25",
-    "staging": "development-5dc25"
+    "default": "panun-kaergar-a162d"
   },
   "targets": {},
   "etags": {}

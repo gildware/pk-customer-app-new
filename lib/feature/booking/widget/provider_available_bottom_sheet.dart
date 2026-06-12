@@ -50,12 +50,13 @@ class RebookWarningBottomSheet extends StatelessWidget {
               Expanded(child: CustomButton(buttonText: 'yes_continue'.tr, onPressed: () {
                 if (serviceBookingController.isNotAvailable || serviceBookingController.isPriceChanged) {
                   Get.back();
+                  final services = serviceAvailable?.content?.services ?? [];
                   if (ResponsiveHelper.isDesktop(Get.context)) {
                      Get.dialog(Center(child: ServiceUnavailableDialog(
                        bookingId: bookingId,
                        isPriceChanged: serviceBookingController.isPriceChanged,
                        isNotAvailable: serviceBookingController.isNotAvailable,
-                       isAllNotAvailable: serviceBookingController.checkAllServiceAvailable(serviceAvailable!.content!.services),
+                       isAllNotAvailable: serviceBookingController.checkAllServiceAvailable(services),
                      )));
                   } else {
 
@@ -63,7 +64,7 @@ class RebookWarningBottomSheet extends StatelessWidget {
                        bookingId: bookingId,
                        isPriceChanged: serviceBookingController.isPriceChanged,
                        isNotAvailable: serviceBookingController.isNotAvailable,
-                       isAllNotAvailable: serviceBookingController.checkAllServiceAvailable(serviceAvailable!.content!.services),
+                       isAllNotAvailable: serviceBookingController.checkAllServiceAvailable(services),
                      ), backgroundColor: Colors.transparent, isScrollControlled: true);
                   }
                 }else{

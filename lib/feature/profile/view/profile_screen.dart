@@ -23,7 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
 
-    bool pickedAddress = Get.find<LocationController>().getUserAddress() != null;
+    bool pickedAddress = AddressSessionHelper.hasValidActiveAddress();
 
     final profileCartModelList = [
       ProfileCardItemModel( 'my_address'.tr, Images.address,RouteHelper.getAddressRoute('fromProfileScreen'),
@@ -111,11 +111,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: 'are_you_sure_to_logout'.tr,
                                     description: "if_you_logged_out_your_cart_will_be_removed".tr,
                                     yesButtonColor: Theme.of(Get.context!).colorScheme.primary,
-                                    onYesPressed: ()async {
-                                  Get.find<AuthController>().clearSharedData();
-                                  Get.find<AuthController>().googleLogout();
-                                  Get.find<AuthController>().signOutWithFacebook();
-                                  Get.find<AuthController>().signOutWithFacebook();
+                                    onYesPressed: () async {
+                                  await Get.find<AuthController>().logOut();
+                                  await Get.find<AuthController>().clearSharedData();
+                                  await Get.find<AuthController>().googleLogout();
+                                  await Get.find<AuthController>().signOutWithFacebook();
                                   Get.offAllNamed(RouteHelper.getInitialRoute());
                                 }), useSafeArea: false);
                               }else {

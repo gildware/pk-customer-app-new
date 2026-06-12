@@ -93,7 +93,11 @@ class CustomerLocationInfo extends StatelessWidget {
                   );
                   print('-----------add---> ${addressModel?.toJson()}');
 
-                  Get.toNamed(RouteHelper.getEditAddressRoute( addressModel ?? AddressModel(), true));
+                  final model = addressModel ?? AddressModel();
+                  Get.toNamed(
+                    RouteHelper.getEditAddressRoute(model, true),
+                    arguments: model,
+                  );
                   return;
                 }
 
@@ -126,8 +130,8 @@ class CustomerLocationInfo extends StatelessWidget {
                 transitionDuration: const Duration(milliseconds: 200),
                 barrierDismissible: true,
                 barrierLabel: '',
-                context: Get.context!,
-                pageBuilder: (context, animation1, animation2){
+                context: context,
+                pageBuilder: (dialogContext, animation1, animation2){
                   return Container();
                 },
               );

@@ -1,4 +1,5 @@
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
@@ -254,8 +255,17 @@ class _PickMapScreenState extends State<PickMapScreen> {
     });
   }
 
-  void _onPickLocationTap() {
+  Future<void> _onPickLocationTap() async {
     final locationController = Get.find<LocationController>();
+
+    if (_cameraPosition != null) {
+      await locationController.updatePosition(
+        _cameraPosition!,
+        false,
+        formCheckout: widget.formCheckout,
+      );
+    }
+
     final pickedAddress = locationController.pickAddress.address ?? '';
     if (locationController.pickPosition.latitude != 0 && pickedAddress.isNotEmpty) {
       if (widget.fromAddAddress!) {
@@ -291,7 +301,7 @@ class _PickMapScreenState extends State<PickMapScreen> {
           house: locationController.pickAddress.house ?? "",
           street: locationController.pickAddress.street ?? "",
           zipCode: locationController.pickAddress.zipCode ?? "",
-          addressLabel: AddressLabel.home.name,
+          addressLabel: AddressSessionHelper.selectedFromMapSourceLabel,
           contactPersonNumber: firstName != null
               ? Get.find<UserController>().userInfoModel?.phone ?? ""
               : "",
@@ -303,13 +313,19 @@ class _PickMapScreenState extends State<PickMapScreen> {
         if (kDebugMode) {
           print("Inside Here ===> Route === > ${widget.route}");
         }
-        locationController.saveAddressAndNavigate(
+        final applied = await AddressSessionHelper.applySelectedAddress(
           address,
-          widget.fromSignUp!,
-          widget.route ?? RouteHelper.getMainRoute('home'),
-          widget.canRoute!,
-          true,
+          redirectRoute: widget.route ?? RouteHelper.getMainRoute('home'),
+          canRoute: widget.canRoute ?? true,
         );
+
+        if (applied && !(widget.canRoute ?? true)) {
+          if (Get.isDialogOpen == true) Get.back();
+          if (Get.currentRoute.startsWith(RouteHelper.pickMap)) {
+            Get.back();
+          }
+          await AddressSessionHelper.performPendingHomeRefreshIfHomeVisible();
+        }
       }
     } else {
       customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);

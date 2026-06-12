@@ -17,9 +17,14 @@ class _SubcategoryServiceViewState extends State<SubcategoryServiceView>  with S
   void initState() {
     super.initState();
     Get.find<CategoryController>().getSubCategoryList(widget.categorySlug,shouldUpdate: false).then((value) {
+      final subCategories = Get.find<CategoryController>().subCategoryList;
+      final firstSlug = subCategories != null && subCategories.isNotEmpty
+          ? (subCategories.first.slug?.trim().isNotEmpty == true
+              ? subCategories.first.slug!.trim()
+              : subCategories.first.id?.trim() ?? '')
+          : '';
       Get.find<ServiceController>().getSubCategoryBasedServiceList(
-        Get.find<CategoryController>().subCategoryList !=null && Get.find<CategoryController>().subCategoryList!.isNotEmpty
-            ? Get.find<CategoryController>().subCategoryList![0].slug! : "", showShimmerAlways: true,
+        firstSlug, showShimmerAlways: true,
       );
       tabController = TabController(length: Get.find<CategoryController>().subCategoryList?.length??0, vsync: this);
     });

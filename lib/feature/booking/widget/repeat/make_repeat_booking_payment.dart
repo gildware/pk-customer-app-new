@@ -180,7 +180,11 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
       html.window.open(url, "_self");
     } else {
       printLog("url_with_digital_payment_mobile:$url");
-      Get.to(()=> PaymentScreen(url:url, fromPage: "repeat-booking",));
+      DigitalPaymentLauncher.start(
+        paymentUrl: url,
+        fromPage: 'repeat-booking',
+        gateway: paymentGateway,
+      );
     }
   }
 }

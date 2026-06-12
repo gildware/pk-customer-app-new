@@ -12,7 +12,7 @@ class UserRepo extends DataSyncRepo{
   }
 
   Future<ApiResponseModel<T>> getCategoryList<T>({required DataSourceEnum source}) async {
-    return await fetchData<T>('${AppConstants.categoryUrl}&limit=100&offset=1', source);
+    return await fetchData<T>('${AppConstants.categoryUrl}?limit=100&offset=1', source);
   }
 
   Future<Response> updateProfile(UserInfoModel userInfoModel, XFile? data) async {

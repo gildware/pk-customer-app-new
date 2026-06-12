@@ -41,13 +41,11 @@ class BookingInfo extends StatelessWidget {
 
 
           Gaps.verticalGapOf(Dimensions.paddingSizeExtraSmall),
-          if (bookingDetails.serviceSchedule != null && DateTime.tryParse(bookingDetails.serviceSchedule!) != null)
+          if (bookingDetails.serviceSchedule != null)
             BookingItem(
               img: Images.calendar1,
               title: "${'service_schedule_date'.tr} : ",
-              date: DateConverter.dateMonthYearTimeTwentyFourFormat(
-                DateTime.tryParse(bookingDetails.serviceSchedule!)!,
-              ),
+              date: DateConverter.scheduleStringToDisplay(bookingDetails.serviceSchedule),
             ),
           Gaps.verticalGapOf(Dimensions.paddingSizeExtraSmall),
 

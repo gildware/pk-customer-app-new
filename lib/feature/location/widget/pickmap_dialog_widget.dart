@@ -134,7 +134,7 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
     });
   }
 
-  void _onPickLocationTap() {
+  Future<void> _onPickLocationTap() async {
     final locationController = Get.find<LocationController>();
     final pickedAddress = locationController.pickAddress.address ?? '';
     if (locationController.pickPosition.latitude != 0 && pickedAddress.isNotEmpty) {
@@ -156,7 +156,7 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
         house: locationController.pickAddress.house ?? "",
         street: locationController.pickAddress.street ?? "",
         zipCode: locationController.pickAddress.zipCode ?? "",
-        addressLabel: AddressLabel.home.name,
+        addressLabel: AddressSessionHelper.selectedFromMapSourceLabel,
         contactPersonNumber: firstName != null
             ? Get.find<UserController>().userInfoModel?.phone ?? ""
             : "",
@@ -165,15 +165,14 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
             : "",
       );
 
-      locationController.saveAddressAndNavigate(
+      await AddressSessionHelper.applySelectedAddress(
         address,
-        false,
-        RouteHelper.getMainRoute('home'),
-        false,
-        true,
+        redirectRoute: RouteHelper.getMainRoute('home'),
+        canRoute: false,
+        closeOverlays: false,
       );
 
-      Get.back(); // Close dialog
+      Get.back();
     } else {
       customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);
     }

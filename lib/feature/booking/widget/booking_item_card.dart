@@ -149,7 +149,8 @@ class BookingItemCard extends StatelessWidget {
 
               Row( children: [
                 Text('${'service_date'.tr} : ', style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall,  color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .6))),
-                if(BookingHelper.getRepeatBookingCurrentSchedule(bookingModel) !=null) Text(DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.tryParse(BookingHelper.getRepeatBookingCurrentSchedule(bookingModel)!)!),
+                if(BookingHelper.getRepeatBookingCurrentSchedule(bookingModel) !=null) Text(
+                  DateConverter.scheduleStringToDisplay(BookingHelper.getRepeatBookingCurrentSchedule(bookingModel)),
                   style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall,  color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .6)),
                   textDirection: TextDirection.ltr,
                 ),

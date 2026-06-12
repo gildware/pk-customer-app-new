@@ -1,3 +1,4 @@
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/common/widgets/staggered_list_animation.dart';
@@ -6,7 +7,13 @@ import 'package:demandium/feature/location/widget/pickmap_dialog_widget.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class AddressSelectionBottomSheet extends StatelessWidget {
-  const AddressSelectionBottomSheet({super.key});
+  final bool mandatory;
+  final String? redirectRoute;
+  const AddressSelectionBottomSheet({
+    super.key,
+    this.mandatory = false,
+    this.redirectRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +105,10 @@ class AddressSelectionBottomSheet extends StatelessWidget {
                           children: [
                             // Address list or empty state
                             if (isLoggedIn && (locationController.addressList?.isNotEmpty ?? false))
-                              AddressListContent(locationController: locationController)
+                              AddressListContent(
+                                locationController: locationController,
+                                redirectRoute: redirectRoute,
+                              )
                             else
                               const EmptyAddressState(),
 
@@ -120,9 +130,10 @@ class AddressSelectionBottomSheet extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          AddressActionButtons(
+                            AddressActionButtons(
                             locationController: locationController,
                             isLoggedIn: isLoggedIn,
+                            redirectRoute: redirectRoute,
                           ),
                           SizedBox(height: MediaQuery.of(context).padding.bottom + Dimensions.paddingSizeDefault),
                         ],
@@ -142,11 +153,13 @@ class AddressSelectionBottomSheet extends StatelessWidget {
 class AddressListContent extends StatelessWidget {
   final LocationController locationController;
   final Function(AddressModel)? onAddressTap;
+  final String? redirectRoute;
   
   const AddressListContent({
     super.key,
     required this.locationController,
     this.onAddressTap,
+    this.redirectRoute,
   });
 
   @override
@@ -178,10 +191,12 @@ class AddressListContent extends StatelessWidget {
                     onAddressTap!(address);
                   } else {
                     Get.dialog(const CustomLoader(), barrierDismissible: false);
-                    await locationController.setAddressIndex(address, fromAddressScreen: false);
-                    locationController.saveAddressAndNavigate(address, false, '', false, true);
-                    Get.back(); // Close loader
-                    Get.back(); // Close bottom sheet
+                    await AddressSessionHelper.applySelectedAddress(
+                      address,
+                      redirectRoute: redirectRoute ?? RouteHelper.getMainRoute('home'),
+                      canRoute: true,
+                    );
+                    if (Get.isDialogOpen == true) Get.back();
                   }
                 },
               ),
@@ -379,12 +394,14 @@ class AddressActionButtons extends StatelessWidget {
   final LocationController locationController;
   final bool isLoggedIn;
   final bool fromDrawer;
+  final String? redirectRoute;
   
   const AddressActionButtons({
     super.key,
     required this.locationController,
     required this.isLoggedIn,
     this.fromDrawer = false,
+    this.redirectRoute,
   });
 
   void _checkPermission(Function onTap) async {
@@ -438,23 +455,52 @@ class AddressActionButtons extends StatelessWidget {
                 return;
               }
               _checkPermission(() async {
-                Get.back(); // Close bottom sheet
+                Get.back();
                 Get.dialog(const CustomLoader(), barrierDismissible: false);
-                AddressModel address = await locationController.getCurrentLocation(
-                  true,
-                  deviceCurrentLocation: true,
-                );
-                ZoneResponseModel response = await locationController.getZone(
-                  address.latitude!,
-                  address.longitude!,
-                  false,
-                );
+                try {
+                  AddressModel address = await locationController.getCurrentLocation(
+                    true,
+                    deviceCurrentLocation: true,
+                  );
 
-                if (response.isSuccess) {
-                  locationController.saveAddressAndNavigate(address, false, '', false, true);
-                } else {
-                  Get.back(); // Close loader
-                  customSnackBar(response.message);
+                  if (address.latitude == null ||
+                      address.longitude == null ||
+                      address.latitude!.isEmpty ||
+                      address.longitude!.isEmpty) {
+                    if (Get.isDialogOpen == true) Get.back();
+                    customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);
+                    return;
+                  }
+
+                  ZoneResponseModel response = await locationController.getZone(
+                    address.latitude!,
+                    address.longitude!,
+                    false,
+                  );
+
+                  if (Get.isDialogOpen == true) Get.back();
+
+                  if (!response.isSuccess) {
+                    final message = (response.message?.trim().isNotEmpty ?? false)
+                        ? response.message!
+                        : '500'.tr;
+                    customSnackBar(message.tr, type: ToasterMessageType.error);
+                    return;
+                  }
+
+                  if ((response.totalServiceCount ?? 0) <= 0) {
+                    Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
+                    return;
+                  }
+
+                  await AddressSessionHelper.applySelectedAddress(
+                    address,
+                    redirectRoute: redirectRoute ?? RouteHelper.getMainRoute('home'),
+                    canRoute: true,
+                  );
+                } catch (_) {
+                  if (Get.isDialogOpen == true) Get.back();
+                  customSnackBar('500'.tr, type: ToasterMessageType.error);
                 }
               });
             },
@@ -481,7 +527,7 @@ class AddressActionButtons extends StatelessWidget {
 
               Get.toNamed(RouteHelper.getPickMapRoute(
                 isLoggedIn ? RouteHelper.getMainRoute('home') : RouteHelper.accessLocation,
-                false,
+                true,
                 'false',
                 null,
                 Get.find<LocationController>().getUserAddress(),

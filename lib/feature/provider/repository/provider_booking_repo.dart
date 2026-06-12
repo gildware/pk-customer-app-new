@@ -9,7 +9,7 @@ class ProviderBookingRepo extends DataSyncRepo{
 
 
   Future<Response> getCategoryList() async {
-    return await apiClient.getData('${AppConstants.categoryUrl}&limit=100&offset=1');
+    return await apiClient.getData('${AppConstants.categoryUrl}?limit=100&offset=1');
   }
 
   Future<ApiResponseModel<T>> getProviderList<T>(int offset, Map<String,dynamic> body,{required DataSourceEnum source, int limit = 10}) async {

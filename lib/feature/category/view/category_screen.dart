@@ -75,11 +75,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     itemBuilder: (context, index) {
                       return InkWell(
                         onTap: () {
+                          final category = categoryList[index];
+                          final slug = category.slug?.trim().isNotEmpty == true
+                              ? category.slug!.trim()
+                              : category.id?.trim() ?? '';
+                          if (slug.isEmpty) return;
+                          final name = category.name ?? '';
                           if(widget.fromPage == 'fromCampaign'){
-                            Get.find<CategoryController>().getSubCategoryList(categoryList[index].slug!); //banner id is category here
-                            Get.toNamed(RouteHelper.subCategoryScreenRoute(categoryList[index].name!,categoryList[index].slug!,index));
+                            Get.find<CategoryController>().getSubCategoryList(slug);
+                            Get.toNamed(RouteHelper.subCategoryScreenRoute(name, slug, index));
                           }else{
-                            Get.toNamed(RouteHelper.getCategoryProductRoute(categoryList[index].slug!, categoryList[index].name!,index.toString()));
+                            Get.toNamed(RouteHelper.getCategoryProductRoute(slug, name, index.toString()));
                           }
                         },
 

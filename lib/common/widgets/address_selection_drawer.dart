@@ -114,10 +114,13 @@ class AddressSelectionDrawer extends StatelessWidget {
                           onAddressTap: (address) async {
                             final navigator = Navigator.of(context);
                             Get.dialog(const CustomLoader(), barrierDismissible: false);
-                            await locationController.setAddressIndex(address, fromAddressScreen: false);
-                            locationController.saveAddressAndNavigate(address, false, '', false, true);
-                            Get.back(); // Close loader
-                            navigator.pop(); // Close drawer
+                            await AddressSessionHelper.applySelectedAddress(
+                              address,
+                              redirectRoute: RouteHelper.getMainRoute('home'),
+                              canRoute: false,
+                            );
+                            if (Get.isDialogOpen == true) Get.back();
+                            navigator.pop();
                           },
                         )
                       else

@@ -15,6 +15,14 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+    buildscript {
+        configurations.matching { it.name == "classpath" }.configureEach {
+            resolutionStrategy {
+                force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.10")
+                force("org.jetbrains.kotlin:kotlin-stdlib:2.3.10")
+            }
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

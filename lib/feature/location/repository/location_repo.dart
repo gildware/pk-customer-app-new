@@ -14,6 +14,10 @@ class LocationRepo {
     return await apiClient.getData('${AppConstants.zoneUri}?lat=$lat&lng=$lng',headers: AppConstants.configHeader);
   }
 
+  Future<void> syncCustomerZoneOnServer() async {
+    await apiClient.getData(AppConstants.updateZoneUri);
+  }
+
   Future<Response> removeAddressByID(String id) async {
     return await apiClient.postData("${AppConstants.addressUri}/$id", {
       '_method': 'delete',

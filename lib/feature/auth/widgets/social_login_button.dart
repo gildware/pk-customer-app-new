@@ -63,14 +63,8 @@ class SocialLoginButton extends StatelessWidget {
         if(canRedirectToRedirectUrl) {
           final redirectRoute = RouteHelper.parseRedirectRouteToNavigate(redirectUrl!);
           Get.offAllNamed(redirectRoute.path);
-
-        }else {
-          if(Get.find<LocationController>().getUserAddress() !=null){
-            Get.offAllNamed(RouteHelper.getMainRoute("home"));
-
-          }else{
-            Get.offAllNamed(RouteHelper.pickMap);
-          }
+        } else {
+          Get.offAllNamed(RouteHelper.getMainRoute('home'));
         }
 
 

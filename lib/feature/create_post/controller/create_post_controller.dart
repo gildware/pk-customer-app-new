@@ -183,9 +183,14 @@ class CreatePostController extends GetxController implements GetxService{
 
   Future<Response> makePayment({String? postId, String? providerId, String? paymentMethod, String? offlinePaymentId, String? customerInfo, int? isPartial} ) async {
 
-    String zoneId = Get.find<LocationController>().getUserAddress()!.zoneId.toString();
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    final savedAddress = Get.find<LocationController>().getUserAddress();
+    final zoneId = savedAddress?.zoneId?.trim() ?? '';
+    if (zoneId.isEmpty) {
+      return Response(statusCode: 400, statusText: 'service_not_available_in_this_area'.tr);
+    }
     String? schedule = Get.find<ScheduleController>().scheduleTime;
-    AddressModel? addressModel = Get.find<LocationController>().selectedAddress ?? Get.find<LocationController>().getUserAddress();
+    AddressModel? addressModel = Get.find<LocationController>().selectedAddress ?? savedAddress;
 
     Response response = await createPostRepo.makePayment(
       paymentMethod : paymentMethod,

@@ -1,6 +1,6 @@
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
-import 'package:demandium/common/widgets/address_selection_bottom_sheet.dart';
 
 class AddressAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool? backButton;
@@ -24,45 +24,85 @@ class AddressAppBar extends StatelessWidget implements PreferredSizeWidget {
             splashColor: Colors.transparent,
             hoverColor: Colors.transparent,
             highlightColor: Colors.transparent,
-            onTap: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              useRootNavigator: true,
-              routeSettings: RouteSettings(name: '/'),
-              builder: (context) => const AddressSelectionBottomSheet(),
-            ),
+            onTap: () => AddressSessionHelper.openAddressPicker(),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('services_in'.tr, style: robotoRegular.copyWith(color: Colors.white, fontSize: Dimensions.fontSizeSmall)),
               const SizedBox(height: Dimensions.paddingSizeTine),
               GetBuilder<LocationController>(builder: (locationController) {
-                return Row(crossAxisAlignment: CrossAxisAlignment.center, mainAxisAlignment: MainAxisAlignment.start, children: [
-                  if(locationController.getUserAddress() != null) Container(
-                    constraints: BoxConstraints(maxWidth:size.width * 0.4),
-                    child: Tooltip(
-                      message: locationController.getUserAddress()?.address ?? '',
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.location_on, color: Colors.white, size: Dimensions.paddingSizeDefault),
-                          const SizedBox(width: Dimensions.paddingSizeMini,),
-
-
-                          Flexible(
-                            child: Text(
-                              locationController.getUserAddress()?.address ?? '',
-                              style: robotoMedium.copyWith(color: Colors.white, fontSize: Dimensions.fontSizeSmall), maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                final hasAddress = AddressSessionHelper.hasValidActiveAddress();
+                final address = locationController.getUserAddress();
+                final addressText = hasAddress
+                    ? (address?.address ?? '')
+                    : 'select_your_location'.tr;
+                final labelText = hasAddress
+                    ? AddressSessionHelper.displayAddressLabelText(address)
+                    : null;
+                final tooltipMessage = hasAddress && labelText != null
+                    ? '$labelText: $addressText'
+                    : addressText;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      constraints: BoxConstraints(maxWidth: size.width * 0.5),
+                      child: Tooltip(
+                        message: tooltipMessage,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              hasAddress
+                                  ? AddressSessionHelper.addressHeaderIcon(address)
+                                  : Icons.location_on,
+                              color: Colors.white,
+                              size: Dimensions.paddingSizeDefault,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: Dimensions.paddingSizeMini),
+                            if (labelText != null) ...[
+                              Text(
+                                labelText,
+                                style: robotoSemiBold.copyWith(
+                                  color: Colors.white,
+                                  fontSize: Dimensions.fontSizeSmall,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: Dimensions.paddingSizeTine,
+                                ),
+                                child: Text(
+                                  '·',
+                                  style: robotoMedium.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    fontSize: Dimensions.fontSizeSmall,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            Flexible(
+                              child: Text(
+                                addressText,
+                                style: robotoMedium.copyWith(
+                                  color: Colors.white,
+                                  fontSize: Dimensions.fontSizeSmall,
+                                  fontStyle: hasAddress ? FontStyle.normal : FontStyle.italic,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: Dimensions.paddingSizeExtraSmall,),
-                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 12),
-                  const SizedBox(width: Dimensions.paddingSizeLarge,)
-                ]);
+                    const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 12),
+                    const SizedBox(width: Dimensions.paddingSizeLarge),
+                  ],
+                );
               }),
             ]),
           ),

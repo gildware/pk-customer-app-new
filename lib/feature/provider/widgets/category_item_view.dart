@@ -42,7 +42,14 @@ class CategorySection extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeExtraSmall),
               child: InkWell(
-                onTap: () => Get.toNamed(RouteHelper.getServiceRoute(category.serviceList[index].slug!)),
+                onTap: () {
+                  final slug = category.serviceList[index].slug;
+                  if (slug == null || slug.isEmpty) {
+                    customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
+                    return;
+                  }
+                  Get.toNamed(RouteHelper.getServiceRoute(slug));
+                },
                 child: ServiceWidgetHorizontal(
                   serviceList: category.serviceList,
                   discountAmountType: discount.discountAmountType,

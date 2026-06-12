@@ -186,6 +186,15 @@ class DateConverter {
     }
   }
 
+  static String scheduleStringToDisplay(String? raw, {String fallback = '—'}) {
+    if (raw == null || raw.trim().isEmpty) return fallback;
+    final parsed = tryParseScheduleDateTime(raw);
+    if (parsed != null) {
+      return dateMonthYearTimeTwentyFourFormat(parsed);
+    }
+    return raw;
+  }
+
   static DateTime? tryParseScheduleDateTime(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;

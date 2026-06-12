@@ -8,7 +8,7 @@ class SuggestServiceRepo{
   SuggestServiceRepo({required this.apiClient});
 
   Future<Response> getCategoryList() async {
-    return await apiClient.getData('${AppConstants.categoryUrl}&limit=100&offset=1');
+    return await apiClient.getData('${AppConstants.categoryUrl}?limit=100&offset=1');
   }
 
   Future<Response> getSuggestedServiceList(int offset) async {

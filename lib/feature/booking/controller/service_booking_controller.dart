@@ -138,6 +138,7 @@ class ServiceBookingController extends GetxController implements GetxService {
       if(isBack){
         Get.back();
       }
+      await Get.find<LocationController>().refreshSavedAddressZone();
       Get.find<CartController>().getCartListFromServer(shouldUpdate: true);
       customSnackBar(response.body['message'], type : ToasterMessageType.success);
     }
@@ -155,38 +156,57 @@ class ServiceBookingController extends GetxController implements GetxService {
     Response response = await serviceBookingRepo.rebookCheck(bookingId);
 
     Get.back();
-    serviceAvailability = ServiceAvailabilityModel.fromJson(response.body);
     _isLoading = false;
     update();
-    if(response.statusCode == 200) {
-
-      for(int i=0; i<serviceAvailability!.content!.services!.length; i++) {
-        if (!_isPriceChanged && serviceAvailability!.content!.services![i].isPriceChanged == 1) {
-          _isPriceChanged = true;
-        }
-        if (!_isNotAvailable && serviceAvailability!.content!.services![i].isAvailable == 0) {
-          _isNotAvailable = true;
-        }
-        update();
-      }
-
-      if(serviceAvailability!.content!.isProviderAvailable! == 1 && !_isNotAvailable && !_isPriceChanged) {
-        await rebook(bookingId);
-      } else if (serviceAvailability!.content!.isProviderAvailable! == 0) {
-        if (ResponsiveHelper.isDesktop(Get.context)) {
-           Get.dialog(Center(child: RebookWarningBottomSheet(bookingId: bookingId)));
-        } else {
-          Get.bottomSheet(RebookWarningBottomSheet(bookingId: bookingId), backgroundColor: Colors.transparent, isScrollControlled: true);
-        }
-      } else if (_isNotAvailable || _isPriceChanged) {
-        if (ResponsiveHelper.isDesktop(Get.context)) {
-          Get.dialog(Center(child: ServiceUnavailableDialog(bookingId: bookingId, isPriceChanged: _isPriceChanged, isNotAvailable: _isNotAvailable, isAllNotAvailable: checkAllServiceAvailable(serviceAvailability!.content!.services),)));
-        } else {
-          Get.bottomSheet(ServiceUnavailableDialog(bookingId: bookingId, isPriceChanged: _isPriceChanged, isNotAvailable: _isNotAvailable, isAllNotAvailable: checkAllServiceAvailable(serviceAvailability!.content!.services)), backgroundColor: Colors.transparent, isScrollControlled: true);
-        }
-      }
-    }else{
+    if(response.statusCode != 200) {
       ApiChecker.checkApi(response);
+      return;
+    }
+
+    final body = response.body;
+    if (body is! Map) {
+      customSnackBar('failed_to_add_to_cart'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
+    try {
+      serviceAvailability = ServiceAvailabilityModel.fromJson(Map<String, dynamic>.from(body));
+    } catch (_) {
+      customSnackBar('failed_to_add_to_cart'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
+    final content = serviceAvailability?.content;
+    final services = content?.services ?? [];
+    if (content == null || services.isEmpty) {
+      customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
+      return;
+    }
+
+    for (final service in services) {
+      if (!_isPriceChanged && service.isPriceChanged == 1) {
+        _isPriceChanged = true;
+      }
+      if (!_isNotAvailable && service.isAvailable == 0) {
+        _isNotAvailable = true;
+      }
+    }
+    update();
+
+    if(content.isProviderAvailable == 1 && !_isNotAvailable && !_isPriceChanged) {
+      await rebook(bookingId);
+    } else if (content.isProviderAvailable == 0) {
+      if (ResponsiveHelper.isDesktop(Get.context)) {
+         Get.dialog(Center(child: RebookWarningBottomSheet(bookingId: bookingId)));
+      } else {
+        Get.bottomSheet(RebookWarningBottomSheet(bookingId: bookingId), backgroundColor: Colors.transparent, isScrollControlled: true);
+      }
+    } else if (_isNotAvailable || _isPriceChanged) {
+      if (ResponsiveHelper.isDesktop(Get.context)) {
+        Get.dialog(Center(child: ServiceUnavailableDialog(bookingId: bookingId, isPriceChanged: _isPriceChanged, isNotAvailable: _isNotAvailable, isAllNotAvailable: checkAllServiceAvailable(services),)));
+      } else {
+        Get.bottomSheet(ServiceUnavailableDialog(bookingId: bookingId, isPriceChanged: _isPriceChanged, isNotAvailable: _isNotAvailable, isAllNotAvailable: checkAllServiceAvailable(services)), backgroundColor: Colors.transparent, isScrollControlled: true);
+      }
     }
   }
 

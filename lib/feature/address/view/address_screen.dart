@@ -1,5 +1,6 @@
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/common/widgets/staggered_list_animation.dart';
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
@@ -100,24 +101,37 @@ class _AddressScreenState extends State<AddressScreen> {
                                         fromCheckout: widget.fromPage == 'checkout' ? true : false,
 
                                         onTap: () async {
-                                          if(widget.fromPage == 'checkout'){
-                                            if(isRedundentClick(DateTime.now())){
-                                              return;
-                                            }
-                                            Get.dialog(const CustomLoader(),barrierDismissible: false);
-                                            await locationController.setAddressIndex(addressList![index]).then((isSuccess){
+                                          if (isRedundentClick(DateTime.now())) return;
+
+                                          if (widget.fromPage == 'checkout') {
+                                            Get.dialog(const CustomLoader(), barrierDismissible: false);
+                                            await locationController.setAddressIndex(addressList![index]).then((isSuccess) {
                                               Get.back();
-                                              if(!isSuccess){
+                                              if (!isSuccess) {
                                                 customSnackBar('this_service_not_available'.tr);
                                               }
                                             });
                                             Get.back();
+                                          } else {
+                                            Get.dialog(const CustomLoader(), barrierDismissible: false);
+                                            final applied = await AddressSessionHelper.applySelectedAddress(
+                                              addressList![index],
+                                              redirectRoute: RouteHelper.getMainRoute('home'),
+                                              canRoute: false,
+                                            );
+                                            if (Get.isDialogOpen == true) Get.back();
+                                            if (applied) {
+                                              customSnackBar('default_update_200'.tr, type: ToasterMessageType.success);
+                                            }
                                           }
                                         },
 
                                         onEditPressed: () {
+                                          final address = addressList![index];
                                           Get.toNamed(
-                                              RouteHelper.getEditAddressRoute(addressList![index], false));
+                                            RouteHelper.getEditAddressRoute(address, false),
+                                            arguments: address,
+                                          );
                                         },
                                         onRemovePressed: () {
                                           if (Get.isSnackbarOpen) {

@@ -19,6 +19,11 @@ class _MyFavoriteScreenState extends State<MyFavoriteScreen> with SingleTickerPr
   void initState() {
     super.initState();
     tabController = TabController(length: 2, vsync: this);
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    await Get.find<LocationController>().refreshSavedAddressZone();
     Get.find<MyFavoriteController>().getFavoriteServiceList(1, true);
     Get.find<MyFavoriteController>().getProviderList(1, true);
   }

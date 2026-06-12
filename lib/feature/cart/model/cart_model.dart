@@ -125,21 +125,21 @@ class CartModel {
   }
 
   CartModel.fromJson(Map<String, dynamic> json) {
-    _id = json['id'];
-    _serviceId = json['service_id'];
-    _categoryId = json['category_id'];
-    _subCategoryId = json['sub_category_id'];
-    _variantKey = json['variant_key'];
-    _serviceCost = json['service_cost'];
-    _quantity = json['quantity'];
-    _discountAmount = json['discount_amount'];
-    _campaignDiscountAmount = json['campaign_discount'];
-    _couponDiscountAmount = json['coupon_discount'];
+    _id = json['id']?.toString() ?? '';
+    _serviceId = json['service_id']?.toString() ?? '';
+    _categoryId = json['category_id']?.toString() ?? '';
+    _subCategoryId = json['sub_category_id']?.toString() ?? '';
+    _variantKey = json['variant_key']?.toString() ?? '';
+    _serviceCost = json['service_cost'] ?? 0;
+    _quantity = (json['quantity'] as num?)?.toInt() ?? 0;
+    _discountAmount = json['discount_amount'] ?? 0;
+    _campaignDiscountAmount = json['campaign_discount'] ?? 0;
+    _couponDiscountAmount = json['coupon_discount'] ?? 0;
     _referralDiscountAmount = double.tryParse(json['referral_discount'].toString());
     _couponCode = json['coupon_code'];
     _couponRemainingUses = int.tryParse(json['remaining_uses'].toString());
-    _taxAmount = json['tax_amount'];
-    _totalCost = json['total_cost'];
+    _taxAmount = json['tax_amount'] ?? 0;
+    _totalCost = json['total_cost'] ?? 0;
     _service = json['service'] != null ? Service.fromJson(json['service']) : null;
     _provider = (json['provider'] != null ? ProviderData.fromJson(json['provider']) : null);
     _zoneId = json['zone_id']?.toString();

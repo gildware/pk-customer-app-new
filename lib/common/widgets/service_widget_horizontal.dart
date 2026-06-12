@@ -139,9 +139,14 @@ class ServiceWidgetHorizontal extends StatelessWidget {
                 ]),
               ),
               Positioned.fill(child: RippleButton(onTap: () {
+                final slug = serviceController.recommendedServiceList![index].slug;
+                if (slug == null || slug.isEmpty) {
+                  customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
+                  return;
+                }
                 Get.toNamed(
-                  RouteHelper.getServiceRoute(serviceController.recommendedServiceList![index].slug!),
-                  arguments: ServiceDetailsScreen(serviceID: serviceController.recommendedServiceList![index].slug!),
+                  RouteHelper.getServiceRoute(slug),
+                  arguments: ServiceDetailsScreen(serviceID: slug),
                 );
               })),
 

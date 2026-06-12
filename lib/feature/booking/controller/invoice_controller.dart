@@ -73,7 +73,7 @@ class InvoiceController {
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Text("Invoice # $invoiceID",style: pw.TextStyle(fontWeight: FontWeight.bold)),
-      Text("Service Schedule : ${DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.tryParse(invoiceSchedule ??"")!)}"),
+      Text("Service Schedule : ${DateConverter.scheduleStringToDisplay(invoiceSchedule, fallback: '')}"),
     ]
   );
 

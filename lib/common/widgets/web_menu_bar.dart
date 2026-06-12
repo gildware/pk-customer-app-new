@@ -7,6 +7,21 @@ class WebMenuBar extends StatelessWidget implements PreferredSizeWidget {
   final GlobalKey<CustomShakingWidgetState>? signInShakeKey;
   const WebMenuBar({super.key, this.openSearchDialog = true, this.searchbarShakeKey, this.signInShakeKey});
 
+  void _closeSearchDialog() {
+    if (Get.isDialogOpen! && Navigator.canPop(Get.context!)) {
+      Get.back();
+    }
+  }
+
+  void _navigateWithAddress(String redirectRoute, VoidCallback action) {
+    _closeSearchDialog();
+    Get.find<AllSearchController>().clearSearchController();
+    AddressSessionHelper.requireAddressForNavigation(
+      redirectRoute: redirectRoute,
+      whenReady: action,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(child: Container( width: Dimensions.webMaxWidth,
@@ -31,105 +46,133 @@ class WebMenuBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
 
-        Get.find<LocationController>().getUserAddress() != null ? Expanded(
+        Expanded(
           child: InkWell( onTap: () {
             _closeSearchDialog();
             Get.find<AllSearchController>().clearSearchController();
-            Scaffold.of(context).openDrawer();
+            if (AddressSessionHelper.hasValidActiveAddress()) {
+              Scaffold.of(context).openDrawer();
+            } else {
+              AddressSessionHelper.openAddressPicker(mandatory: true);
+            }
             },
 
             child: Padding( padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
               child: GetBuilder<LocationController>(builder: (locationController) {
-                return Row(crossAxisAlignment: CrossAxisAlignment.center, mainAxisAlignment: MainAxisAlignment.start, children: [
-                  const SizedBox(width: Dimensions.paddingSizeExtraSmall),
-                  Icon(locationController.getUserAddress()!.addressType == 'home' ?
-                  Icons.home_filled : locationController.getUserAddress()!.addressType == 'office' ? Icons.work : Icons.location_on,
-                    size: 20, color: Theme.of(context).textTheme.bodyLarge!.color,
-                  ),
-                  const SizedBox(width: Dimensions.paddingSizeExtraSmall),
-                  Flexible( child: Text( locationController.getUserAddress()?.address ?? "",
-                    style: robotoRegular.copyWith(color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: Dimensions.fontSizeExtraSmall,),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                  )),
-                  Icon( Icons.arrow_drop_down, color: Get.isDarkMode? light.cardColor : Theme.of(context).primaryColor),
-                ]);
+                final hasAddress = AddressSessionHelper.hasValidActiveAddress();
+                final address = locationController.getUserAddress();
+                final addressText = hasAddress
+                    ? (address?.address ?? '')
+                    : 'select_your_location'.tr;
+                final labelText = hasAddress
+                    ? AddressSessionHelper.displayAddressLabelText(address)
+                    : null;
+                final icon = hasAddress
+                    ? AddressSessionHelper.addressHeaderIcon(address)
+                    : Icons.location_on;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                    Icon(icon, size: 20, color: Theme.of(context).textTheme.bodyLarge!.color),
+                    const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                    if (labelText != null) ...[
+                      Text(
+                        labelText,
+                        style: robotoSemiBold.copyWith(
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontSize: Dimensions.fontSizeExtraSmall,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '·',
+                          style: robotoRegular.copyWith(
+                            color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.7),
+                            fontSize: Dimensions.fontSizeExtraSmall,
+                          ),
+                        ),
+                      ),
+                    ],
+                    Flexible(
+                      child: Text(
+                        addressText,
+                        style: robotoRegular.copyWith(
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontSize: Dimensions.fontSizeExtraSmall,
+                          fontStyle: hasAddress ? FontStyle.normal : FontStyle.italic,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      color: Get.isDarkMode ? light.cardColor : Theme.of(context).primaryColor,
+                    ),
+                  ],
+                );
               }),
             ),
-          )
-        ) : const Expanded(child: SizedBox()),
+          ),
+        ),
 
         MenuButtonWeb(title: 'home'.tr, onTap: () {
-          _closeSearchDialog();
-          Get.find<AllSearchController>().clearSearchController();
-
-          if(Get.find<LocationController>().getUserAddress() != null){
-            Get.toNamed(RouteHelper.getMainRoute("home"));
-          }else{
-            Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.home , true, 'false', null, null,));
-          }
+          _navigateWithAddress(RouteHelper.getMainRoute('home'), () {
+            Get.toNamed(RouteHelper.getMainRoute('home'));
+          });
         }),
         const SizedBox(width: 10),
 
         MenuButtonWeb( title: 'categories'.tr, onTap: (){
-          _closeSearchDialog();
-          Get.find<AllSearchController>().clearSearchController();
-          if(Get.find<LocationController>().getUserAddress() != null){
-            Get.toNamed(RouteHelper.getCategoryProductRoute(
-                Get.find<CategoryController>().categoryList != null && Get.find<CategoryController>().categoryList!.isNotEmpty ?  Get.find<CategoryController>().categoryList![0].slug! : "",
-                Get.find<CategoryController>().categoryList != null && Get.find<CategoryController>().categoryList!.isNotEmpty ?  Get.find<CategoryController>().categoryList![0].name! : "",
-                0.toString()
-            ));
-          }else{
-            Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.categories , true, 'false', null, null,));
-          }
+          _navigateWithAddress(RouteHelper.getCategoryProductRoute('', '', '0'), () {
+            final categories = Get.find<CategoryController>().categoryList;
+            if (categories != null && categories.isNotEmpty) {
+              final first = categories.first;
+              final slug = first.slug?.trim().isNotEmpty == true
+                  ? first.slug!.trim()
+                  : first.id?.trim() ?? '';
+              if (slug.isNotEmpty) {
+                Get.toNamed(RouteHelper.getCategoryProductRoute(
+                  slug,
+                  first.name ?? '',
+                  '0',
+                ));
+              }
+            }
+          });
         }),
         const SizedBox(width: Dimensions.paddingSizeSmall),
 
         MenuButtonWeb( title: 'services'.tr, onTap: () {
-          _closeSearchDialog();
-          Get.find<AllSearchController>().clearSearchController();
-
-          if(Get.find<LocationController>().getUserAddress() != null){
+          _navigateWithAddress(RouteHelper.allServiceScreenRoute('all_service'), () {
             Get.toNamed(RouteHelper.allServiceScreenRoute('all_service'));
-          }else{
-            Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.allServiceScreen , true, 'false', null, null,));
-          }
+          });
         }),
 
         SearchWidgetWeb(openSearchDialog : openSearchDialog),
         MenuButtonWebIcon( icon: Images.webCartIcon, isCart: true, onTap: () {
-          _closeSearchDialog();
-          Get.find<AllSearchController>().clearSearchController();
-          if(Get.find<LocationController>().getUserAddress() != null){
+          _navigateWithAddress(RouteHelper.getCartRoute(), () {
             Get.toNamed(RouteHelper.getCartRoute());
-          }else{
-            Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.cart , true, 'false', null, null,));
-          }
+          });
         }),
 
         const SizedBox(width: Dimensions.paddingSizeSmall),
         MenuButtonWebIcon( icon: Images.notification, isCart: false, onTap: () {
-          _closeSearchDialog();
-          Get.find<AllSearchController>().clearSearchController();
-
-          if(Get.find<LocationController>().getUserAddress() != null){
+          _navigateWithAddress(RouteHelper.getNotificationRoute(), () {
             Get.toNamed(RouteHelper.getNotificationRoute());
-          }else{
-            Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.notification , true, 'false', null, null,));
-          }
+          });
         }),
 
         const SizedBox(width: Dimensions.paddingSizeSmall),
         MenuButtonWebIcon( icon: Images.offerMenu, isCart: false, onTap: () {
-          _closeSearchDialog();
-          Get.find<AllSearchController>().clearSearchController();
-
-          if(Get.find<LocationController>().getUserAddress() != null){
+          _navigateWithAddress(RouteHelper.getOffersRoute(), () {
             Get.toNamed(RouteHelper.getOffersRoute());
-          }else{
-            Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.offers , true, 'false', null, null,));
-          }
-
+          });
         }),
 
         const SizedBox(width: Dimensions.paddingSizeSmall),
@@ -169,15 +212,6 @@ class WebMenuBar extends StatelessWidget implements PreferredSizeWidget {
       ]),
     ));
   }
-
-
-  void _closeSearchDialog() {
-    if(Get.isDialogOpen! && Navigator.canPop(Get.context!)){
-      Get.back();
-    }
-  }
-
-
 
   @override
   Size get preferredSize => const Size(Dimensions.webMaxWidth, 70);
@@ -245,6 +279,3 @@ class MenuButtonWeb extends StatelessWidget {
     );
   }
 }
-
-
-

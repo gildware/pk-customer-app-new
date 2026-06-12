@@ -11,12 +11,13 @@ class AppConstants {
   /// AI chat tab + center FAB — disabled until we resume work on it.
   static const bool enableAiChat = false;
   /// Local Laravel backend (`php artisan serve` at http://127.0.0.1:8000)
-  static const String baseUrl = 'http://127.0.0.1:8000';
-  static const String websiteUrl = 'http://127.0.0.1:8000';
+  static const String baseUrl = 'https://dev.panunkaergar.com';
+  static const String websiteUrl = 'https://dev.panunkaergar.com';
   static const String googleServerClientId = '889759666168-ruq4mnv8fonls4gfvn01t2jap0f0662u.apps.googleusercontent.com'; /// find that in android/app/google-services.json || use client_type 3
   static const bool avoidMaintenanceMode = false;
-  static const LocalCachesTypeEnum cachesType = LocalCachesTypeEnum.all;
-  static const String categoryUrl = '/api/v1/customer/category?limit=20';
+  /// Disabled on mobile: Drift/path_provider can fail on some iOS simulator runtimes.
+  static const LocalCachesTypeEnum cachesType = LocalCachesTypeEnum.none;
+  static const String categoryUrl = '/api/v1/customer/category';
   static const String webLandingContents = '/api/v1/customer/landing/contents';
   static const String bannerUri = '/api/v1/customer/banner?limit=10&offset=1';
   static const String bonusUri = '/api/v1/customer/bonus-list?limit=100&offset=1';

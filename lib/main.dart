@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:url_strategy/url_strategy.dart';
+import 'firebase_options.dart';
 import 'helper/analytics/analytics_helper.dart';
+import 'helper/error_logger.dart';
 import 'util/core_export.dart';
 import 'helper/get_di.dart' as di;
 
@@ -15,37 +17,15 @@ Future<void> main() async {
   setPathUrlStrategy();
   AnalyticsHelper.init();
 
-  try{
-    if(kIsWeb){
-      await Firebase.initializeApp(options: const FirebaseOptions(
-          apiKey: "AIzaSyATwpBSYz69b5Y9ryQLELOJIHZSpJcXf7I",
-          authDomain: "demancms.firebaseapp.com",
-          projectId: "demancms",
-          storageBucket: "demancms.appspot.com",
-          messagingSenderId: "889759666168",
-          appId: "1:889759666168:web:ab661cb341d3e47384d00d",
-      ));
-    } else if(Platform.isAndroid) {
-      try {
-        await Firebase.initializeApp(
-          options: const FirebaseOptions(
-            apiKey: "AIzaSyBYMyaGbvQhVf6YIfH1TEVT56Zs83QASxg", ///current_key here
-            appId: "1:889759666168:android:64e5375b02e6121d84d00d", ///mobilesdk_app_id here
-            messagingSenderId: "889759666168", ///project_number here
-            projectId: "demancms", ///project_id her
-          ),
-        );
-      }catch (e) {
-        await Firebase.initializeApp();
-
-      }
-    } else {
-      await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    if (!kIsWeb) {
+      await ErrorLogger.initialize();
     }
-  }catch(e) {
-    if (kDebugMode) {
-      print('Error initializing Flutter bindings: ${e.toString()}');
-    }
+  } catch (e, stack) {
+    ErrorLogger.record(e, stack, reason: 'Firebase.initializeApp');
   }
 
   if(kIsWeb) {
@@ -57,8 +37,12 @@ Future<void> main() async {
     );
   }
 
-  if(defaultTargetPlatform == TargetPlatform.android) {
-    await FirebaseMessaging.instance.requestPermission();
+  if (!kIsWeb && GetPlatform.isMobile) {
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
 
@@ -78,10 +62,8 @@ Future<void> main() async {
     }
     await NotificationHelper.initialize(flutterLocalNotificationsPlugin);
     FirebaseMessaging.onBackgroundMessage(myBackgroundMessageHandler);
-  }catch(e) {
-    if (kDebugMode) {
-      print("");
-    }
+  }catch(e, stack) {
+    ErrorLogger.record(e, stack, reason: 'NotificationHelper.initialize');
   }
   runApp(MyApp(languages: languages, body: body, route: path,));
 }
@@ -115,19 +97,12 @@ Future<String?> initDynamicLinks() async {
 
 class _MyAppState extends State<MyApp> {
   void _route() async {
-
-    Get.find<SplashController>().getConfigData().then((success) async {
-
-      if(Get.find<LocationController>().getUserAddress() != null){
-        AddressModel addressModel = Get.find<LocationController>().getUserAddress()!;
-        ZoneResponseModel responseModel = await Get.find<LocationController>().getZone(addressModel.latitude.toString(), addressModel.longitude.toString(), false);
-        addressModel.availableServiceCountInZone = responseModel.totalServiceCount;
-        Get.find<LocationController>().saveUserAddress(addressModel);
-      }
-      Get.find<AuthController>().updateToken();
-
-    });
-
+    final success = await Get.find<SplashController>().getConfigData();
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    Get.find<AuthController>().updateToken();
+    if (success && Get.isRegistered<CartController>()) {
+      await Get.find<CartController>().getCartListFromServer();
+    }
   }
   @override
   void initState() {
@@ -136,7 +111,6 @@ class _MyAppState extends State<MyApp> {
     if(kIsWeb || widget.route != null)  {
       Get.find<SplashController>().initSharedData();
       Get.find<SplashController>().getCookiesData();
-      Get.find<CartController>().getCartListFromServer();
 
       if (Get.find<AuthController>().isLoggedIn()) {
         Get.find<UserController>().getUserInfo();
@@ -156,15 +130,16 @@ class _MyAppState extends State<MyApp> {
     return GetBuilder<ThemeController>(builder: (themeController) {
       return GetBuilder<LocalizationController>(builder: (localizeController) {
         return GetBuilder<SplashController>(builder: (splashController) {
-          if ((GetPlatform.isWeb && splashController.configModel.content == null)) {
-            return const SizedBox();
-          } else if((!GetPlatform.isWeb && !Get.currentRoute.contains('/splash') &&  Get.currentRoute.isNotEmpty) && splashController.configModel.content == null) {
-            return Material(
+          // Web only: show logo until config loads. On mobile, SplashScreen handles startup.
+          if (kIsWeb &&
+              splashController.configModel.content == null &&
+              !Get.currentRoute.contains('/splash')) {
+            return const Material(
               child: SplashLogoWidget(),
             );
-
           }
-          else {return GetMaterialApp(
+
+          return GetMaterialApp(
             title: AppConstants.appName,
             debugShowCheckedModeBanner: false,
             navigatorKey: Get.key,
@@ -200,7 +175,6 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
           );
-          }
         });
       });
     });

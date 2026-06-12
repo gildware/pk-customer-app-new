@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/db_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -174,7 +176,9 @@ class LocationController extends GetxController implements GetxService {
         street: address.street ?? "",
         city: address.city ?? "",
         zipCode: address.zipCode ?? "",
-        addressLabel: AddressLabel.home.name,
+        addressLabel: deviceCurrentLocation
+            ? AddressSessionHelper.currentLocationSourceLabel
+            : AddressLabel.home.name,
         availableServiceCountInZone: responseModel.totalServiceCount,
         contactPersonNumber: firstName !=null? Get.find<UserController>().userInfoModel?.phone ?? "" : "",
         contactPersonName: firstName!=null ? "$firstName${Get.find<UserController>().userInfoModel?.lName ?? "" }" : ""
@@ -197,9 +201,11 @@ class LocationController extends GetxController implements GetxService {
 
     int totalServiceCountInZone = 0;
     final body = response.body;
-    if(response.statusCode == 200 && body is Map && body['content'] != null) {
+    final content = body is Map ? body['content'] : null;
+    final zone = content is Map ? content['zone'] : null;
+    if(response.statusCode == 200 && body is Map && zone != null && zone['id'] != null) {
       _inZone = true;
-      _zoneID = body['content']['zone']['id'];
+      _zoneID = zone['id'].toString();
 
       if(body['content']['available_services_count'] !=null){
         totalServiceCountInZone = int.tryParse(body['content']['available_services_count'].toString()) ?? 0;
@@ -217,7 +223,7 @@ class LocationController extends GetxController implements GetxService {
     return responseModel;
   }
 
-  void updatePosition(CameraPosition position, bool fromAddress, {bool formCheckout = false}) async {
+  Future<void> updatePosition(CameraPosition position, bool fromAddress, {bool formCheckout = false}) async {
     if(_updateAddAddressData) {
       _loading = true;
       update();
@@ -290,14 +296,18 @@ class LocationController extends GetxController implements GetxService {
     return responseModel;
   }
 
-  Future<void> getAddressList({bool fromCheckout = false}) async {
+  Future<void> getAddressList({bool fromCheckout = false, bool showErrorSnackBar = true}) async {
     Response response = await locationRepo.getAllAddress();
     if (response.statusCode == 200) {
       _addressList = <AddressModel>[];
-      response.body['content']['data'].forEach((address) {
-        _addressList!.add(AddressModel.fromJson(address));
-      });
-    } else {
+      final content = response.body is Map ? response.body['content'] : null;
+      final data = content is Map ? content['data'] : null;
+      if (data is List) {
+        for (final address in data) {
+          _addressList!.add(AddressModel.fromJson(address));
+        }
+      }
+    } else if (showErrorSnackBar) {
       ApiChecker.checkApi(response);
     }
     if(_addressList != null && _addressList!.isNotEmpty){
@@ -313,35 +323,49 @@ class LocationController extends GetxController implements GetxService {
     update();
   }
 
-  Future<void> addAddress(AddressModel addressModel, bool fromAddAddressScreen) async {
+  Future<void> addAddress(
+    AddressModel addressModel, {
+    bool fromAddAddressScreen = false,
+    bool fromCheckout = false,
+  }) async {
     _isLoading = true;
     update();
     Response response = await locationRepo.addAddress(addressModel);
-    if (response.body["response_code"] == "default_store_200") {
-      // Store the newly added address ID for animation
-      _newlyAddedAddressId = response.body["content"]["id"]?.toString();
-      
+    final body = response.body;
+    if (body is Map && body["response_code"] == "default_store_200") {
+      _newlyAddedAddressId = body["content"]["id"]?.toString();
+
       await getAddressList();
-      
-      // Clear the newly added address ID after animation duration (3 seconds)
+
       Future.delayed(const Duration(seconds: 3), () {
         _newlyAddedAddressId = null;
         update();
       });
-      
-      if(fromAddAddressScreen){
+
+      final saved = AddressModel.fromJson(body["content"]);
+
+      if (fromAddAddressScreen) {
         Get.back();
-        if(addressModel.zoneId == getUserAddress()?.zoneId){
-          _selectedAddress = addressModel;
-          customSnackBar('new_address_added_successfully'.tr, type : ToasterMessageType.success);
-        }else{
-          customSnackBar('you_added_address_from_different_zone'.tr, type : ToasterMessageType.info);
+        if (fromCheckout) {
+          updateSelectedAddress(saved);
+          customSnackBar('new_address_added_successfully'.tr, type: ToasterMessageType.success);
+        } else {
+          await AddressSessionHelper.promptUseNewAddress(saved);
         }
-      }else{
-        await saveUserAddress(AddressModel.fromJson(response.body["content"]));
+      } else {
+        await saveUserAddress(saved);
       }
     } else {
-      customSnackBar(response.statusText == 'out_of_coverage'.tr ? 'service_not_available_in_this_area'.tr : response.statusText.toString().tr, type : ToasterMessageType.success);
+      String message = '500'.tr;
+      if (body is Map && body['message'] != null) {
+        message = body['message'].toString();
+      } else if (response.statusText != null && response.statusText!.isNotEmpty) {
+        message = response.statusText!;
+      }
+      if (message == 'out_of_coverage' || message.contains('out_of_coverage')) {
+        message = 'service_not_available_in_this_area'.tr;
+      }
+      customSnackBar(message.tr, type: ToasterMessageType.error);
     }
     _isLoading = false;
     update();
@@ -353,11 +377,23 @@ class LocationController extends GetxController implements GetxService {
     Response response = await locationRepo.updateAddress(addressModel, addressId);
     ResponseModel responseModel;
     if (response.statusCode == 200) {
-      await getAddressList();
-      responseModel = ResponseModel(true, response.body["response_code"]);
+      await getAddressList(showErrorSnackBar: false);
+      final body = response.body;
+      final successMessage = body is Map
+          ? (body['message']?.toString() ?? body['response_code']?.toString() ?? 'default_update_200')
+          : 'default_update_200';
+      responseModel = ResponseModel(true, successMessage);
     } else {
-      responseModel = ResponseModel(false, response.statusText.toString().tr);
-
+      String message = '500'.tr;
+      final body = response.body;
+      if (body is Map && body['message'] != null) {
+        message = body['message'].toString();
+      } else if (body is Map && body['errors'] is List && (body['errors'] as List).isNotEmpty) {
+        message = body['errors'][0]['message']?.toString() ?? message;
+      } else if (response.statusText != null && response.statusText!.isNotEmpty) {
+        message = response.statusText!;
+      }
+      responseModel = ResponseModel(false, message.tr);
     }
     _isLoading = false;
     update();
@@ -368,6 +404,42 @@ class LocationController extends GetxController implements GetxService {
   Future<bool> saveUserAddress(AddressModel address) async {
     String userAddress = jsonEncode(address.toJson());
     return await locationRepo.saveUserAddress(userAddress, address.zoneId);
+  }
+
+  /// Re-resolves zone from saved coordinates, updates zoneId, service count, and API headers.
+  Future<bool> refreshSavedAddressZone() async {
+    final address = getUserAddress();
+    if (address?.latitude == null ||
+        address?.longitude == null ||
+        address!.latitude!.isEmpty ||
+        address.longitude!.isEmpty) {
+      return false;
+    }
+
+    final previousZoneId = address.zoneId?.trim();
+
+    final zoneResponse = await getZone(
+      address.latitude.toString(),
+      address.longitude.toString(),
+      false,
+      isLoading: true,
+    );
+
+    if (!zoneResponse.isSuccess) {
+      address.availableServiceCountInZone = 0;
+      await saveUserAddress(address);
+      return false;
+    }
+    if (zoneResponse.isSuccess && zoneResponse.zoneIds.isNotEmpty) {
+      address.zoneId = zoneResponse.zoneIds;
+    }
+    address.availableServiceCountInZone = zoneResponse.totalServiceCount;
+    await saveUserAddress(address);
+    await DbHelper.clearCacheOnZoneChange(
+      previousZoneId: previousZoneId,
+      newZoneId: address.zoneId?.trim(),
+    );
+    return zoneResponse.isSuccess;
   }
 
 
@@ -383,13 +455,34 @@ class LocationController extends GetxController implements GetxService {
   }
 
   ///
-  Future<void> saveAddressAndNavigate(AddressModel address, bool fromSignUp, String? route, bool canRoute, bool isServiceAvailable, {bool fromAddressDialog = false, String? showDialog}) async {
-    ZoneResponseModel responseModel = await getZone(address.latitude.toString(), address.longitude.toString(), true);
+  Future<void> saveAddressAndNavigate(
+    AddressModel address,
+    bool fromSignUp,
+    String? route,
+    bool canRoute,
+    bool isServiceAvailable, {
+    bool fromAddressDialog = false,
+    String? showDialog,
+    ZoneResponseModel? resolvedZone,
+  }) async {
+    final ZoneResponseModel responseModel = resolvedZone ?? await getZone(
+      address.latitude.toString(),
+      address.longitude.toString(),
+      true,
+    );
+
+    if (!responseModel.isSuccess || responseModel.zoneIds.trim().isEmpty) {
+      final message = (responseModel.message?.trim().isNotEmpty ?? false)
+          ? responseModel.message!
+          : 'service_not_available_in_this_area'.tr;
+      customSnackBar(message.tr, type: ToasterMessageType.error);
+      return;
+    }
+
     AddressModel? previousAddress = getUserAddress();
     if(previousAddress != null) {
       setZoneContinue('true');
     }
-
 
     address.availableServiceCountInZone = responseModel.totalServiceCount;
 
@@ -411,7 +504,7 @@ class LocationController extends GetxController implements GetxService {
   }
 
   void _setZoneData(AddressModel address, bool fromSignUp, String? route, bool canRoute,bool shouldCartDelete, String? zoneIds, AddressModel? previousAddress, bool? isServiceAvailable, {String? showDialog}) {
-    if(zoneIds != null){
+    if(zoneIds != null && zoneIds.trim().isNotEmpty){
       address.zoneId = zoneIds;
       autoNavigate(address, fromSignUp, route, canRoute, previousAddress,isServiceAvailable, shouldCartDelete: shouldCartDelete, showDialog: showDialog);
     }
@@ -431,15 +524,20 @@ class LocationController extends GetxController implements GetxService {
       }
     }
     await saveUserAddress(address);
-    HomeScreen.loadData(true);
-    if(canRoute && route !=null && route != "" && route != "home"){
-      Get.offAllNamed(route);
-    }else{
-      Get.offAllNamed(RouteHelper.getMainRoute('home', previousAddress: previousAddress, showServiceNotAvailableDialog: showDialog));
+
+    if (shouldCartDelete) {
+      await Get.find<CartController>().removeAllCartItem();
     }
 
-    if(shouldCartDelete){
-      await Get.find<CartController>().removeAllCartItem();
+    if (!canRoute) {
+      return;
+    }
+
+    HomeScreen.loadData(true);
+    if (route != null && route != "" && route != "home") {
+      Get.offAllNamed(route);
+    } else {
+      Get.offAllNamed(RouteHelper.getMainRoute('home', previousAddress: previousAddress, showServiceNotAvailableDialog: showDialog));
     }
   }
 
@@ -493,6 +591,7 @@ class LocationController extends GetxController implements GetxService {
         altitudeAccuracy: 1, headingAccuracy: 1
     );
 
+    addressModel.addressLabel = AddressSessionHelper.selectedFromMapSourceLabel;
     _pickAddress = addressModel;
     _changeAddress = false;
 
@@ -530,12 +629,28 @@ class LocationController extends GetxController implements GetxService {
   }
 
   void setUpdateAddress(AddressModel address){
+    final latitude = double.tryParse(address.latitude?.toString() ?? '') ?? 0;
+    final longitude = double.tryParse(address.longitude?.toString() ?? '') ?? 0;
     _position = Position(
-      latitude: double.parse(address.latitude!), longitude: double.parse(address.longitude!), timestamp: DateTime.now(),
-      altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, floor: 1, accuracy: 1,
-        altitudeAccuracy: 1, headingAccuracy: 1
+      latitude: latitude,
+      longitude: longitude,
+      timestamp: DateTime.now(),
+      altitude: 1,
+      heading: 1,
+      speed: 1,
+      speedAccuracy: 1,
+      floor: 1,
+      accuracy: 1,
+      altitudeAccuracy: 1,
+      headingAccuracy: 1,
     );
-    _address.address = address.address!;
+    _address.address = address.address ?? '';
+    if (address.zoneId != null && address.zoneId!.trim().isNotEmpty) {
+      _zoneID = address.zoneId!.trim();
+      _inZone = true;
+    }
+    _updateAddAddressData = false;
+    update();
   }
 
   void updateAddressType(Address address){
@@ -548,8 +663,8 @@ class LocationController extends GetxController implements GetxService {
       _selectedAddressLabel = _getAddressLabel(addressLabelString);
     }else{
       _selectedAddressLabel = addressLabel;
-      update();
     }
+    update();
   }
 
   AddressLabel _getAddressLabel(String addressLabel) {
@@ -595,6 +710,19 @@ class LocationController extends GetxController implements GetxService {
     if (clearMapController) {
       _mapController = null;
     }
+    if (notify) {
+      update();
+    }
+  }
+
+  /// Clears in-memory address state when the customer session ends or switches.
+  void clearSessionData({bool notify = true}) {
+    _addressList = null;
+    _selectedAddress = null;
+    _newlyAddedAddressId = null;
+    _inZone = false;
+    _zoneID = '';
+    resetAddress(clearMapController: true, notify: false);
     if (notify) {
       update();
     }

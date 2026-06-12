@@ -27,14 +27,26 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
     scrollController!.highlight(int.tryParse(widget.categoryIndex) ?? 0);
 
     if(Get.find<LocationController>().getUserAddress() !=null){
-      availableServiceCount = Get.find<LocationController>().getUserAddress()!.availableServiceCountInZone!;
+      availableServiceCount = Get.find<LocationController>().getUserAddress()?.availableServiceCountInZone ?? 0;
     }
 
     Get.find<CategoryController>().getCategoryList(false);
     categoryIndex = widget.categoryIndex ;
     Get.find<CategoryController>().getSubCategoryList(widget.categorySlug, shouldUpdate: false);
+    _syncZoneAndCounts();
 
     super.initState();
+  }
+
+  Future<void> _syncZoneAndCounts() async {
+    await Get.find<LocationController>().refreshSavedAddressZone();
+    await Get.find<CategoryController>().getCategoryList(true);
+    await Get.find<CategoryController>().getSubCategoryList(widget.categorySlug);
+    if (!mounted) return;
+    final count = Get.find<LocationController>().getUserAddress()?.availableServiceCountInZone;
+    if (count != null) {
+      setState(() => availableServiceCount = count);
+    }
   }
 
   @override
@@ -83,8 +95,12 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
                                 index: index,
                                 child: InkWell(
                                   onTap: () async {
+                                    final slug = categoryModel.slug?.trim().isNotEmpty == true
+                                        ? categoryModel.slug!.trim()
+                                        : categoryModel.id?.trim() ?? '';
+                                    if (slug.isEmpty) return;
                                     categoryIndex = index.toString();
-                                    Get.find<CategoryController>().getSubCategoryList(categoryModel.slug!);
+                                    Get.find<CategoryController>().getSubCategoryList(slug);
                                     await scrollController!.scrollToIndex( index, preferPosition: AutoScrollPosition.middle,
                                       duration: const Duration(milliseconds: 500)
                                     );

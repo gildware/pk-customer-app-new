@@ -28,15 +28,36 @@ class ServiceCenterDialog extends StatefulWidget {
 class _ProductBottomSheetState extends State<ServiceCenterDialog> {
   @override
   void initState() {
+    super.initState();
+    if (widget.service == null) return;
     Get.find<CartController>().resetBookingFlow(shouldUpdate: false);
     Get.find<CartController>().setInitialCartList(widget.service!);
     Get.find<CartController>().updatePreselectedProvider(null, shouldUpdate: false);
     Get.find<AllSearchController>().searchFocus.unfocus();
-    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.service == null) {
+      return Padding(
+        padding: EdgeInsets.only(top: ResponsiveHelper.isWeb() ? 0 : Dimensions.cartDialogPadding),
+        child: Container(
+          padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(Dimensions.radiusExtraLarge)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('no_service_available'.tr, style: robotoMedium),
+              const SizedBox(height: Dimensions.paddingSizeDefault),
+              CustomButton(buttonText: 'ok'.tr, onPressed: () => Get.back()),
+            ],
+          ),
+        ),
+      );
+    }
     if(ResponsiveHelper.isDesktop(context)) {
       return  Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.radiusExtraLarge)),

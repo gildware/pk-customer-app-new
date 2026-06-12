@@ -238,7 +238,12 @@ class CheckoutHelper {
       }
     }
     else if (repeatBookingType == RepeatBookingType.weekly) {
-      if (selectedDays == null || selectedDays.isEmpty) return null;
+      if (selectedDays == null ||
+          selectedDays.isEmpty ||
+          dateRange == null ||
+          time == null) {
+        return null;
+      }
 
       Map<String, int> dayNameToInt = {
         'monday': DateTime.monday,
@@ -249,15 +254,15 @@ class CheckoutHelper {
         'saturday': DateTime.saturday,
         'sunday': DateTime.sunday,
       };
-      DateTime startDate = dateRange?.start ?? DateTime.now();
-      DateTime endDate = dateRange?.end ?? DateTime.now().add(const Duration(days: 6));
+      DateTime startDate = dateRange.start;
+      DateTime endDate = dateRange.end;
 
       for (DateTime currentDate = startDate;
       !currentDate.isAfter(endDate);
       currentDate = currentDate.add(const Duration(days: 1))) {
         int currentWeekday = currentDate.weekday;
         if (selectedDays.contains(dayNameToInt.keys.firstWhere((dayName) => dayNameToInt[dayName] == currentWeekday,orElse: () => ""))) {
-          result.add({"date": dateTimeFormat.format(combineDateAndTime(currentDate, time!))});
+          result.add({"date": dateTimeFormat.format(combineDateAndTime(currentDate, time))});
         }
       }
     }

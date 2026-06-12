@@ -52,7 +52,11 @@ class _SelectAddressDialogState extends State<SelectAddressDialog> {
                   onTap: (){
                     AddressModel? addressModel = CheckoutHelper.selectedAddressModel(selectedAddress: Get.find<LocationController>().selectedAddress, pickedAddress: Get.find<LocationController>().getUserAddress());
                     Get.back();
-                    Get.toNamed(RouteHelper.getEditAddressRoute( addressModel ?? AddressModel(), true));
+                    final model = addressModel ?? AddressModel();
+                    Get.toNamed(
+                      RouteHelper.getEditAddressRoute(model, true),
+                      arguments: model,
+                    );
                   },
                   child: Row(children: [
                     Icon(Icons.my_location, color: Get.isDarkMode ? Theme.of(context).textTheme.bodyMedium?.color : Theme.of(context).colorScheme.primary,),
@@ -77,8 +81,11 @@ class _SelectAddressDialogState extends State<SelectAddressDialog> {
                           isShowOnlyEdit: false,
                           onEditPressed: (){
                             Get.back();
+                            final address = addressList[index];
                             Get.toNamed(
-                                RouteHelper.getEditAddressRoute(addressList[index], true));
+                              RouteHelper.getEditAddressRoute(address, true),
+                              arguments: address,
+                            );
 
                           },
                           onTap: (){
@@ -135,7 +142,11 @@ class _SelectAddressDialogState extends State<SelectAddressDialog> {
                     onPressed: (){
                       AddressModel? addressModel = CheckoutHelper.selectedAddressModel(selectedAddress: Get.find<LocationController>().selectedAddress, pickedAddress: Get.find<LocationController>().getUserAddress());
                       Get.back();
-                      Get.toNamed(RouteHelper.getEditAddressRoute( addressModel ?? AddressModel(), true));
+                      final model = addressModel ?? AddressModel();
+                    Get.toNamed(
+                      RouteHelper.getEditAddressRoute(model, true),
+                      arguments: model,
+                    );
                     },
                   ),
                 ),
