@@ -545,7 +545,16 @@ class RouteHelper {
     }),
     GetPage(name: support, page: () => SupportScreen()),
     GetPage(name: update, page: () => UpdateScreen(fromPage: Get.parameters['update'])),
-    GetPage(name: cart, page: () => getRoute(const CartScreen(fromNav: false))),
+    GetPage(
+      name: cart,
+      page: () => getRoute(const CartScreen(fromNav: false)),
+      middlewares: [
+        AuthMiddleware(
+          pageTitle: 'cart',
+          canGuestCheckout: true,
+        ),
+      ],
+    ),
     GetPage(name: addAddress, page: () => AddAddressScreen(fromCheckout: Get.parameters['page'] == 'checkout')),
     GetPage(name: editAddress, page: () {
       AddressModel? address;

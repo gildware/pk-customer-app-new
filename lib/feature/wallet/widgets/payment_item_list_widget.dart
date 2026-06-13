@@ -34,7 +34,9 @@ class _PaymentMethodListWidgetState extends State<PaymentMethodListWidget> {
     List<DigitalPaymentMethod> paymentMethodList = CheckoutHelper.enabledDigitalPaymentGateways();
 
     if(paymentMethodList.isNotEmpty && paymentMethodList.length ==1){
-      Get.find<WalletController>().changeDigitalPaymentName(paymentMethodList[0].gateway??"",isUpdate: false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.find<WalletController>().changeDigitalPaymentName(paymentMethodList[0].gateway??"", isUpdate: false);
+      });
     }
 
     return GetBuilder<WalletController>(builder: (walletController){
@@ -213,7 +215,7 @@ class _PaymentMethodListWidgetState extends State<PaymentMethodListWidget> {
     });
   }
 
-  void _addFundToWallet(String paymentGateway , double amount){
+  Future<void> _addFundToWallet(String paymentGateway , double amount) async {
 
 
     String url = '';
@@ -228,9 +230,9 @@ class _PaymentMethodListWidgetState extends State<PaymentMethodListWidget> {
     String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
 
     String platform = GetPlatform.isWeb ? "web" : "app" ;
+    final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-
-    url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=${base64Url.encode(utf8.encode(userId))}'
+    url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=$accessToken'
         '&callback=$callbackUrl&amount=$amount&payment_platform=$platform&is_add_fund=1';
 
     if (GetPlatform.isWeb) {

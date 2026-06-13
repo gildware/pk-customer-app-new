@@ -34,10 +34,12 @@ class LocationRepo {
   }
 
   Future<bool> saveUserAddress(String address, String? zoneIDs) async {
+    final token = SecureTokenStorage.cachedToken();
     apiClient.updateHeader(
-      sharedPreferences.getString(AppConstants.token), zoneIDs,
+      token.isEmpty ? null : token,
+      zoneIDs,
       sharedPreferences.getString(AppConstants.languageCode),
-      sharedPreferences.getString(AppConstants.guestId)
+      sharedPreferences.getString(AppConstants.guestId),
     );
     return await sharedPreferences.setString(AppConstants.userAddress, address);
   }

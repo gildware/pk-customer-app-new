@@ -14,12 +14,14 @@ class ApiClient extends GetxService {
   final int timeoutInSeconds = 30;
 
   String? token;
+  String? _guestSecret;
   late Map<String, String> _mainHeaders;
 
   ApiClient({required this.appBaseUrl, required this.sharedPreferences}) {
-    printLog('API Base URL: $appBaseUrl');
-    token = sharedPreferences.getString(AppConstants.token);
-    printLog('Token: $token');
+    if (kDebugMode) {
+      printLog('API Base URL: $appBaseUrl');
+    }
+    token = SecureTokenStorage.cachedToken().isEmpty ? null : SecureTokenStorage.cachedToken();
     AddressModel? addressModel;
     try {
       final addressJson = sharedPreferences.getString(AppConstants.userAddress);
@@ -39,22 +41,54 @@ class ApiClient extends GetxService {
       sharedPreferences.getString(AppConstants.languageCode), sharedPreferences.getString(AppConstants.guestId)
     );
   }
-  void updateHeader(String? token, String? zoneIDs, String? languageCode, String? guestID) {
+  void updateHeader(String? token, String? zoneIDs, String? languageCode, String? guestID, {String? guestSecret}) {
+    if (guestSecret != null) {
+      _guestSecret = guestSecret;
+    }
     _mainHeaders = {
       'Content-Type': 'application/json; charset=UTF-8',
       AppConstants.zoneId: zoneIDs ?? '',
       AppConstants.localizationKey: languageCode ?? AppConstants.languages[0].languageCode!,
       AppConstants.guestId : guestID ?? "",
     };
+    if (_guestSecret != null && _guestSecret!.isNotEmpty) {
+      _mainHeaders[AppConstants.guestSecretHeader] = _guestSecret!;
+    }
     if (token != null && token.isNotEmpty && token != 'null') {
       _mainHeaders['Authorization'] = 'Bearer $token';
     }
   }
 
+  Future<void> refreshGuestSessionHeaders() async {
+    final guestId = sharedPreferences.getString(AppConstants.guestId) ?? '';
+    if (guestId.isEmpty) {
+      return;
+    }
+
+    final secret = await GuestSessionHelper.getOrCreateSecret();
+    String? zoneId;
+    try {
+      final addressJson = sharedPreferences.getString(AppConstants.userAddress);
+      if (addressJson != null && addressJson.isNotEmpty) {
+        zoneId = AddressModel.fromJson(jsonDecode(addressJson)).zoneId;
+      }
+    } catch (_) {}
+
+    updateHeader(
+      token,
+      zoneId,
+      sharedPreferences.getString(AppConstants.languageCode),
+      guestId,
+      guestSecret: secret,
+    );
+  }
+
   Future<Response> getData(String uri, {Map<String, dynamic>? query, Map<String, String>? headers}) async {
 
     try {
-      printLog('====> API Call: $uri\nHeader: $_mainHeaders');
+      if (kDebugMode) {
+        printLog('====> API Call: $uri');
+      }
       http.Response response = await http.get(
         Uri.parse(appBaseUrl! + uri),
         headers: headers ?? _mainHeaders,
@@ -68,8 +102,9 @@ class ApiClient extends GetxService {
   }
 
   Future<Response> postData(String? uri, dynamic body, {Map<String, String>? headers, int? timeoutSeconds}) async {
-    printLog('====> API Call: $uri\nHeader: $_mainHeaders');
-    printLog('====> body : ${body.toString()}');
+    if (kDebugMode) {
+      printLog('====> API Call: $uri');
+    }
 
 
     try {

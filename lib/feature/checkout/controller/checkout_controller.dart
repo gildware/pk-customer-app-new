@@ -181,6 +181,10 @@ class CheckOutController extends GetxController implements GetxService{
    String? paymentAmountType,
  })async{
 
+   if (!Get.find<AuthController>().isLoggedIn() && BookingAuthHelper.guestCheckoutEnabled) {
+     await BookingAuthHelper.ensureGuestSessionIfNeeded();
+   }
+
    String zoneId = address.zoneId?.trim().isNotEmpty == true
        ? address.zoneId!
        : (Get.find<LocationController>().getUserAddress()?.zoneId ?? '');
@@ -496,6 +500,23 @@ class CheckOutController extends GetxController implements GetxService{
     double extraFee = CheckoutHelper.getAdditionalCharge();
     totalAmount = amount + ((amount*serviceTax)/100) + extraFee - referralDiscountAmount;
     totalVat = (amount*serviceTax)/100;
+  }
+
+  void applyHomeBundleOfflineMethods(dynamic rawContent) {
+    _offlinePaymentModelList = [];
+    final list = rawContent is Map ? rawContent['data'] : null;
+    if (list is List) {
+      for (final element in list) {
+        if (element is Map<String, dynamic>) {
+          _offlinePaymentModelList.add(OfflinePaymentModel.fromJson(element));
+        }
+      }
+    }
+    if (_offlinePaymentModelList.isNotEmpty) {
+      _selectedOfflineMethod = _offlinePaymentModelList.first;
+    }
+    _loading = false;
+    update();
   }
 
  Future<void> getOfflinePaymentMethod(bool isReload, {bool shouldUpdate = true, int? selectedIndex, AutoScrollController? scrollController} ) async {

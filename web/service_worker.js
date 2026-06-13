@@ -4,7 +4,7 @@ const urlsToCache = [
   '/index.html',
   '/main.dart.js',
   '/styles.css',
-  '/assets/images'
+  '/assets/images',
   '/assets/language'
 ];
 

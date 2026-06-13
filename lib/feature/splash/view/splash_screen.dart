@@ -1,6 +1,4 @@
-import 'dart:convert';
-
-import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/app_startup.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -48,26 +46,11 @@ class SplashScreenState extends State<SplashScreen> {
   Future<void> _bootstrap() async {
     final splashController = Get.find<SplashController>();
     await splashController.initSharedData();
+    await Get.find<AuthRepo>().preloadRememberMeCredentials();
 
     if (splashController.getGuestId().isEmpty) {
       await splashController.setGuestId(const Uuid().v1());
     }
-
-    final prefs = Get.find<SharedPreferences>();
-    AddressModel? addressModel;
-    try {
-      final addressJson = prefs.getString(AppConstants.userAddress);
-      if (addressJson != null && addressJson.isNotEmpty) {
-        addressModel = AddressModel.fromJson(jsonDecode(addressJson));
-      }
-    } catch (_) {}
-
-    Get.find<ApiClient>().updateHeader(
-      prefs.getString(AppConstants.token),
-      addressModel?.zoneId,
-      prefs.getString(AppConstants.languageCode),
-      splashController.getGuestId(),
-    );
 
     Get.find<AuthController>().updateToken();
     _route();
@@ -95,34 +78,33 @@ class SplashScreenState extends State<SplashScreen> {
         ErrorLogger.record(e, stack, reason: 'splash refreshSavedAddressZone');
       }
 
-      Timer(const Duration(seconds: 1), () async {
-        if (!mounted) return;
+      await BookingAuthHelper.ensureGuestSessionIfNeeded();
 
-        try {
-          if (_checkAvailableUpdate()) {
-            Get.offNamed(RouteHelper.getUpdateRoute('update'));
-          } else if (_checkMaintenanceModeActive() && !AppConstants.avoidMaintenanceMode) {
-            Get.offAllNamed(RouteHelper.getMaintenanceRoute());
-          } else {
-            if (widget.body != null) {
-              _notificationRoute();
-            } else {
-              if (Get.find<SplashController>().isShowInitialLanguageScreen()) {
-                Get.offNamed(RouteHelper.getLanguageScreen('fromOthers'));
-              } else if (Get.find<SplashController>().isShowOnboardingScreen()) {
-                Get.offAllNamed(RouteHelper.onBoardScreen);
-              } else {
-                final canContinue = await AddressSessionHelper.ensureAddressBeforeContinue();
-                if (!mounted || !canContinue) return;
-                Get.offNamed(RouteHelper.getInitialRoute());
-              }
-            }
-          }
-        } catch (e, stack) {
-          ErrorLogger.record(e, stack, reason: 'splash navigation');
-          if (mounted) setState(() => _configFailed = true);
+      await AppStartup.ensureDeferredReady();
+      if (!mounted) return;
+
+      final notificationBody = widget.body ?? AppStartup.initialNotificationBody;
+
+      try {
+        if (_checkAvailableUpdate()) {
+          Get.offNamed(RouteHelper.getUpdateRoute('update'));
+        } else if (_checkMaintenanceModeActive() && !AppConstants.avoidMaintenanceMode) {
+          Get.offAllNamed(RouteHelper.getMaintenanceRoute());
+        } else if (notificationBody != null) {
+          _notificationRoute(notificationBody);
+        } else if (Get.find<SplashController>().isShowInitialLanguageScreen()) {
+          Get.offNamed(RouteHelper.getLanguageScreen('fromOthers'));
+        } else if (Get.find<SplashController>().isShowOnboardingScreen()) {
+          Get.offAllNamed(RouteHelper.onBoardScreen);
+        } else {
+          final canContinue = await AddressSessionHelper.ensureAddressBeforeContinue();
+          if (!mounted || !canContinue) return;
+          Get.offNamed(RouteHelper.getInitialRoute());
         }
-      });
+      } catch (e, stack) {
+        ErrorLogger.record(e, stack, reason: 'splash navigation');
+        if (mounted) setState(() => _configFailed = true);
+      }
     }).catchError((e, stack) {
       ErrorLogger.record(e, stack, reason: 'splash getConfigData');
       if (mounted) setState(() => _configFailed = true);
@@ -176,9 +158,9 @@ class SplashScreenState extends State<SplashScreen> {
     return (configModel.content?.maintenanceMode?.maintenanceStatus == 1 && configModel.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1);
   }
 
-  void _notificationRoute(){
+  void _notificationRoute(NotificationBody notificationBody){
 
-    String notificationType = widget.body?.notificationType??"";
+    String notificationType = notificationBody.notificationType??"";
 
     switch(notificationType) {
 
@@ -191,13 +173,13 @@ class SplashScreenState extends State<SplashScreen> {
       } break;
 
       case "booking" || 'booking_ignored': {
-        if( widget.body!.bookingId!=null&& widget.body!.bookingId!=""){
-          if(widget.body?.bookingType == "repeat" && widget.body?.repeatBookingType == "single"){
-            Get.toNamed(RouteHelper.getBookingDetailsScreen( subBookingId : widget.body!.bookingId!,fromPage: 'fromNotification'));
-          }else if(widget.body?.bookingType == "repeat" && widget.body?.repeatBookingType != "single"){
-            Get.toNamed(RouteHelper.getRepeatBookingDetailsScreen( bookingId : widget.body!.bookingId, fromPage : "fromNotification"));
+        if( notificationBody.bookingId!=null&& notificationBody.bookingId!=""){
+          if(notificationBody.bookingType == "repeat" && notificationBody.repeatBookingType == "single"){
+            Get.toNamed(RouteHelper.getBookingDetailsScreen( subBookingId : notificationBody.bookingId!,fromPage: 'fromNotification'));
+          }else if(notificationBody.bookingType == "repeat" && notificationBody.repeatBookingType != "single"){
+            Get.toNamed(RouteHelper.getRepeatBookingDetailsScreen( bookingId : notificationBody.bookingId, fromPage : "fromNotification"));
           }else{
-            Get.toNamed(RouteHelper.getBookingDetailsScreen( bookingID:widget.body!.bookingId!,fromPage: 'fromNotification'));
+            Get.toNamed(RouteHelper.getBookingDetailsScreen( bookingID:notificationBody.bookingId!,fromPage: 'fromNotification'));
           }
         }else{
           Get.toNamed(RouteHelper.getMainRoute(""));
@@ -221,8 +203,8 @@ class SplashScreenState extends State<SplashScreen> {
       } break;
 
       case "service": {
-        if (widget.body != null && NotificationHelper.isServiceNotification(widget.body!)) {
-          NotificationHelper.navigateToServiceNotification(widget.body!);
+        if (NotificationHelper.isServiceNotification(notificationBody)) {
+          NotificationHelper.navigateToServiceNotification(notificationBody);
         } else {
           Get.toNamed(RouteHelper.getNotificationRoute());
         }

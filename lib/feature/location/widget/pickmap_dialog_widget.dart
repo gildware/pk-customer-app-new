@@ -18,6 +18,7 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   GoogleMapController? _mapController;
   CameraPosition? _cameraPosition;
   LatLng? _initialPosition;
+  bool _isMapReady = false;
 
   @override
   void initState() {
@@ -93,11 +94,14 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   // Map callback methods
   void _onMapCreated(GoogleMapController mapController) {
     _mapController = mapController;
-    Get.find<LocationController>().getCurrentLocation(
-      false,
-      mapController: mapController,
-      defaultLatLng: _initialPosition,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Get.find<LocationController>().getCurrentLocation(
+        false,
+        mapController: mapController,
+        defaultLatLng: _initialPosition,
+      );
+      _isMapReady = true;
+    });
   }
 
   void _onCameraMove(CameraPosition cameraPosition) {
@@ -105,11 +109,13 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   }
 
   void _onCameraMoveStarted() {
+    if (!_isMapReady) return;
     Get.find<LocationController>().updateCameraMovingStatus(true);
     Get.find<LocationController>().disableButton();
   }
 
   void _onCameraIdle() {
+    if (!_isMapReady || _cameraPosition == null) return;
     Get.find<LocationController>().updateCameraMovingStatus(false);
     try {
       Get.find<LocationController>().updatePosition(

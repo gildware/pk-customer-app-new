@@ -86,7 +86,11 @@ class _RepeatBookingDetailsScreenState extends State<RepeatBookingDetailsScreen>
                     onTap: () async {
                       if(option.title == "download_invoice"){
                         String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                        String uri = "${AppConstants.baseUrl}${AppConstants.repeatBookingInvoiceUrl}${bookingDetailsController.bookingDetailsContent?.id}/$languageCode";
+                        final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                          bookingId: bookingDetailsController.bookingDetailsContent?.id ?? '',
+                          lang: languageCode,
+                          variant: 'repeat',
+                        );
                         if (kDebugMode) {
                           print("Uri : $uri");
                         }
@@ -136,7 +140,11 @@ class _RepeatBookingDetailsScreenState extends State<RepeatBookingDetailsScreen>
             ) : IconButton(
                 onPressed: () async {
                   String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                  String uri = "${AppConstants.baseUrl}${AppConstants.repeatBookingInvoiceUrl}${bookingDetailsController.bookingDetailsContent?.id}/$languageCode";
+                  final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                    bookingId: bookingDetailsController.bookingDetailsContent?.id ?? '',
+                    lang: languageCode,
+                    variant: 'repeat',
+                  );
                   if (kDebugMode) {
                     print("Uri : $uri");
                   }
@@ -216,8 +224,11 @@ class RepeatBookingTabBar extends StatelessWidget {
                       onTap : () async {
                         Get.dialog(const CustomLoader());
                         String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                        String uri = "${AppConstants.baseUrl}${
-                            AppConstants.repeatBookingInvoiceUrl}${bookingDetails.id}/$languageCode";
+                        final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                          bookingId: bookingDetails.id ?? '',
+                          lang: languageCode,
+                          variant: 'repeat',
+                        );
                         if (kDebugMode) {
                           print("Uri : $uri");
                         }

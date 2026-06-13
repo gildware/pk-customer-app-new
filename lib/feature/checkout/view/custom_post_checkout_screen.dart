@@ -317,8 +317,9 @@ class _CustomPostCheckoutScreenState extends State<CustomPostCheckoutScreen> {
           int isPartial = cartController.walletPaymentStatus && isPartialPayment ? 1 : 0;
           String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
           String serviceLocation = "customer" ;
+          final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-          url = '${AppConstants.baseUrl}/payment?payment_method=${checkoutController.selectedDigitalPaymentMethod?.gateway}&access_token=${base64Url.encode(utf8.encode(userId))}&zone_id=$zoneId'
+          url = '${AppConstants.baseUrl}/payment?payment_method=${checkoutController.selectedDigitalPaymentMethod?.gateway}&access_token=$accessToken&zone_id=$zoneId'
               '&callback=$callbackUrl&payment_platform=$platform&service_address=$encodedAddress&service_address_id=$addressId'
               '&is_partial=$isPartial&service_schedule=$schedule&post_id=${widget.postId}&provider_id=${widget.providerId}'
               '&service_location=$serviceLocation';

@@ -175,8 +175,13 @@ class AddressSessionHelper {
     return address != null && (address.zoneId?.trim().isNotEmpty ?? false);
   }
 
-  static void regenerateGuestId() {
-    Get.find<SplashController>().setGuestId(const Uuid().v1());
+  static Future<void> regenerateGuestId() async {
+    final guestId = const Uuid().v1();
+    await Get.find<SplashController>().setGuestId(guestId);
+    try {
+      await GuestSessionHelper.regenerateForGuest(guestId);
+      await Get.find<ApiClient>().refreshGuestSessionHeaders();
+    } catch (_) {}
   }
 
   static Future<void> resetHomeData() async {

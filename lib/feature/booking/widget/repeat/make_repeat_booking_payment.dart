@@ -158,7 +158,7 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
     );
   }
 
-  void _makePayment(String paymentGateway , BookingDetailsContent bookingDetails){
+  Future<void> _makePayment(String paymentGateway , BookingDetailsContent bookingDetails) async {
 
     String url = '';
     String hostname = html.window.location.hostname!;
@@ -171,8 +171,9 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
     String platform = GetPlatform.isWeb ? "web" : "app" ;
     String repeatBookingId = bookingDetails.id ?? "";
     String bookingId = bookingDetails.bookingId ?? "";
+    final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-    url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=${base64Url.encode(utf8.encode(userId))}'
+    url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=$accessToken'
         '&callback=$callbackUrl&payment_platform=$platform&is_repeat_single_booking=1&booking_repeat_id=$repeatBookingId&booking_id=$bookingId';
 
     if (GetPlatform.isWeb) {

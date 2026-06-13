@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:demandium/api/local/cache_response.dart';
 import 'package:demandium/common/repo/data_sync_repo.dart';
+import 'package:demandium/feature/home/repository/home_bundle_repo.dart';
 import 'package:demandium/feature/auth/controller/facebook_login_controller.dart';
 import 'package:get/get.dart';
 // import 'package:demandium/feature/ai_chat/repository/ai_chat_repo.dart';
@@ -12,10 +13,13 @@ Future<Map<String, Map<String, String>>> init() async {
 
   final sharedPreferences = await SharedPreferences.getInstance();
 
-  Get.lazyPut(() => sharedPreferences);
+  Get.lazyPut<SharedPreferences>(() => sharedPreferences);
+  await SecureTokenStorage.preload(sharedPreferences);
+  Get.lazyPut(() => ApiClient(appBaseUrl: AppConstants.baseUrl, sharedPreferences: Get.find<SharedPreferences>()));
 
   /// Repository
-  Get.lazyPut(() => DataSyncRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
+  Get.lazyPut(() => DataSyncRepo(apiClient: Get.find(), sharedPreferences: Get.find<SharedPreferences>()));
+  Get.lazyPut(() => HomeBundleRepo(apiClient: Get.find(), sharedPreferences: Get.find<SharedPreferences>()));
   Get.lazyPut(() => CategoryRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
   Get.lazyPut(() => BannerRepo(apiClient: Get.find(), sharedPreferences: Get.find()));
   Get.lazyPut(() => WebLandingRepo(apiClient: Get.find(), sharedPreferences:  Get.find()));
@@ -71,14 +75,13 @@ Future<Map<String, Map<String, String>>> init() async {
   Get.lazyPut(() => FacebookLoginController());
 
 
-  Get.lazyPut(() => ApiClient(appBaseUrl: AppConstants.baseUrl, sharedPreferences: Get.find()));
 
 
 
 
 
 
-  Get.lazyPut(() => ThemeController(sharedPreferences: Get.find()));
+  Get.lazyPut(() => ThemeController(sharedPreferences: Get.find<SharedPreferences>()));
   Get.lazyPut(() => LocationController(locationRepo: LocationRepo(apiClient: Get.find(), sharedPreferences: Get.find())));
   Get.lazyPut(() => CartController(cartRepo: CartRepo(sharedPreferences:Get.find(),apiClient: Get.find())));
 

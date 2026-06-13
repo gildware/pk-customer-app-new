@@ -12,6 +12,13 @@ class LocationController extends GetxController implements GetxService {
   final LocationRepo locationRepo;
   LocationController({required this.locationRepo});
 
+  void refreshUi({bool notify = true}) {
+    if (!notify) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!isClosed) update();
+    });
+  }
+
   Position _position = Position(longitude: 0, latitude: 0, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1);
   Position _pickPosition = Position(longitude: 0, latitude: 0, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1);
   bool _loading = false;
@@ -78,7 +85,7 @@ class LocationController extends GetxController implements GetxService {
     _minBottomSheetExtent = min;
     _maxBottomSheetExtent = max;
     if (notify) {
-      update();
+      refreshUi();
     }
   }
 
@@ -87,7 +94,7 @@ class LocationController extends GetxController implements GetxService {
   Future<AddressModel> getCurrentLocation(bool fromAddress, {bool deviceCurrentLocation = false, GoogleMapController? mapController, LatLng? defaultLatLng, bool notify = true, bool isFromCheckout = false}) async {
     _loading = true;
     if(notify) {
-      update();
+      refreshUi();
     }
     AddressModel addressModel;
     Position myPosition;
@@ -186,7 +193,7 @@ class LocationController extends GetxController implements GetxService {
 
     fromAddress ? _address = addressModel : _pickAddress = addressModel;
     _loading = false;
-    update();
+    refreshUi();
     return addressModel;
   }
 
@@ -194,7 +201,7 @@ class LocationController extends GetxController implements GetxService {
     
     if(!isLoading){
       _isLoading = true;
-      update();
+      refreshUi();
     }
     ZoneResponseModel responseModel;
     Response response = await locationRepo.getZone(lat, long);
@@ -218,7 +225,7 @@ class LocationController extends GetxController implements GetxService {
     }
     if(!isLoading){
       _isLoading = false;
-      update();
+      refreshUi();
     }
     return responseModel;
   }
@@ -226,7 +233,7 @@ class LocationController extends GetxController implements GetxService {
   Future<void> updatePosition(CameraPosition position, bool fromAddress, {bool formCheckout = false}) async {
     if(_updateAddAddressData) {
       _loading = true;
-      update();
+      refreshUi();
       try {
         if (fromAddress) {
           _position = Position(
@@ -276,7 +283,7 @@ class LocationController extends GetxController implements GetxService {
       _updateAddAddressData = true;
     }
     _loading = false;
-    update();
+    refreshUi();
   }
 
   Future<ResponseModel> deleteUserAddressByID(AddressModel address) async {
@@ -292,7 +299,7 @@ class LocationController extends GetxController implements GetxService {
     } else {
       responseModel = ResponseModel(false, response.body['message']??response.statusText);
     }
-    update();
+    refreshUi();
     return responseModel;
   }
 
@@ -320,7 +327,7 @@ class LocationController extends GetxController implements GetxService {
     }
    // _isLoading = false;
 
-    update();
+    refreshUi();
   }
 
   Future<void> addAddress(
@@ -329,7 +336,7 @@ class LocationController extends GetxController implements GetxService {
     bool fromCheckout = false,
   }) async {
     _isLoading = true;
-    update();
+    refreshUi();
     Response response = await locationRepo.addAddress(addressModel);
     final body = response.body;
     if (body is Map && body["response_code"] == "default_store_200") {
@@ -339,7 +346,7 @@ class LocationController extends GetxController implements GetxService {
 
       Future.delayed(const Duration(seconds: 3), () {
         _newlyAddedAddressId = null;
-        update();
+        refreshUi();
       });
 
       final saved = AddressModel.fromJson(body["content"]);
@@ -368,12 +375,12 @@ class LocationController extends GetxController implements GetxService {
       customSnackBar(message.tr, type: ToasterMessageType.error);
     }
     _isLoading = false;
-    update();
+    refreshUi();
   }
 
   Future<ResponseModel> updateAddress(AddressModel addressModel, String addressId) async {
     _isLoading = true;
-    update();
+    refreshUi();
     Response response = await locationRepo.updateAddress(addressModel, addressId);
     ResponseModel responseModel;
     if (response.statusCode == 200) {
@@ -396,7 +403,7 @@ class LocationController extends GetxController implements GetxService {
       responseModel = ResponseModel(false, message.tr);
     }
     _isLoading = false;
-    update();
+    refreshUi();
     return responseModel;
   }
 
@@ -543,7 +550,7 @@ class LocationController extends GetxController implements GetxService {
 
   Future<AddressModel> setLocation(String placeID, String address, GoogleMapController? mapController) async {
     _loading = true;
-    update();
+    refreshUi();
 
     LatLng latLng = const LatLng(0, 0);
 
@@ -610,7 +617,7 @@ class LocationController extends GetxController implements GetxService {
       mapController.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(target: latLng, zoom: 17)));
     }
     _loading = false;
-    update();
+    refreshUi();
 
     return addressModel;
   }
@@ -618,17 +625,17 @@ class LocationController extends GetxController implements GetxService {
   void disableButton() {
     _buttonDisabled = true;
     _inZone = true;
-    update();
+    refreshUi();
   }
 
   void setAddAddressData() {
     _position = _pickPosition;
     _address = _pickAddress;
     _updateAddAddressData = false;
-    update();
+    refreshUi();
   }
 
-  void setUpdateAddress(AddressModel address){
+  void setUpdateAddress(AddressModel address, {bool shouldUpdate = true}){
     final latitude = double.tryParse(address.latitude?.toString() ?? '') ?? 0;
     final longitude = double.tryParse(address.longitude?.toString() ?? '') ?? 0;
     _position = Position(
@@ -650,21 +657,21 @@ class LocationController extends GetxController implements GetxService {
       _inZone = true;
     }
     _updateAddAddressData = false;
-    update();
+    refreshUi(notify: shouldUpdate);
   }
 
-  void updateAddressType(Address address){
+  void updateAddressType(Address address, {bool shouldUpdate = true}){
     _selectedAddressType = address;
-    update();
+    refreshUi(notify: shouldUpdate);
   }
 
-  void updateAddressLabel({AddressLabel? addressLabel,String addressLabelString = ''}){
+  void updateAddressLabel({AddressLabel? addressLabel, String addressLabelString = '', bool shouldUpdate = true}){
     if(addressLabel == null) {
       _selectedAddressLabel = _getAddressLabel(addressLabelString);
     }else{
       _selectedAddressLabel = addressLabel;
     }
-    update();
+    refreshUi(notify: shouldUpdate);
   }
 
   AddressLabel _getAddressLabel(String addressLabel) {
@@ -689,14 +696,14 @@ class LocationController extends GetxController implements GetxService {
       if(selectedZone.zoneIds.contains(getUserAddress()?.zoneId??"")) {
         _selectedAddress = address;
 
-        update();
+        refreshUi();
         isSuccess = true;
       }else{
         isSuccess = false;
       }
     }else{
       _selectedAddress = address;
-      update();
+      refreshUi();
       isSuccess = true;
     }
     return isSuccess;
@@ -711,7 +718,7 @@ class LocationController extends GetxController implements GetxService {
       _mapController = null;
     }
     if (notify) {
-      update();
+      refreshUi();
     }
   }
 
@@ -724,7 +731,7 @@ class LocationController extends GetxController implements GetxService {
     _zoneID = '';
     resetAddress(clearMapController: true, notify: false);
     if (notify) {
-      update();
+      refreshUi();
     }
   }
 
@@ -842,7 +849,7 @@ class LocationController extends GetxController implements GetxService {
     _selectedAddress =  addressModel;
 
     if(shouldUpdate){
-      update();
+      refreshUi();
     }
   }
 
@@ -879,19 +886,19 @@ class LocationController extends GetxController implements GetxService {
       ));
     });
 
-    update();
+    refreshUi();
   }
 
   void updateCameraMovingStatus(bool status){
     _isCameraMoving = status;
-    update();
+    refreshUi();
   }
 
   void updateSelectedServiceLocationType ({ServiceLocationType? type, bool shouldUpdate = true}){
     if(type !=null){
       _selectedServiceLocationType = type;
       if(shouldUpdate){
-        update();
+        refreshUi();
       }
     }else{
       _selectedServiceLocationType = ServiceLocationType.customer;

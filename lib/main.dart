@@ -1,98 +1,32 @@
+import 'package:demandium/helper/app_startup.dart';
 import 'package:get/get.dart';
 import 'package:url_strategy/url_strategy.dart';
-import 'firebase_options.dart';
-import 'helper/analytics/analytics_helper.dart';
-import 'helper/error_logger.dart';
 import 'util/core_export.dart';
-import 'helper/get_di.dart' as di;
 
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if(ResponsiveHelper.isMobilePhone()) {
-    await FlutterDownloader.initialize();
+  if (!kIsWeb && AppConstants.sslPinSha256.isNotEmpty) {
+    HttpOverrides.global = CertificatePinningHttpOverrides(
+      expectedPinSha256: AppConstants.sslPinSha256,
+    );
   }
   setPathUrlStrategy();
-  AnalyticsHelper.init();
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    if (!kIsWeb) {
-      await ErrorLogger.initialize();
-    }
-  } catch (e, stack) {
-    ErrorLogger.record(e, stack, reason: 'Firebase.initializeApp');
-  }
+  final languages = await AppStartup.prepareForRunApp();
 
-  if(kIsWeb) {
-    await FacebookAuth.instance.webAndDesktopInitialize(
-      appId: "482889663914976",
-      cookie: true,
-      xfbml: true,
-      version: "v15.0",
-    );
-  }
-
-  if (!kIsWeb && GetPlatform.isMobile) {
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-  }
-
-
-
-
-  Map<String, Map<String, String>> languages = await di.init();
-  NotificationBody? body;
-  String? path;
-  try {
-    if (!kIsWeb) {
-      path =  await initDynamicLinks();
-    }
-
-    final RemoteMessage? remoteMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (remoteMessage != null) {
-      body = NotificationHelper.convertNotification(remoteMessage.data);
-    }
-    await NotificationHelper.initialize(flutterLocalNotificationsPlugin);
-    FirebaseMessaging.onBackgroundMessage(myBackgroundMessageHandler);
-  }catch(e, stack) {
-    ErrorLogger.record(e, stack, reason: 'NotificationHelper.initialize');
-  }
-  runApp(MyApp(languages: languages, body: body, route: path,));
+  runApp(MyApp(languages: languages));
+  AppStartup.scheduleDeferredInit(flutterLocalNotificationsPlugin);
 }
 
 class MyApp extends StatefulWidget {
   final Map<String, Map<String, String>>? languages;
-  final NotificationBody? body;
-  final String? route;
-  const MyApp({super.key, required this.languages, required this.body, this.route});
-
+  const MyApp({super.key, required this.languages});
 
   @override
   State<MyApp> createState() => _MyAppState();
-
-}
-
-
-
-Future<String?> initDynamicLinks() async {
-  final appLinks = AppLinks();
-  final uri = await appLinks.getInitialLink();
-  String? path;
-  if (uri != null) {
-    path = uri.path;
-  }else{
-    path = null;
-  }
-  return path;
-
 }
 
 class _MyAppState extends State<MyApp> {
@@ -100,23 +34,26 @@ class _MyAppState extends State<MyApp> {
     final success = await Get.find<SplashController>().getConfigData();
     await Get.find<LocationController>().refreshSavedAddressZone();
     Get.find<AuthController>().updateToken();
-    if (success && Get.isRegistered<CartController>()) {
+    await BookingAuthHelper.ensureGuestSessionIfNeeded();
+    if (success && Get.isRegistered<CartController>() && BookingAuthHelper.shouldSyncCartFromServer()) {
       await Get.find<CartController>().getCartListFromServer();
     }
   }
+
   @override
   void initState() {
     super.initState();
 
-    if(kIsWeb || widget.route != null)  {
+    if (kIsWeb || AppStartup.initialDeepLinkPath != null) {
       Get.find<SplashController>().initSharedData();
       Get.find<SplashController>().getCookiesData();
+      Get.find<AuthRepo>().preloadRememberMeCredentials();
 
       if (Get.find<AuthController>().isLoggedIn()) {
         Get.find<UserController>().getUserInfo();
       }
 
-      if( Get.find<SplashController>().getGuestId().isEmpty){
+      if (Get.find<SplashController>().getGuestId().isEmpty) {
         var uuid = const Uuid().v1();
         Get.find<SplashController>().setGuestId(uuid);
       }
@@ -126,11 +63,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-
     return GetBuilder<ThemeController>(builder: (themeController) {
       return GetBuilder<LocalizationController>(builder: (localizeController) {
         return GetBuilder<SplashController>(builder: (splashController) {
-          // Web only: show logo until config loads. On mobile, SplashScreen handles startup.
           if (kIsWeb &&
               splashController.configModel.content == null &&
               !Get.currentRoute.contains('/splash')) {
@@ -149,8 +84,13 @@ class _MyAppState extends State<MyApp> {
             theme: themeController.darkTheme ? dark : light,
             locale: localizeController.locale,
             translations: Messages(languages: widget.languages),
-            fallbackLocale: Locale(AppConstants.languages[0].languageCode!, AppConstants.languages[0].countryCode),
-            initialRoute: GetPlatform.isWeb ? RouteHelper.getInitialRoute() : RouteHelper.getSplashRoute(widget.body, widget.route),
+            fallbackLocale: Locale(
+              AppConstants.languages[0].languageCode!,
+              AppConstants.languages[0].countryCode,
+            ),
+            initialRoute: GetPlatform.isWeb
+                ? RouteHelper.getInitialRoute()
+                : RouteHelper.getSplashRoute(null, AppStartup.initialDeepLinkPath),
             getPages: RouteHelper.routes,
             defaultTransition: Transition.fadeIn,
             transitionDuration: const Duration(milliseconds: 500),
@@ -160,17 +100,25 @@ class _MyAppState extends State<MyApp> {
                 child: SafeArea(
                   top: false,
                   bottom: GetPlatform.isAndroid,
-                  child: Stack(children: [
-                    widget!,
-
-                    GetBuilder<SplashController>(builder: (splashController){
-                      if(!splashController.savedCookiesData || !splashController.getAcceptCookiesStatus(splashController.configModel.content?.cookiesText??"")){
-                        return ResponsiveHelper.isWeb() ? const Align(alignment: Alignment.bottomCenter,child: CookiesView()) :const SizedBox();
-                      }else{
+                  child: Stack(
+                    children: [
+                      widget!,
+                      GetBuilder<SplashController>(builder: (splashController) {
+                        if (!splashController.savedCookiesData ||
+                            !splashController.getAcceptCookiesStatus(
+                              splashController.configModel.content?.cookiesText ?? '',
+                            )) {
+                          return ResponsiveHelper.isWeb()
+                              ? const Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: CookiesView(),
+                                )
+                              : const SizedBox();
+                        }
                         return const SizedBox();
-                      }
-                    })
-                  ],),
+                      }),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -29,9 +29,23 @@ class UserRepo extends DataSyncRepo{
     return await apiClient.postMultipartData(AppConstants.updateProfileUri, body,data != null ? [MultipartBody('profile_image', data)]:[]);
   }
 
-  Future<Response> changePassword(UserInfoModel userInfoModel) async {
-    return await apiClient.postData(AppConstants.updateProfileUri, {'phone_or_email': userInfoModel.fName, 'otp': userInfoModel.lName,
-      'password': userInfoModel.email, 'confirm_password': userInfoModel.phone});
+  Future<Response> changePassword({
+    required String identity,
+    required String identityType,
+    required String otp,
+    required String password,
+    required String confirmPassword,
+    int isFirebaseOtp = 0,
+  }) async {
+    return await apiClient.putData(AppConstants.resetPasswordUri, {
+      '_method': 'put',
+      'identity': identity,
+      'identity_type': identityType,
+      'otp': otp,
+      'password': password,
+      'confirm_password': confirmPassword,
+      'is_firebase_otp': isFirebaseOtp,
+    });
   }
 
   Future<Response> deleteUser() async {

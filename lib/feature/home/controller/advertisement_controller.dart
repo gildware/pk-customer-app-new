@@ -72,4 +72,22 @@ class AdvertisementController extends GetxController implements GetxService {
     }
   }
 
+  void applyHomeBundleAdvertisements(dynamic rawContent) {
+    _advertisementList = [];
+    final list = rawContent is Map ? rawContent['data'] : null;
+    if (list is List) {
+      for (final banner in list) {
+        if (banner is Map<String, dynamic>) {
+          _advertisementList!.add(Advertisement.fromJson(banner));
+        }
+      }
+    }
+    if (_advertisementList != null &&
+        _advertisementList!.isNotEmpty &&
+        _advertisementList![0].type == 'video_promotion') {
+      autoPlay = false;
+    }
+    update();
+  }
+
 }

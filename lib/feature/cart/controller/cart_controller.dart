@@ -161,6 +161,14 @@ class CartController extends GetxController implements GetxService {
     bool shouldUpdate = true,
     bool forceFromServer = false,
   }) async {
+    if (!BookingAuthHelper.shouldSyncCartFromServer()) {
+      _cartList = [];
+      _initialCartList = [];
+      _isCartLoading = false;
+      if (shouldUpdate) update();
+      return;
+    }
+
     if (forceFromServer) {
       _isCartLoading = true;
       _cartLoadFailed = false;

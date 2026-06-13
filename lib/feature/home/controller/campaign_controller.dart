@@ -57,6 +57,19 @@ class CampaignController extends GetxController implements GetxService {
     update();
   }
 
+  void applyHomeBundleCampaigns(dynamic rawContent) {
+    _campaignList = [];
+    final list = rawContent is Map ? rawContent['data'] : null;
+    if (list is List) {
+      for (final campaign in list) {
+        if (campaign is Map<String, dynamic>) {
+          _campaignList!.add(CampaignData.fromJson(campaign));
+        }
+      }
+    }
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _campaignList = null;
     _itemCampaignList = null;

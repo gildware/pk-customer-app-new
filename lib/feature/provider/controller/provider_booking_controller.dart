@@ -571,6 +571,19 @@ class ProviderBookingController extends GetxController implements GetxService {
     }
   }
 
+  void applyHomeBundleProviders(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _providerModel = ProviderModel.fromJson(data);
+    _providerList = List<ProviderData>.from(_providerModel?.content?.data ?? []);
+    _calculateDistance();
+    update();
+  }
+
+  void applyHomeBundleCuratedProviders(String sectionKey, List<ProviderData> providers) {
+    _curatedProvidersBySection[sectionKey] = providers;
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _providerModel = null;
     _providerDetailsContent = null;

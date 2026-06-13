@@ -820,7 +820,7 @@ class AuthController extends GetxController implements GetxService {
       } catch (_) {}
     }
     authRepo.clearSharedData(response: response);
-    AddressSessionHelper.regenerateGuestId();
+    await AddressSessionHelper.regenerateGuestId();
     await resetCustomerSession(clearAddress: false);
     await AddressSessionHelper.resetHomeData();
   }

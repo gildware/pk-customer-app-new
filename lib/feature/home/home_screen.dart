@@ -1,3 +1,4 @@
+import 'package:demandium/feature/home/helper/home_bundle_helper.dart';
 import 'package:demandium/feature/home/helper/mobile_app_home_helper.dart';
 import 'package:demandium/feature/home/widget/customer_home_sections.dart';
 import 'package:demandium/feature/home/widget/home_search_widget.dart';
@@ -65,31 +66,45 @@ class HomeScreen extends StatefulWidget {
     if (availableServiceCount == 0) {
       await _safeLoad(Get.find<BannerController>().getBannerList(reload));
     } else {
-      await Future.wait([
-        _safeLoad(Get.find<ServiceController>().getRecommendedSearchList()),
-        _safeLoad(Get.find<BannerController>().getBannerList(reload)),
-        _safeLoad(Get.find<AdvertisementController>().getAdvertisementList(reload)),
-        _safeLoad(Get.find<CategoryController>().getCategoryList(reload)),
-        if (_needsDefaultHomeSubCategories())
-          _safeLoad(Get.find<CategoryController>().getHomeSubCategoryList(
-            reload,
-            limit: _defaultHomeSubCategoryLimit(),
-          )),
-        _safeLoad(Get.find<ServiceController>().getPopularServiceList(1, reload)),
-        _safeLoad(Get.find<ServiceController>().getTrendingServiceList(1, reload)),
-        _safeLoad(Get.find<ProviderBookingController>().getProviderList(1, reload)),
-        _safeLoad(Get.find<NearbyProviderController>().getProviderList(1, reload)),
-        _safeLoad(Get.find<CampaignController>().getCampaignList(reload)),
-        _safeLoad(Get.find<ServiceController>().getRecommendedServiceList(1, reload)),
-        _safeLoad(Get.find<CheckOutController>().getOfflinePaymentMethod(false, shouldUpdate: false)),
-        _safeLoad(Get.find<ServiceController>().getFeatherCategoryList(reload)),
-        if (Get.find<AuthController>().isLoggedIn())
-          _safeLoad(Get.find<AuthController>().updateToken()),
-        if (Get.find<AuthController>().isLoggedIn())
-          _safeLoad(Get.find<ServiceController>().getRecentlyViewedServiceList(1, reload)),
-      ]);
+      if (reload) {
+        HomeBundleHelper.reset();
+      }
 
-      await _safeLoad(_loadCuratedHomeSections(reload));
+      var bundleLoaded = false;
+      try {
+        bundleLoaded = await HomeBundleHelper.loadAndApply(reload: reload);
+      } catch (error, stack) {
+        ErrorLogger.record(error, stack, reason: 'HomeScreen.loadHomeBundle');
+      }
+
+      if (!bundleLoaded) {
+        await Future.wait([
+          _safeLoad(Get.find<ServiceController>().getRecommendedSearchList()),
+          _safeLoad(Get.find<BannerController>().getBannerList(reload)),
+          _safeLoad(Get.find<AdvertisementController>().getAdvertisementList(reload)),
+          _safeLoad(Get.find<CategoryController>().getCategoryList(reload)),
+          if (_needsDefaultHomeSubCategories())
+            _safeLoad(Get.find<CategoryController>().getHomeSubCategoryList(
+              reload,
+              limit: _defaultHomeSubCategoryLimit(),
+            )),
+          _safeLoad(Get.find<ServiceController>().getPopularServiceList(1, reload)),
+          _safeLoad(Get.find<ServiceController>().getTrendingServiceList(1, reload)),
+          _safeLoad(Get.find<ProviderBookingController>().getProviderList(1, reload)),
+          _safeLoad(Get.find<NearbyProviderController>().getProviderList(1, reload)),
+          _safeLoad(Get.find<CampaignController>().getCampaignList(reload)),
+          _safeLoad(Get.find<ServiceController>().getRecommendedServiceList(1, reload)),
+          _safeLoad(Get.find<CheckOutController>().getOfflinePaymentMethod(false, shouldUpdate: false)),
+          _safeLoad(Get.find<ServiceController>().getFeatherCategoryList(reload)),
+          if (Get.find<AuthController>().isLoggedIn())
+            _safeLoad(Get.find<ServiceController>().getRecentlyViewedServiceList(1, reload)),
+        ]);
+        await _safeLoad(_loadCuratedHomeSections(reload));
+      }
+
+      if (Get.find<AuthController>().isLoggedIn()) {
+        await _safeLoad(Get.find<AuthController>().updateToken());
+      }
 
       Get.find<BookingDetailsController>().manageDialog();
     }

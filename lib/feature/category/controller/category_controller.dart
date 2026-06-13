@@ -232,6 +232,28 @@ class CategoryController extends GetxController implements GetxService {
     update();
   }
 
+  void applyHomeBundleCategories(dynamic rawContent) {
+    _categoryList = [];
+    for (final item in MobileAppHomeApiHelper.extractContentDataMaps({'content': rawContent})) {
+      _categoryList!.add(CategoryModel.fromJson(item));
+    }
+    Get.find<AllSearchController>().insertCategoryCheckedList();
+    update();
+  }
+
+  void applyHomeBundleSubCategories(dynamic rawContent) {
+    _homeSubCategoryList = MobileAppHomeApiHelper.extractContentDataMaps({'content': rawContent})
+        .map((item) => CategoryModel.fromJson(item))
+        .where((c) => c.isActive == true && _categoryHasServices(c))
+        .toList();
+    update();
+  }
+
+  void applyHomeBundleCuratedCategories(String sectionKey, List<CategoryModel> categories) {
+    _curatedCategoriesBySection[sectionKey] = categories;
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _categoryList = null;
     _curatedCategoriesBySection.clear();

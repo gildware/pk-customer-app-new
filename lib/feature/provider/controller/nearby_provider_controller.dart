@@ -460,6 +460,19 @@ class NearbyProviderController extends GetxController implements GetxService {
     _mapController = controller;
   }
 
+  void applyHomeBundleProviders(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _providerModel = ProviderModel.fromJson(data);
+    _providerList = List<ProviderData>.from(_providerModel?.content?.data ?? []);
+    _sortProviderListAndInitMap();
+    update();
+  }
+
+  void applyHomeBundleCuratedProviders(String sectionKey, List<ProviderData> providers) {
+    _curatedProvidersBySection[sectionKey] = providers;
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _providerModel = null;
     categoryItemList = [];

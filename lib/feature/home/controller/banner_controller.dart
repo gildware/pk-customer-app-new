@@ -108,6 +108,19 @@ class BannerController extends GetxController implements GetxService {
     }
   }
 
+  void applyHomeBundleBanners(dynamic rawContent) {
+    _banners = [];
+    for (final item in MobileAppHomeApiHelper.extractContentDataMaps({'content': rawContent})) {
+      _banners!.add(BannerModel.fromJson(item));
+    }
+    update();
+  }
+
+  void applyHomeBundleCuratedBanners(String sectionKey, List<BannerModel> banners) {
+    _curatedBannersBySection[sectionKey] = banners;
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _banners = null;
     _curatedBannersBySection.clear();

@@ -599,6 +599,68 @@ class ServiceController extends GetxController implements GetxService {
     update();
   }
 
+  void applyHomeBundlePopularServices(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _popularBasedServiceContent = ServiceModel.fromJson(data).content;
+    _popularServiceList = List<Service>.from(_popularBasedServiceContent?.serviceList ?? []);
+    update();
+  }
+
+  void applyHomeBundleTrendingServices(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _trendingServiceContent = ServiceModel.fromJson(data).content;
+    _trendingServiceList = List<Service>.from(_trendingServiceContent?.serviceList ?? []);
+    update();
+  }
+
+  void applyHomeBundleRecommendedServices(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _recommendedServiceContent = ServiceModel.fromJson(data).content;
+    _recommendedServiceList = List<Service>.from(_recommendedServiceContent?.serviceList ?? []);
+    update();
+  }
+
+  void applyHomeBundleRecommendedSearch(dynamic rawContent) {
+    _recommendedSearchList = [];
+    if (rawContent is List) {
+      for (final item in rawContent) {
+        if (item is Map<String, dynamic>) {
+          _recommendedSearchList!.add(RecommendedSearch.fromJson(item));
+        }
+      }
+    }
+    update();
+  }
+
+  void applyHomeBundleFeaturedCategories(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _featheredCategoryContent = FeatheredCategoryModel.fromJson(data).content;
+    _categoryList = [];
+    _featheredCategoryContent?.categoryList?.forEach((element) {
+      if (element.servicesByCategory != null && element.servicesByCategory!.isNotEmpty) {
+        _categoryList!.add(element);
+      }
+    });
+    update();
+  }
+
+  void applyHomeBundleRecentlyViewed(dynamic rawContent) {
+    final data = {'content': rawContent};
+    _recentlyViewServiceContent = ServiceModel.fromJson(data).content;
+    _recentlyViewServiceList = List<Service>.from(_recentlyViewServiceContent?.serviceList ?? []);
+    update();
+  }
+
+  void applyHomeBundleCuratedServices(String sectionKey, List<Service> services) {
+    _curatedServicesBySection[sectionKey] = services;
+    update();
+  }
+
+  void applyHomeBundleCuratedFeatheredCategories(String sectionKey, List<CategoryData> categories) {
+    _curatedFeatheredBySection[sectionKey] = categories;
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _serviceContent = null;
     _offerBasedServiceContent = null;

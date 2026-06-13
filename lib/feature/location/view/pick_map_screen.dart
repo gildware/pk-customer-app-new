@@ -38,6 +38,7 @@ class _PickMapScreenState extends State<PickMapScreen> {
 
   String? pageTitle;
   String? pageSubTitle;
+  bool _isMapReady = false;
 
   @override
   void initState() {
@@ -176,48 +177,48 @@ class _PickMapScreenState extends State<PickMapScreen> {
   // Callback methods for _MapViewWidget
   void _onMapCreated(GoogleMapController mapController) {
     _mapController = mapController;
-    final locationController = Get.find<LocationController>();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final locationController = Get.find<LocationController>();
 
-    if (widget.fromAddAddress!) {
-      final target = MapHelper.resolveMapTarget(
-        usePickPosition: true,
-        fallback: _initialPosition,
-      );
-      if (MapHelper.isValidLatLng(LatLng(
-        locationController.pickPosition.latitude,
-        locationController.pickPosition.longitude,
-      ))) {
-        mapController.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(target: target, zoom: 16),
-          ),
+      if (widget.fromAddAddress!) {
+        final target = MapHelper.resolveMapTarget(
+          usePickPosition: true,
+          fallback: _initialPosition,
         );
-      } else {
-        locationController.getCurrentLocation(
-          false,
-          mapController: mapController,
-          defaultLatLng: target,
-          isFromCheckout: widget.formCheckout,
-        );
-      }
-      return;
-    }
-
-    if (widget.zone != null) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        mapController.animateCamera(CameraUpdate.newLatLngBounds(
+        if (MapHelper.isValidLatLng(LatLng(
+          locationController.pickPosition.latitude,
+          locationController.pickPosition.longitude,
+        ))) {
+          await mapController.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: target, zoom: 16),
+            ),
+          );
+        } else {
+          await locationController.getCurrentLocation(
+            false,
+            mapController: mapController,
+            defaultLatLng: target,
+            isFromCheckout: widget.formCheckout,
+          );
+        }
+      } else if (widget.zone != null) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        await mapController.animateCamera(CameraUpdate.newLatLngBounds(
           MapHelper.boundsFromLatLngList(zoneLatLongList),
           100.5,
         ));
-      });
-    } else {
-      locationController.getCurrentLocation(
-        false,
-        mapController: mapController,
-        defaultLatLng: _initialPosition,
-        isFromCheckout: widget.formCheckout,
-      );
-    }
+      } else {
+        await locationController.getCurrentLocation(
+          false,
+          mapController: mapController,
+          defaultLatLng: _initialPosition,
+          isFromCheckout: widget.formCheckout,
+        );
+      }
+
+      _isMapReady = true;
+    });
   }
 
   void _onCameraMove(CameraPosition cameraPosition) {
@@ -225,11 +226,13 @@ class _PickMapScreenState extends State<PickMapScreen> {
   }
 
   void _onCameraMoveStarted() {
+    if (!_isMapReady) return;
     Get.find<LocationController>().updateCameraMovingStatus(true);
     Get.find<LocationController>().disableButton();
   }
 
   void _onCameraIdle() {
+    if (!_isMapReady || _cameraPosition == null) return;
     Get.find<LocationController>().updateCameraMovingStatus(false);
     try {
       Get.find<LocationController>().updatePosition(

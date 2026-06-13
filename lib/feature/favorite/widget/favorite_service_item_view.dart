@@ -182,12 +182,10 @@ class FavoriteServiceItemView extends StatelessWidget {
                 child: Padding(padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
                   child: InkWell(
                     onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        useRootNavigator: true,
-                        isScrollControlled: true,
-                        builder: (context) => ServiceCenterDialog(service: service, minPurchasePrice: discount?.minPurchase),
-                        backgroundColor: Colors.transparent,
+                      ServiceCenterDialog.show(
+                        context,
+                        service: service,
+                        minPurchasePrice: discount?.minPurchase,
                       );
                     },
                     child: Icon(

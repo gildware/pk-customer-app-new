@@ -21,6 +21,35 @@ class ServiceCenterDialog extends StatefulWidget {
     this.minPurchasePrice
   });
 
+  static void show(
+    BuildContext context, {
+    required Service? service,
+    CartModel? cart,
+    int? cartIndex,
+    bool isFromDetails = false,
+    ProviderData? providerData,
+    double? minPurchasePrice,
+  }) {
+    if (BookingAuthHelper.redirectToLoginIfRequired()) {
+      return;
+    }
+
+    showModalBottomSheet(
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      context: context,
+      builder: (context) => ServiceCenterDialog(
+        service: service,
+        cart: cart,
+        cartIndex: cartIndex,
+        isFromDetails: isFromDetails,
+        providerData: providerData,
+        minPurchasePrice: minPurchasePrice,
+      ),
+    );
+  }
+
   @override
   State<ServiceCenterDialog> createState() => _ProductBottomSheetState();
 }

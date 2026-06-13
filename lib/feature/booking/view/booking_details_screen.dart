@@ -138,8 +138,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
                       onTap: () async {
                         if(option.title == "download_invoice"){
                           String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                          String uri = "${AppConstants.baseUrl}${
-                              isSubBooking ? AppConstants.singleRepeatBookingInvoiceUrl : AppConstants.regularBookingInvoiceUrl}${bookingDetailsContent.id}/$languageCode";
+                          final variant = isSubBooking ? 'single' : 'regular';
+                          final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                            bookingId: bookingDetailsContent.id ?? '',
+                            lang: languageCode,
+                            variant: variant,
+                          );
                           if (kDebugMode) {
                             print("Uri : $uri");
                           }
@@ -185,8 +189,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
               ) : IconButton(
                 onPressed: () async {
                   String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                  String uri = "${AppConstants.baseUrl}${
-                  isSubBooking ? AppConstants.singleRepeatBookingInvoiceUrl : AppConstants.regularBookingInvoiceUrl }${bookingDetailsContent.id}/$languageCode";
+                  final variant = isSubBooking ? 'single' : 'regular';
+                  final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                    bookingId: bookingDetailsContent.id ?? '',
+                    lang: languageCode,
+                    variant: variant,
+                  );
                   if (kDebugMode) {
                     print("Uri : $uri");
                   }
@@ -291,8 +299,12 @@ class BookingTabBar extends StatelessWidget {
                     child: InkWell(
                       onTap : () async {
                         String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                        String uri = "${AppConstants.baseUrl}${
-                            isSubBooking ? AppConstants.singleRepeatBookingInvoiceUrl : AppConstants.regularBookingInvoiceUrl}${bookingDetailsContent.id}/$languageCode";
+                        final variant = isSubBooking ? 'single' : 'regular';
+                        final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                          bookingId: bookingDetailsContent.id ?? '',
+                          lang: languageCode,
+                          variant: variant,
+                        );
                         if (kDebugMode) {
                           print("Uri : $uri");
                         }

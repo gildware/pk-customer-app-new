@@ -188,12 +188,11 @@ class ServiceInformationCard extends StatelessWidget {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.paddingSizeExtraSmall)),
                             ),
                             onPressed: () {
-                              showModalBottomSheet(
-                                  context: context,
-                                  useRootNavigator: true,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (context) => ServiceCenterDialog(service: service, isFromDetails: true, minPurchasePrice: discount?.minPurchase)
+                              ServiceCenterDialog.show(
+                                context,
+                                service: service,
+                                isFromDetails: true,
+                                minPurchasePrice: discount?.minPurchase,
                               );
                             },
                             child: Text('${"add".tr} +',style: robotoRegular.copyWith(color: Colors.white),),

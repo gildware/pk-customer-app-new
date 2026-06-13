@@ -5,6 +5,8 @@ import 'package:demandium/util/core_export.dart';
 class AuthRepo {
   final ApiClient apiClient;
   final SharedPreferences sharedPreferences;
+  String _cachedPassword = '';
+
   AuthRepo({required this.apiClient, required this.sharedPreferences});
 
   Future<Response> registration(SignUpBody signUpBody) async {
@@ -191,15 +193,16 @@ class AuthRepo {
     apiClient.updateHeader(token, sharedPreferences.getString(AppConstants.userAddress) != null ?
     AddressModel.fromJson(jsonDecode(sharedPreferences.getString(AppConstants.userAddress)!)).zoneId :
     null, sharedPreferences.getString(AppConstants.languageCode), sharedPreferences.getString(AppConstants.guestId));
-    return await sharedPreferences.setString(AppConstants.token, token);
+    await SecureTokenStorage.writeToken(token);
+    return true;
   }
 
   String getUserToken() {
-    return sharedPreferences.getString(AppConstants.token) ?? "";
+    return SecureTokenStorage.cachedToken();
   }
 
   bool isLoggedIn() {
-    return sharedPreferences.containsKey(AppConstants.token);
+    return SecureTokenStorage.cachedToken().isNotEmpty;
   }
 
   bool clearSharedData({Response? response}) {
@@ -212,6 +215,7 @@ class AuthRepo {
       }
     }
     apiClient.postData(AppConstants.tokenUri, {"_method": "put", "fcm_token": '@'});
+    SecureTokenStorage.evictToken();
     sharedPreferences.remove(AppConstants.token);
     sharedPreferences.remove(AppConstants.referredBottomSheet);
     sharedPreferences.remove(AppConstants.isContinueZone);
@@ -228,12 +232,30 @@ class AuthRepo {
     return true;
   }
 
+  Future<void> preloadRememberMeCredentials() async {
+    await _migrateLegacyPassword();
+    _cachedPassword = await SecureCredentialStorage.readPassword();
+  }
+
+  Future<void> _migrateLegacyPassword() async {
+    final legacy = sharedPreferences.getString(AppConstants.userPassword);
+    if (legacy != null && legacy.isNotEmpty) {
+      await SecureCredentialStorage.writePassword(legacy);
+      await sharedPreferences.remove(AppConstants.userPassword);
+    }
+  }
+
   Future<void> saveUserNumberAndPassword(String number, String password, String countryCode) async {
     try {
-      await sharedPreferences.setString(AppConstants.userPassword, password);
       await sharedPreferences.setString(AppConstants.userNumber, number);
       await sharedPreferences.setString(AppConstants.userCountryCode, countryCode);
-
+      if (password.isNotEmpty) {
+        await SecureCredentialStorage.writePassword(password);
+        _cachedPassword = password;
+      } else {
+        await SecureCredentialStorage.deletePassword();
+        _cachedPassword = '';
+      }
     } catch (e) {
       rethrow;
     }
@@ -248,7 +270,7 @@ class AuthRepo {
   }
 
   String getUserPassword() {
-    return sharedPreferences.getString(AppConstants.userPassword) ?? "";
+    return _cachedPassword;
   }
 
   bool isNotificationActive() {
@@ -269,7 +291,8 @@ class AuthRepo {
 
 
   Future<bool> clearUserNumberAndPassword() async {
-    await sharedPreferences.remove(AppConstants.userPassword);
+    await SecureCredentialStorage.deletePassword();
+    _cachedPassword = '';
     await sharedPreferences.remove(AppConstants.userCountryCode);
     return await sharedPreferences.remove(AppConstants.userNumber);
   }
@@ -277,7 +300,7 @@ class AuthRepo {
   bool clearSharedAddress(){
     sharedPreferences.remove(AppConstants.userAddress);
     apiClient.updateHeader(
-      sharedPreferences.getString(AppConstants.token),
+      SecureTokenStorage.cachedToken().isEmpty ? null : SecureTokenStorage.cachedToken(),
       null,
       sharedPreferences.getString(AppConstants.languageCode),
       sharedPreferences.getString(AppConstants.guestId),

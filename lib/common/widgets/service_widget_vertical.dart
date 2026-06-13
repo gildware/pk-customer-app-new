@@ -181,11 +181,12 @@ class ServiceWidgetVertical extends StatelessWidget {
                     ),
                   ),
                   Positioned.fill(child: RippleButton(onTap: () {
-                    showModalBottomSheet(
-                        useRootNavigator: true,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        context: context, builder: (context) => ServiceCenterDialog(service: service, providerData: providerData, minPurchasePrice: discountModel.minPurchase));
+                    ServiceCenterDialog.show(
+                      context,
+                      service: service,
+                      providerData: providerData,
+                      minPurchasePrice: discountModel.minPurchase,
+                    );
                   }))
                 ],
               ),

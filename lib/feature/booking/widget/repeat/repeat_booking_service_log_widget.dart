@@ -148,9 +148,12 @@ class _ServiceLogItem extends StatelessWidget {
                                       Get.toNamed(RouteHelper.getBookingDetailsScreen(subBookingId : serviceList[index]!.id!,));
                                     }
                                     else if(option.title == "download_invoice"){
-                                      String uri = "";
                                       String languageCode = Get.find<LocalizationController>().locale.languageCode;
-                                      uri = "${AppConstants.baseUrl}${AppConstants.singleRepeatBookingInvoiceUrl}${serviceList[index]!.id!}/$languageCode";
+                                      final uri = await BookingInvoiceHelper.customerInvoiceUrl(
+                                        bookingId: serviceList[index]!.id!,
+                                        lang: languageCode,
+                                        variant: 'single',
+                                      );
 
                                       if (kDebugMode) {
                                         print("Uri : $uri");

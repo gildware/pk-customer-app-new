@@ -64,8 +64,11 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                 isLoading: checkoutController.isLoading,
                 fontSize: Dimensions.fontSizeDefault + 1,
                 buttonText: cartController.cartList.isEmpty ? "empty_cart_go_back".tr : (widget.pageState == "orderDetails" && checkoutController.currentPageState == PageState.orderDetails) ? "make_payment".tr : 'confirm_booking'.tr,
-                onPressed : (widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment) && checkoutController.othersPaymentList.isEmpty && checkoutController.digitalPaymentList.isEmpty ? null : () {
-                  if(errorText !=null && scheduleController.selectedScheduleType != ScheduleType.asap ){
+                onPressed : (widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment) && checkoutController.othersPaymentList.isEmpty && checkoutController.digitalPaymentList.isEmpty
+                    ? () => customSnackBar("no_payment_method_available".tr, type: ToasterMessageType.info)
+                    : () {
+                  final bool onPaymentStep = widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment;
+                  if(!onPaymentStep && errorText !=null && scheduleController.selectedScheduleType != ScheduleType.asap ){
                     customSnackBar(errorText.tr);
                   }
                   else if( checkoutController.acceptTerms || cartController.cartList.isEmpty ){
@@ -191,6 +194,11 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                     }
                     else if(checkoutController.currentPageState == PageState.payment || PageState.payment.name == widget.pageState){
 
+                      if (addressModel == null) {
+                        customSnackBar("add_address_first".tr, type: ToasterMessageType.info);
+                        return;
+                      }
+
                       if ((schedule == null || schedule.isEmpty) && !isRepeatBooking) {
                         customSnackBar("select_your_preferable_booking_time".tr, type: ToasterMessageType.info);
                         return;
@@ -215,7 +223,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                           paymentMethod: "cash_after_service",
                           schedule: schedule,
                           isPartial: 0,
-                          address: addressModel!,
+                          address: addressModel,
                         );
                       }
                       else if(cartController.walletPaymentStatus && isPartialPayment && checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
@@ -229,27 +237,56 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                           paymentMethod: "cash_after_service",
                           schedule: schedule,
                           isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
-                          address: addressModel!,
+                          address: addressModel,
                           paymentAmountType: paymentAmountType,
                         );
+                      }
+                      else if(checkoutController.selectedPaymentMethod == PaymentMethodName.offline){
+                        if (checkoutController.selectedOfflineMethod != null) {
+                          final selectedOfflinePaymentIndex = checkoutController.offlinePaymentModelList
+                              .indexOf(checkoutController.selectedOfflineMethod!);
+                          checkoutController.placeBookingRequest(
+                            paymentMethod: "offline_payment",
+                            schedule: schedule,
+                            isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
+                            address: addressModel,
+                            paymentAmountType: paymentAmountType,
+                            offlinePaymentId: checkoutController.selectedOfflineMethod?.id,
+                            bookingAmount: payableAmount,
+                            selectedOfflinePaymentIndex: selectedOfflinePaymentIndex >= 0 ? selectedOfflinePaymentIndex : 0,
+                          );
+                        } else {
+                          customSnackBar("provide_offline_payment_info".tr, type: ToasterMessageType.info);
+                        }
                       }
                       else if(checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
                         checkoutController.placeBookingRequest(
                             paymentMethod: "wallet_payment",
                             schedule: schedule,
                             isPartial:  isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
-                            address: addressModel!,
+                            address: addressModel,
                             paymentAmountType: paymentAmountType,
                         );
                       }
                       else if( checkoutController.selectedPaymentMethod == PaymentMethodName.digitalPayment){
 
                         if(checkoutController.selectedDigitalPaymentMethod != null && checkoutController.selectedDigitalPaymentMethod?.gateway != "offline"){
-                          _makeDigitalPayment(addressModel, checkoutController.selectedDigitalPaymentMethod, isPartialPayment, checkoutController, paymentAmountType);
+                          _makeDigitalPayment(
+                            addressModel,
+                            checkoutController.selectedDigitalPaymentMethod,
+                            isPartialPayment,
+                            checkoutController,
+                            paymentAmountType,
+                          ).catchError((_) {
+                            customSnackBar('connection_to_api_server_failed'.tr, type: ToasterMessageType.error);
+                          });
                         }else{
                           customSnackBar("select_any_payment_method".tr, type: ToasterMessageType.info);
                         }
 
+                      }
+                      else {
+                        customSnackBar("select_payment_method".tr, type: ToasterMessageType.info);
                       }
                     }
                     else {
@@ -270,7 +307,16 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
     });
   }
 
-  void _makeDigitalPayment(AddressModel? address , DigitalPaymentMethod?  paymentMethod, bool isPartialPayment, CheckOutController checkoutController, String? paymentAmountType) {
+  Future<void> _makeDigitalPayment(AddressModel? address , DigitalPaymentMethod?  paymentMethod, bool isPartialPayment, CheckOutController checkoutController, String? paymentAmountType) async {
+
+    if (address == null) {
+      customSnackBar("add_address_first".tr, type: ToasterMessageType.info);
+      return;
+    }
+
+    if (!Get.find<AuthController>().isLoggedIn() && BookingAuthHelper.guestCheckoutEnabled) {
+      await BookingAuthHelper.ensureGuestSessionIfNeeded();
+    }
 
     String url = '';
     String hostname = html.window.location.hostname!;
@@ -290,8 +336,9 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
     String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
     int isPartial = Get.find<CartController>().walletPaymentStatus && isPartialPayment ? 1 : 0;
     String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
+    final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-    url = '${AppConstants.baseUrl}/payment?payment_method=${paymentMethod?.gateway}&access_token=${base64Url.encode(utf8.encode(userId))}&zone_id=$zoneId'
+    url = '${AppConstants.baseUrl}/payment?payment_method=${paymentMethod?.gateway}&access_token=$accessToken&zone_id=$zoneId'
         '&service_schedule=$schedule&service_address_id=$addressId&callback=$callbackUrl'
         '&service_address=$encodedAddress&new_user_info=$encodedNewUserInfo&is_partial=$isPartial'
         '&payment_platform=$platform&service_location=$serviceLocation';

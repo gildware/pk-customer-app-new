@@ -59,7 +59,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       setControllerData();
     } else {
       locationController.resetAddress(notify: false);
-      Get.find<LocationController>().updateAddressLabel(addressLabelString: 'home'.tr);
+      locationController.updateAddressLabel(addressLabelString: 'home'.tr, shouldUpdate: false);
       Get.find<LocationController>().countryDialCode = CountryCode.fromCountryCode(Get.find<SplashController>().configModel.content?.countryCode ?? "BD").dialCode!;
       _prefillDefaultContactInfo();
       if (Get.find<AuthController>().isLoggedIn()) {
@@ -197,15 +197,15 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     if (dialCode != null && dialCode.isNotEmpty) {
       locationController.countryDialCode = dialCode;
     }
-    locationController.updateAddressLabel(addressLabelString: address.addressLabel ?? "");
+    locationController.updateAddressLabel(addressLabelString: address.addressLabel ?? "", shouldUpdate: false);
     if (address.addressType == Address.billing.name) {
-      locationController.updateAddressType(Address.billing);
+      locationController.updateAddressType(Address.billing, shouldUpdate: false);
     } else {
-      locationController.updateAddressType(Address.service);
+      locationController.updateAddressType(Address.service, shouldUpdate: false);
     }
     locationController.setPlaceMark(addressModel: address);
     locationController.buttonDisabledOption = false;
-    locationController.setUpdateAddress(address);
+    locationController.setUpdateAddress(address, shouldUpdate: false);
 
     _initialPosition = LatLng(
       double.tryParse(address.latitude ?? '') ?? 0,

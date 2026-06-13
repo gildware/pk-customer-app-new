@@ -10,13 +10,21 @@ class AppConstants {
 
   /// AI chat tab + center FAB — disabled until we resume work on it.
   static const bool enableAiChat = false;
-  /// Local Laravel backend (`php artisan serve` at http://127.0.0.1:8000)
-  static const String baseUrl = 'https://dev.panunkaergar.com';
-  static const String websiteUrl = 'https://dev.panunkaergar.com';
+  /// Override at build time: `--dart-define=BASE_URL=https://panunkaergar.com`
+  static const String baseUrl = String.fromEnvironment(
+    'BASE_URL',
+    defaultValue: 'https://dev.panunkaergar.com',
+  );
+  static const String websiteUrl = String.fromEnvironment(
+    'WEBSITE_URL',
+    defaultValue: 'https://dev.panunkaergar.com',
+  );
+  /// Release-only SHA-256 cert fingerprint (hex). Set via `--dart-define=SSL_PIN_SHA256=...`
+  static const String sslPinSha256 = String.fromEnvironment('SSL_PIN_SHA256', defaultValue: '');
   static const String googleServerClientId = '889759666168-ruq4mnv8fonls4gfvn01t2jap0f0662u.apps.googleusercontent.com'; /// find that in android/app/google-services.json || use client_type 3
   static const bool avoidMaintenanceMode = false;
-  /// Disabled on mobile: Drift/path_provider can fail on some iOS simulator runtimes.
-  static const LocalCachesTypeEnum cachesType = LocalCachesTypeEnum.none;
+  /// Drift (mobile) + SharedPreferences (web). DbHelper/DataSyncRepo skip writes on failure.
+  static const LocalCachesTypeEnum cachesType = LocalCachesTypeEnum.all;
   static const String categoryUrl = '/api/v1/customer/category';
   static const String webLandingContents = '/api/v1/customer/landing/contents';
   static const String bannerUri = '/api/v1/customer/banner?limit=10&offset=1';
@@ -37,6 +45,7 @@ class AppConstants {
   static const String subCategoryListUri = '/api/v1/customer/sub-categories?limit=';
   static const String categoryServiceUri = '/api/v1/categories/service/';
   static const String configUri = '/api/v1/customer/config';
+  static const String homeBundleUri = '/api/v1/customer/home-bundle';
   static const String customerRemove = '/api/v1/customer/remove-account';
   static const String registerUri = '/api/v1/customer/auth/registration';
   static const String loginUri = '/api/v1/customer/auth/login';
@@ -152,6 +161,7 @@ class AppConstants {
   static const String theme = 'demand_theme';
   static const String token = 'demand_token';
   static const String guestId = 'guest_id';
+  static const String guestSecretHeader = 'X-Guest-Secret';
   static const String countryCode = 'demand_country_code';
   static const String languageCode = 'demand_language_code';
   static const String acceptCookies = 'demand_accept_cookies';

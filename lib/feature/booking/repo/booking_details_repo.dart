@@ -17,8 +17,16 @@ class BookingDetailsRepo{
   }
 
   Future<Response> trackBookingDetails({required String bookingID, required String phoneNUmber})async{
+    final trackToken = await BookingTrackHelper.requestAccessToken(
+      readableId: bookingID,
+      phone: phoneNUmber,
+    );
+    if (trackToken == null) {
+      return const Response(statusCode: 404, statusText: 'Booking not found');
+    }
     return await apiClient.postData("${AppConstants.trackBooking}/$bookingID",{
-      "phone": phoneNUmber
+      "phone": phoneNUmber,
+      "track_token": trackToken,
     });
   }
 
