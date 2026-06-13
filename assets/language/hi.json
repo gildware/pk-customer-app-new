@@ -583,6 +583,8 @@
   "suggest_more_service_that_you_willing": "ऐसी और सेवाएँ सुझाएँ जो बुक करने के इच्छुक हों और हमें आपके लिए अधिक कुशल प्लेटफ़ॉर्म बनाने में मदद करें...",
   "request_for_service": "सेवाओं के लिए अनुरोध",
   "select_category": "श्रेणी चुनना",
+  "category": "श्रेणी",
+  "sub_category": "उप श्रेणी",
   "provide_some_details": "कुछ विवरण प्रदान करें",
   "service_category": "सेवा श्रेणी",
   "send_request": "अनुरोध भेजा",

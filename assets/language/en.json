@@ -583,6 +583,8 @@
   "suggest_more_service_that_you_willing": "Suggest more services that are willing to book and help us make more efficient platform for you ...",
   "request_for_service": "Request for Services",
   "select_category": "Select Category",
+  "category": "Category",
+  "sub_category": "Sub Category",
   "provide_some_details": "Provide Some Details",
   "service_category": "Service Category",
   "send_request": "Send Request",

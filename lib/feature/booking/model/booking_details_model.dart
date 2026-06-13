@@ -45,6 +45,8 @@ class BookingDetailsContent {
   String? updatedAt;
   String? categoryId;
   String? subCategoryId;
+  BookingCategoryInfo? category;
+  BookingCategoryInfo? subCategory;
   List<ItemService>? bookingDetails;
   List<ScheduleHistories>? scheduleHistories;
   List<StatusHistories>? statusHistories;
@@ -102,6 +104,8 @@ class BookingDetailsContent {
         this.updatedAt,
         this.categoryId,
         this.subCategoryId,
+        this.category,
+        this.subCategory,
         this.bookingDetails,
         this.scheduleHistories,
         this.statusHistories,
@@ -161,6 +165,12 @@ class BookingDetailsContent {
     updatedAt = json['updated_at'];
     categoryId = json['category_id'];
     subCategoryId = json['sub_category_id'];
+    category = json['category'] != null
+        ? BookingCategoryInfo.fromJson(json['category'])
+        : null;
+    subCategory = json['sub_category'] != null
+        ? BookingCategoryInfo.fromJson(json['sub_category'])
+        : null;
     if (json['detail'] != null) {
       bookingDetails = <ItemService>[];
       json['detail'].forEach((v) {
@@ -778,6 +788,25 @@ class BookingOfflinePayment {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['key'] = key;
     data['value'] = value;
+    return data;
+  }
+}
+
+class BookingCategoryInfo {
+  String? id;
+  String? name;
+
+  BookingCategoryInfo({this.id, this.name});
+
+  BookingCategoryInfo.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    name = json['name'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['name'] = name;
     return data;
   }
 }

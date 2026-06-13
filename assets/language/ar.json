@@ -583,6 +583,8 @@
   "suggest_more_service_that_you_willing": "اقترح المزيد من الخدمات التي ترغب في حجزها وساعدنا في إنشاء منصة أكثر كفاءة لك...",
   "request_for_service": "طلب الخدمات",
   "select_category": "حدد الفئة",
+  "category": "فئة",
+  "sub_category": "فئة فرعية",
   "provide_some_details": "تقديم بعض التفاصيل",
   "service_category": "فئة الخدمة",
   "send_request": "إرسال الطلب",

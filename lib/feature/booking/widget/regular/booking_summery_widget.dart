@@ -1,3 +1,4 @@
+import 'package:demandium/feature/booking/widget/booking_summary_category_info.dart';
 import 'package:demandium/helper/booking_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
@@ -58,6 +59,7 @@ class BookingSummeryWidget extends StatelessWidget{
         Padding(
           padding:  ResponsiveHelper.isDesktop(context) ?  const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall) :  EdgeInsets.zero,
           child: Column(children: [
+            BookingSummaryCategoryInfo(bookingDetails: bookingDetails),
             ListView.builder(itemBuilder: (context, index){
               return _ServiceInfoItem(
                 bookingService : bookingDetails.bookingDetails?[index],

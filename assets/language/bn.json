@@ -583,6 +583,8 @@
   "suggest_more_service_that_you_willing": "বুক করতে ইচ্ছুক আরও সার্ভিসের পরামর্শ দিন এবং আপনার জন্য আরও দক্ষ প্ল্যাটফর্ম তৈরি করতে আমাদের সাহায্য করুন...",
   "request_for_service": "সার্ভিসের জন্য রিকুয়েস্ট",
   "select_category": "ক্যাটাগরি সিলেক্ট করুন",
+  "category": "ক্যাটাগরি",
+  "sub_category": "সাব ক্যাটাগরি",
   "provide_some_details": "কিছু বিবরণ প্রদান করুন",
   "service_category": "সার্ভিস ক্যাটাগরি",
   "send_request": "রিকুয়েস্ট পাঠান",
