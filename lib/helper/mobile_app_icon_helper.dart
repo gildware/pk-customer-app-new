@@ -10,6 +10,7 @@ class MobileAppIconHelper {
   static const String appLogoKey = 'customer_app_logo';
 
   static const String heroTag = 'app_logo';
+
   static Map<String, Map<String, String?>>? get _icons {
     final raw = Get.find<SplashController>().configModel.content?.mobileAppIcons;
     if (raw == null || raw.isEmpty) {
@@ -101,25 +102,14 @@ class MobileAppIconHelper {
     String? heroTag,
     String? fallbackAsset,
   }) {
-    final h = height ?? width;
-    final remote = appLogoUrl();
-    final fallback = fallbackAsset ?? Images.logo;
-
-    Widget child = remote != null
-        ? CustomImage(
-            image: remote,
-            width: width,
-            height: h,
-            fit: fit,
-            placeholder: fallback,
-          )
-        : Image.asset(fallback, width: width, height: h, fit: fit);
-
-    if (useHero) {
-      child = Hero(tag: heroTag ?? MobileAppIconHelper.heroTag, child: child);
-    }
-
-    return child;
+    return _BrandedLogo(
+      width: width,
+      height: height,
+      fit: fit,
+      fallbackAsset: fallbackAsset ?? Images.logo,
+      useHero: useHero,
+      heroTag: heroTag,
+    );
   }
 
   static Widget icon({
@@ -130,23 +120,106 @@ class MobileAppIconHelper {
     BoxFit fit = BoxFit.contain,
     Color? color,
   }) {
-    final remote = remoteUrl(key);
-    if (remote != null) {
-      return CustomImage(
-        image: remote,
-        height: height,
-        width: width,
-        fit: fit,
-        placeholder: fallbackAsset,
-      );
-    }
-
-    return Image.asset(
-      fallbackAsset,
+    return _BrandedIcon(
+      iconKey: key,
+      fallbackAsset: fallbackAsset,
       height: height,
       width: width,
       fit: fit,
       color: color,
+    );
+  }
+}
+
+class _BrandedLogo extends StatelessWidget {
+  final double width;
+  final double? height;
+  final BoxFit fit;
+  final String fallbackAsset;
+  final bool useHero;
+  final String? heroTag;
+
+  const _BrandedLogo({
+    required this.width,
+    this.height,
+    required this.fit,
+    required this.fallbackAsset,
+    this.useHero = false,
+    this.heroTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GetBuilder<SplashController>(
+      builder: (_) {
+        final h = height ?? width;
+        final remote = MobileAppIconHelper.appLogoUrl();
+
+        Widget child = remote != null
+            ? CustomImage(
+                key: ValueKey(remote),
+                image: remote,
+                width: width,
+                height: h,
+                fit: fit,
+                placeholder: fallbackAsset,
+              )
+            : Image.asset(fallbackAsset, width: width, height: h, fit: fit);
+
+        if (useHero) {
+          child = Hero(
+            tag: heroTag ?? MobileAppIconHelper.heroTag,
+            child: child,
+          );
+        }
+
+        return child;
+      },
+    );
+  }
+}
+
+class _BrandedIcon extends StatelessWidget {
+  final String iconKey;
+  final String fallbackAsset;
+  final double height;
+  final double width;
+  final BoxFit fit;
+  final Color? color;
+
+  const _BrandedIcon({
+    required this.iconKey,
+    required this.fallbackAsset,
+    required this.height,
+    required this.width,
+    required this.fit,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GetBuilder<SplashController>(
+      builder: (_) {
+        final remote = MobileAppIconHelper.remoteUrl(iconKey);
+        if (remote != null) {
+          return CustomImage(
+            key: ValueKey(remote),
+            image: remote,
+            height: height,
+            width: width,
+            fit: fit,
+            placeholder: fallbackAsset,
+          );
+        }
+
+        return Image.asset(
+          fallbackAsset,
+          height: height,
+          width: width,
+          fit: fit,
+          color: color,
+        );
+      },
     );
   }
 }
