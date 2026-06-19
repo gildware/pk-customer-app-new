@@ -1,3 +1,4 @@
+import 'package:demandium/feature/home/helper/home_provider_section_layout.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
@@ -11,8 +12,13 @@ class NearbyProviderListItemView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<NearbyProviderController>(builder: (providerBookingController){
+      final logoSize = fromHomePage ? HomeProviderSectionLayout.homeLogoSize(context) : 70.0;
+      final cardPadding = fromHomePage
+          ? HomeProviderSectionLayout.homeCardPadding()
+          : const EdgeInsets.all(Dimensions.paddingSizeDefault);
+
       return Padding(padding:EdgeInsets.symmetric(
-          horizontal: ResponsiveHelper.isDesktop(context) && fromHomePage ? 5 : Dimensions.paddingSizeEight,
+          horizontal: fromHomePage ? 0 : (ResponsiveHelper.isDesktop(context) ? 5 : Dimensions.paddingSizeEight),
           vertical: fromHomePage?0:Dimensions.paddingSizeEight),
 
         child: OnHover(
@@ -24,13 +30,13 @@ class NearbyProviderListItemView extends StatelessWidget {
                 decoration: BoxDecoration(color: Theme.of(context).cardColor , borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                   border: Border.all(color: Theme.of(context).hintColor.withValues(alpha: 0.3)),
                 ),
-                padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+                padding: cardPadding,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                   Row(crossAxisAlignment: CrossAxisAlignment.center,children: [
 
                     ClipRRect(borderRadius: BorderRadius.circular(Dimensions.radiusExtraMoreLarge),
                       child: Stack( children: [
-                        CustomImage(height: 70, width: 70, fit: BoxFit.cover,
+                        CustomImage(height: logoSize, width: logoSize, fit: BoxFit.cover,
                           image: providerData.logoFullPath ?? "" , placeholder: Images.userPlaceHolder,
                         ),
                         if(providerData.serviceAvailability == 0) Positioned.fill(child: Container(
@@ -49,30 +55,30 @@ class NearbyProviderListItemView extends StatelessWidget {
                       ]),
                     ),
 
-                    const SizedBox(width: Dimensions.paddingSizeDefault),
+                    const SizedBox(width: Dimensions.paddingSizeSmall),
 
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start,mainAxisAlignment: MainAxisAlignment.center,children: [
                         Row(children: [
                           Flexible(
                             child: Text(providerData.companyName ?? "", style: robotoMedium.copyWith(
-                                fontSize: Dimensions.fontSizeDefault + 1
+                                fontSize: fromHomePage ? Dimensions.fontSizeDefault : Dimensions.fontSizeDefault + 1
                             ),
                               maxLines: 1, overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: Dimensions.paddingSizeExtraLarge,)
+                          if (!fromHomePage) const SizedBox(width: Dimensions.paddingSizeExtraLarge,)
                         ]),
                         Row(children: [
-                          SizedBox(height: 20,
+                          SizedBox(height: fromHomePage ? 16 : 20,
                             child: Row(children: [
 
-                              Image(image: AssetImage(Images.starIcon), color: Theme.of(context).colorScheme.secondary),
+                              Image(image: AssetImage(Images.starIcon), color: Theme.of(context).colorScheme.secondary, height: fromHomePage ? 12 : null, width: fromHomePage ? 12 : null),
                               Gaps.horizontalGapOf(3),
                               Directionality(
                                 textDirection: TextDirection.ltr,
                                 child: Text(
-                                  providerData.avgRating!.toStringAsFixed(2),
+                                  (providerData.avgRating ?? 0).toStringAsFixed(2),
                                   style: robotoRegular.copyWith(color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6), fontSize: Dimensions.fontSizeSmall),
                                 ),
                               ),
@@ -86,27 +92,28 @@ class NearbyProviderListItemView extends StatelessWidget {
                             ),
                           )],
                         ),
+                        if (!fromHomePage)
                         Text(providerData.companyAddress??"",
                           style: robotoRegular.copyWith(color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6), fontSize: Dimensions.fontSizeSmall),
                           overflow: TextOverflow.ellipsis, maxLines: 1,
                         ),
 
-                        const SizedBox(height: Dimensions.paddingSizeTine),
-
-                        Row(children: [
-                          Image.asset(Images.distance, height:12),
-                          const SizedBox(width: Dimensions.paddingSizeExtraSmall),
-                          Directionality(
-                            textDirection: TextDirection.ltr,
-                            child: Flexible(
-                              child: Text("${providerData.distance!.toStringAsFixed(2)} ${'km_away_from_you'.tr}",
-                                style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
-                                overflow: TextOverflow.ellipsis,
+                        if (providerData.distance != null) ...[
+                          if (!fromHomePage) const SizedBox(height: Dimensions.paddingSizeTine),
+                          Row(children: [
+                            Image.asset(Images.distance, height:12),
+                            const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                            Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Flexible(
+                                child: Text("${providerData.distance!.toStringAsFixed(2)} ${'km_away_from_you'.tr}",
+                                  style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ),
-                          ),
-
-                        ],)
+                          ]),
+                        ]
                       ]),
                     ),
                   ]),
@@ -114,17 +121,33 @@ class NearbyProviderListItemView extends StatelessWidget {
               ),
 
               Positioned.fill(child: RippleButton(onTap: () {
-                Get.toNamed(RouteHelper.getProviderDetails(providerData.id!));
+                final providerId = providerData.id;
+                if (providerId != null) {
+                  Get.toNamed(RouteHelper.getProviderDetails(providerId));
+                }
               })),
 
-              Align(
-                alignment: favButtonAlignment(),
-                child: FavoriteIconWidget(
-                  value: providerData.isFavorite,
-                  providerId: providerData.id,
-                  signInShakeKey: signInShakeKey,
+              if (fromHomePage)
+                Padding(
+                  padding: const EdgeInsets.all(Dimensions.paddingSizeExtraSmall),
+                  child: Align(
+                    alignment: HomeProviderSectionLayout.homeFavoriteAlignment(),
+                    child: FavoriteIconWidget(
+                      value: providerData.isFavorite,
+                      providerId: providerData.id,
+                      signInShakeKey: signInShakeKey,
+                    ),
+                  ),
+                )
+              else
+                Align(
+                  alignment: favButtonAlignment(),
+                  child: FavoriteIconWidget(
+                    value: providerData.isFavorite,
+                    providerId: providerData.id,
+                    signInShakeKey: signInShakeKey,
+                  ),
                 ),
-              ),
 
             ],
           ),

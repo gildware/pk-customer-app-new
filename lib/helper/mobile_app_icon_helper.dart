@@ -56,12 +56,16 @@ class MobileAppIconHelper {
         return '$_apiBase$path';
       }
       final base = Uri.parse(AppConstants.baseUrl);
-      if (parsed.host != base.host || parsed.port != base.port) {
+      final host = parsed.host.toLowerCase();
+      if (host == 'localhost' ||
+          host == '127.0.0.1' ||
+          parsed.host != base.host ||
+          parsed.port != base.port) {
         return Uri(
           scheme: base.scheme,
           host: base.host,
           port: base.hasPort ? base.port : null,
-          path: path,
+          path: path.isNotEmpty ? path : parsed.path,
         ).toString();
       }
     } catch (_) {

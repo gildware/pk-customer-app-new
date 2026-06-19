@@ -142,8 +142,12 @@ class NearbyProviderController extends GetxController implements GetxService {
         limit: limit,
       ),
       onResponse: (data, source) {
-        _curatedProvidersBySection[sectionKey] =
-            ProviderModel.fromJson(data).content?.data ?? [];
+        final providers = ProviderModel.fromJson(data).content?.data ?? [];
+        _applyDistancesToProviders(providers);
+        if (sectionKey == 'nearby_providers') {
+          providers.sort((a, b) => (a.distance ?? double.infinity).compareTo(b.distance ?? double.infinity));
+        }
+        _curatedProvidersBySection[sectionKey] = providers;
         update();
       },
     );
@@ -178,13 +182,10 @@ class NearbyProviderController extends GetxController implements GetxService {
   void _sortProviderListAndInitMap({ LatLng? initialPosition}){
     final address = Get.find<LocationController>().getUserAddress();
     if (address == null) return;
-    _providerList?.forEach((element) {
-      double distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(address, element);
-      element.distance = distance;
-    });
+    _applyDistancesToProviders(_providerList);
 
     if(_selectedSortBy == "default"){
-      _providerList?.sort((a, b) => a.distance!.compareTo(b.distance!));
+      _providerList?.sort((a, b) => (a.distance ?? double.infinity).compareTo(b.distance ?? double.infinity));
     }
     selectedProviderIndex = -1;
 
@@ -472,7 +473,19 @@ class NearbyProviderController extends GetxController implements GetxService {
     update();
   }
 
+  void _applyDistancesToProviders(List<ProviderData>? providers) {
+    final address = Get.find<LocationController>().getUserAddress();
+    if (address == null || providers == null) return;
+    for (final element in providers) {
+      element.distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(address, element);
+    }
+  }
+
   void applyHomeBundleCuratedProviders(String sectionKey, List<ProviderData> providers) {
+    _applyDistancesToProviders(providers);
+    if (sectionKey == 'nearby_providers') {
+      providers.sort((a, b) => (a.distance ?? double.infinity).compareTo(b.distance ?? double.infinity));
+    }
     _curatedProvidersBySection[sectionKey] = providers;
     update();
   }

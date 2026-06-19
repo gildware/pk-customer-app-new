@@ -244,8 +244,9 @@ class ProviderBookingController extends GetxController implements GetxService {
         limit: limit,
       ),
       onResponse: (data, source) {
-        _curatedProvidersBySection[sectionKey] =
-            ProviderModel.fromJson(data).content?.data ?? [];
+        final providers = ProviderModel.fromJson(data).content?.data ?? [];
+        _applyDistancesToProviders(providers);
+        _curatedProvidersBySection[sectionKey] = providers;
         update();
       },
     );
@@ -264,10 +265,15 @@ class ProviderBookingController extends GetxController implements GetxService {
   void _calculateDistance (){
     final address = Get.find<LocationController>().getUserAddress();
     if (address == null) return;
-    _providerList?.forEach((element) {
-      double distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(address, element);
-      element.distance = distance;
-    });
+    _applyDistancesToProviders(_providerList);
+  }
+
+  void _applyDistancesToProviders(List<ProviderData>? providers) {
+    final address = Get.find<LocationController>().getUserAddress();
+    if (address == null || providers == null) return;
+    for (final element in providers) {
+      element.distance = MapHelper.getDistanceBetweenUserCurrentLocationAndProvider(address, element);
+    }
   }
 
 
@@ -584,6 +590,7 @@ class ProviderBookingController extends GetxController implements GetxService {
   }
 
   void applyHomeBundleCuratedProviders(String sectionKey, List<ProviderData> providers) {
+    _applyDistancesToProviders(providers);
     _curatedProvidersBySection[sectionKey] = providers;
     update();
   }

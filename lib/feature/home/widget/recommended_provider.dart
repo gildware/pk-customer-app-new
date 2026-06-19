@@ -1,14 +1,15 @@
+import 'package:demandium/feature/home/helper/home_provider_section_layout.dart';
+import 'package:demandium/feature/home/widget/home_provider_horizontal_section.dart';
 import 'package:demandium/util/core_export.dart';
-import 'package:demandium/feature/provider/widgets/provider_item_view.dart';
 import 'package:get/get.dart';
 
 class HomeRecommendProvider extends StatelessWidget {
-  final double height;
+  final double? height;
   final GlobalKey<CustomShakingWidgetState>? signInShakeKey;
   final String? titleOverride;
   const HomeRecommendProvider({
     super.key,
-    required this.height,
+    this.height,
     this.signInShakeKey,
     this.titleOverride,
   });
@@ -16,52 +17,16 @@ class HomeRecommendProvider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ProviderBookingController>(
-      builder: (providerBookingController){
-        return providerBookingController.providerList != null && providerBookingController.providerList!.isNotEmpty ? Container(
-          color: Get.isDarkMode ? Colors.grey.shade900 : Theme.of(context).primaryColor.withValues(alpha: 0.12),
-          height: height,
-          child: Stack(children: [
-            Image.asset(Images.homeProviderBackground,width: Get.width,fit: BoxFit.cover,),
-            Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: Column(children: [
-                const SizedBox(height: Dimensions.paddingSizeDefault),
-
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(Dimensions.paddingSizeDefault, 15, Dimensions.paddingSizeDefault,  Dimensions.paddingSizeSmall,),
-                  child: TitleWidget(
-                    textDecoration: TextDecoration.underline,
-                    title: 'recommended_experts_for_you',
-                    displayTitle: titleOverride,
-                    onTap: () => Get.toNamed(RouteHelper.getAllProviderRoute()),
-                    isShowSeeAllButton: providerBookingController.providerList!.length > 7,
-                  ),
-                ),
-
-                SizedBox(height: ResponsiveHelper.isMobile(context) ? 160: 170,
-                  child: ListView.builder(
-                    physics: const ClampingScrollPhysics(),
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall + 2),
-                    itemCount: providerBookingController.providerList?.length,
-                    itemBuilder: (context, index){
-                      return Padding(padding: const EdgeInsets.only(bottom: Dimensions.paddingSizeLarge),
-                        child: SizedBox(
-                          width: ResponsiveHelper.isDesktop(context) ? Dimensions.webMaxWidth / 3.2 : ResponsiveHelper.isTab(context)? Get.width/ 2.5 :  Get.width/1.16,
-                          child: ProviderItemView(providerData: providerBookingController.providerList![index], index: index, signInShakeKey: signInShakeKey,),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ]),
-            )
-          ],
-          ),
-        ) :  providerBookingController.providerList != null && providerBookingController.providerList!.isEmpty ? const SizedBox() :
-         HomeRecommendedProviderShimmer(height: height,);
-
-    });
+      builder: (controller) => HomeProviderHorizontalSection(
+        titleKey: 'recommended_experts_for_you',
+        displayTitle: titleOverride,
+        onSeeAll: () => Get.toNamed(RouteHelper.getAllProviderRoute()),
+        showSeeAll: (controller.providerList?.length ?? 0) > 7,
+        providers: controller.providerList,
+        signInShakeKey: signInShakeKey,
+        height: height,
+      ),
+    );
   }
 }
 
@@ -71,71 +36,75 @@ class HomeRecommendedProviderShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-        boxShadow: Get.isDarkMode ? null : [BoxShadow(color: Colors.grey[300]!, blurRadius: 10, spreadRadius: 1)],
+    final cardWidth = HomeProviderSectionLayout.cardWidth(context);
+    final listHeight = HomeProviderSectionLayout.listHeight(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Dimensions.paddingSizeDefault,
+        Dimensions.paddingSizeSmall,
+        Dimensions.paddingSizeDefault,
+        0,
       ),
-      margin: const EdgeInsets.all(2),
-      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          const SizedBox(height: Dimensions.paddingSizeDefault,),
-
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,children: [
-            Container(height: 15, width: 130, color: Theme.of(context).shadowColor),
-            Container(height: 15, width: 80, color: Theme.of(context).shadowColor),
-          ],),
-
-          const SizedBox(height: Dimensions.paddingSizeDefault,),
-
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(height: 15, width: 130, color: Theme.of(context).shadowColor),
+              Container(height: 15, width: 80, color: Theme.of(context).shadowColor),
+            ],
+          ),
+          const SizedBox(height: Dimensions.paddingSizeDefault),
           SizedBox(
-            height: 140,
+            height: listHeight,
             child: ListView.builder(
               shrinkWrap: true,
-              physics: const BouncingScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               scrollDirection: Axis.horizontal,
-              itemCount: 10,
-              itemBuilder: (context, index){
+              padding: const EdgeInsets.only(left: Dimensions.paddingSizeDefault),
+              itemCount: 2,
+              itemBuilder: (context, index) {
                 return Container(
-                  width: Dimensions.webMaxWidth /3.2,
-                  margin: const EdgeInsets.symmetric(horizontal:Dimensions.paddingSizeSmall),
-                  padding: const EdgeInsets.symmetric(vertical:Dimensions.paddingSizeExtraSmall, horizontal: Dimensions.paddingSizeLarge),
+                  width: cardWidth,
+                  margin: const EdgeInsets.only(right: Dimensions.paddingSizeExtraSmall),
+                  padding: HomeProviderSectionLayout.homeCardPadding(),
                   decoration: BoxDecoration(
                     color: Theme.of(context).shadowColor,
-                    borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                    boxShadow: Get.isDarkMode?null:[BoxShadow(color: Colors.grey[200]!, blurRadius: 5, spreadRadius: 1)],
+                    borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                   ),
                   child: Shimmer(
                     duration: const Duration(seconds: 1),
                     interval: const Duration(seconds: 1),
                     enabled: true,
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                      Container(
-                        height: 70, width: 70,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          shape: BoxShape.circle
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          height: HomeProviderSectionLayout.homeLogoSize(context),
+                          width: HomeProviderSectionLayout.homeLogoSize(context),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).cardColor,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(Dimensions.paddingSizeExtraSmall),
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Container(height: 15, width: 100, color: Theme.of(context).cardColor),
-                            const SizedBox(height: 5),
-                            Container(height: 10, width: 130, color: Theme.of(context).cardColor),
-                            const SizedBox(height: 5),
-                            Container(height: 15, width: 100, color: Theme.of(context).cardColor),
-                          ]),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(Dimensions.paddingSizeExtraSmall),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(height: 12, width: 90, color: Theme.of(context).cardColor),
+                                const SizedBox(height: 5),
+                                Container(height: 10, width: 110, color: Theme.of(context).cardColor),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-
-                    ]),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -146,4 +115,3 @@ class HomeRecommendedProviderShimmer extends StatelessWidget {
     );
   }
 }
-

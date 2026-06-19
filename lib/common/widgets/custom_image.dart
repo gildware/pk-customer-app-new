@@ -35,7 +35,8 @@ class CustomImage extends StatelessWidget {
       );
     }
 
-    final imageUrl = kIsWeb ? '${AppConstants.baseUrl}/image-proxy?url=$rawUrl' : rawUrl;
+    final resolvedUrl = MobileAppIconHelper.normalizeMediaUrl(rawUrl) ?? rawUrl;
+    final imageUrl = kIsWeb ? '${AppConstants.baseUrl}/image-proxy?url=$resolvedUrl' : resolvedUrl;
 
     // On web, use Image.network for GIFs to preserve animation
     if (kIsWeb && _isGif(imageUrl)) {

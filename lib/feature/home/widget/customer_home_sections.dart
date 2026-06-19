@@ -116,13 +116,9 @@ class CustomerHomeSections {
         if (MobileAppHomeHelper.usesManualData('highlight_providers')) {
           final curated = Get.find<ProviderBookingController>().providersForHomeSection('highlight_providers');
           if (curated != null && curated.isEmpty) return null;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-            child: CuratedProviderHorizontalView(
-              sectionKey: 'highlight_providers',
-              height: isLtr ? 190 : 205,
-              titleOverride: MobileAppHomeHelper.sectionTitle('highlight_providers', 'highlight_providers'),
-            ),
+          return CuratedProviderHorizontalView(
+            sectionKey: 'highlight_providers',
+            titleOverride: MobileAppHomeHelper.sectionTitle('highlight_providers', 'highlight_providers'),
           );
         }
         return Padding(
@@ -183,7 +179,6 @@ class CustomerHomeSections {
               const SizedBox(height: Dimensions.paddingSizeLarge),
               CuratedProviderHorizontalView(
                 sectionKey: 'nearby_providers',
-                height: isLtr ? 190 : 205,
                 titleOverride: MobileAppHomeHelper.sectionTitle('nearby_providers', 'providers_near_you'),
               ),
             ],
@@ -196,7 +191,6 @@ class CustomerHomeSections {
           children: [
             SizedBox(height: (isAvailableProvider || providerController.providerList == null) ? Dimensions.paddingSizeLarge : 0),
             NearbyProviderListview(
-              height: isLtr ? 190 : 205,
               titleOverride: MobileAppHomeHelper.sectionTitle('nearby_providers', 'providers_near_you'),
             ),
           ],
@@ -219,12 +213,10 @@ class CustomerHomeSections {
         if (MobileAppHomeHelper.usesManualData('recommended_providers')) {
           return CuratedProviderHorizontalView(
             sectionKey: 'recommended_providers',
-            height: 220,
             titleOverride: MobileAppHomeHelper.sectionTitle('recommended_providers', 'recommended_experts_for_you'),
           );
         }
         return HomeRecommendProvider(
-          height: 220,
           titleOverride: MobileAppHomeHelper.sectionTitle('recommended_providers', 'recommended_experts_for_you'),
         );
 
@@ -278,7 +270,6 @@ class CustomerHomeSections {
         if (section.isProviderContent && directBooking) {
           return CuratedProviderHorizontalView(
             sectionKey: section.key,
-            height: isLtr ? 190 : 205,
             titleOverride: MobileAppHomeHelper.sectionTitle(section.key, section.key),
           );
         }

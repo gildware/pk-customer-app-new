@@ -184,7 +184,12 @@ class ProviderData {
     serviceManCount = json['service_man_count'];
     serviceCapacityPerDay = json['service_capacity_per_day'];
     ratingCount = json['rating_count'];
-    avgRating = json['avg_rating'] != null ? double.tryParse(double.tryParse(json['avg_rating'].toString())!.toStringAsExponential(2)) : null;
+    if (json['avg_rating'] != null) {
+      final parsed = double.tryParse(json['avg_rating'].toString());
+      avgRating = parsed != null ? double.tryParse(parsed.toStringAsExponential(2)) : null;
+    } else {
+      avgRating = null;
+    }
     commissionStatus = json['commission_status'];
     commissionPercentage = int.tryParse(json['commission_percentage'].toString());
     isActive = int.tryParse(json['is_active'].toString());
