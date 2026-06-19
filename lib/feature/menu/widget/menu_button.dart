@@ -12,6 +12,8 @@ class MenuButton extends StatelessWidget {
 
     int count = ResponsiveHelper.isTab(context) ? 6 : 4;
     double size = ((context.width > Dimensions.webMaxWidth ? Dimensions.webMaxWidth : context.width)/count)-Dimensions.paddingSizeDefault;
+    final boxSize = size - (size * 0.25);
+    final iconSize = (boxSize - (Dimensions.paddingSizeDefault * 2)).clamp(22.0, 36.0);
 
     return Stack(
       children: [
@@ -21,15 +23,15 @@ class MenuButton extends StatelessWidget {
               borderRadius: const BorderRadius.all(Radius.circular(Dimensions.paddingSizeExtraSmall)),
               color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
             ),
-            height: size - (size * 0.25),
+            height: boxSize,
             padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
             margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
             alignment: Alignment.center,
             child: MobileAppIconHelper.icon(
-              key: menu.iconKey ?? '',
+              iconKey: menu.iconKey ?? '',
               fallbackAsset: menu.icon!,
-              width: size,
-              height: size,
+              width: iconSize,
+              height: iconSize,
               fit: BoxFit.contain,
             ),
           ),

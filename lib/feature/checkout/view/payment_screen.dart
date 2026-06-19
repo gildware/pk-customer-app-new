@@ -79,6 +79,15 @@ class PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
+    if (widget.fromPage == 'booking-due-payment' || widget.fromPage == 'switch-payment-method') {
+      Get.back();
+      PaymentRedirectHandler.handlePaymentResult(
+        fromPage: widget.fromPage ?? '',
+        flag: 'fail',
+      );
+      return;
+    }
+
     SafeContext.whenAvailable((context) {
       showDialog(
         context: context,

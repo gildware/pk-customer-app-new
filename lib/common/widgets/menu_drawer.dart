@@ -266,7 +266,7 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
                             color: Theme.of(context).primaryColor,
                           ),
                           child: MobileAppIconHelper.icon(
-                            key: _menuList[index].iconKey ?? '',
+                            iconKey: _menuList[index].iconKey ?? '',
                             fallbackAsset: _menuList[index].icon!,
                             height: 30,
                             width: 30,

@@ -4,6 +4,7 @@ import 'package:demandium/helper/error_logger.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/helper/get_di.dart' as di;
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AppStartup {
   AppStartup._();
@@ -70,13 +71,7 @@ class AppStartup {
     }
 
     if (!kIsWeb && GetPlatform.isMobile) {
-      tasks.add(_safeInit('FCM permission', () async {
-        await FirebaseMessaging.instance.requestPermission(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-      }));
+      tasks.add(_safeInit('FCM permission', _requestNotificationPermission));
     }
 
     await Future.wait(tasks);
@@ -92,11 +87,28 @@ class AppStartup {
           initialNotificationBody = NotificationHelper.convertNotification(remoteMessage.data);
         }
         await NotificationHelper.initialize(notificationsPlugin);
-        FirebaseMessaging.onBackgroundMessage(myBackgroundMessageHandler);
       }
     } catch (e, stack) {
       ErrorLogger.record(e, stack, reason: 'AppStartup.deferredNotifications');
     }
+  }
+
+  static Future<void> _requestNotificationPermission() async {
+    if (GetPlatform.isIOS) {
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    } else if (GetPlatform.isAndroid) {
+      await Permission.notification.request();
+    }
+
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
   static Future<String?> _resolveInitialDeepLink() async {

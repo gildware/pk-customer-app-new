@@ -43,52 +43,64 @@ class AddressMapSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<LocationController>(
       builder: (locationController) {
-        return GestureDetector(
-          onHorizontalDragStart: (_){},
-          onVerticalDragStart: (_){},
-          child: Container(
-            height: isDesktop
-                ? (ResponsiveHelper.isDesktop(context) ? 570 : 150)
-                : 150,
-            width: MediaQuery.of(context).size.width,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(Dimensions.radiusDefault)
+        final addressText = locationController.address.address?.trim().isNotEmpty == true
+            ? locationController.address.address!.trim()
+            : serviceAddressController.text.trim();
+
+        final mapWidget = SizedBox.expand(
+          child: GoogleMap(
+            minMaxZoomPreference: const MinMaxZoomPreference(0, 16),
+            initialCameraPosition: CameraPosition(
+              target: MapHelper.resolveMapTarget(
+                usePickPosition: false,
+                fallback: initialPosition,
+              ),
+              zoom: isDesktop ? 14.4746 : 16,
             ),
-            padding: const EdgeInsets.all(1),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  SizedBox.expand(
-                    child: GoogleMap(
-                    minMaxZoomPreference: const MinMaxZoomPreference(0, 16),
-                    initialCameraPosition: CameraPosition(
-                      target: MapHelper.resolveMapTarget(
-                        usePickPosition: false,
-                        fallback: initialPosition,
-                      ),
-                      zoom: isDesktop ? 14.4746 : 16,
-                    ),
-                    zoomControlsEnabled: ResponsiveHelper.isDesktop(context) ? true : false,
-                    onCameraIdle: onCameraIdle,
-                    onCameraMove: onCameraMove,
-                    onMapCreated: onMapCreated,
-                    style: Get.isDarkMode
-                        ? Get.find<ThemeController>().darkMap
-                        : Get.find<ThemeController>().lightMap,
-                    myLocationButtonEnabled: false,
-                    mapToolbarEnabled: false,
-                    webCameraControlEnabled: false,
-                  ),
-                  ),
+            zoomControlsEnabled: ResponsiveHelper.isDesktop(context) ? true : false,
+            onCameraIdle: onCameraIdle,
+            onCameraMove: onCameraMove,
+            onMapCreated: onMapCreated,
+            style: Get.isDarkMode
+                ? Get.find<ThemeController>().darkMap
+                : Get.find<ThemeController>().lightMap,
+            myLocationButtonEnabled: false,
+            mapToolbarEnabled: false,
+            webCameraControlEnabled: false,
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+            },
+          ),
+        );
+
+        return Container(
+          height: isDesktop
+              ? (ResponsiveHelper.isDesktop(context) ? 570 : 150)
+              : 150,
+          width: MediaQuery.of(context).size.width,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Dimensions.radiusDefault)
+          ),
+          padding: const EdgeInsets.all(1),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                kIsWeb
+                    ? GestureDetector(
+                        onHorizontalDragStart: (_) {},
+                        onVerticalDragStart: (_) {},
+                        child: mapWidget,
+                      )
+                    : mapWidget,
                   Positioned(
                       top: Dimensions.paddingSizeLarge,
                       left: Dimensions.paddingSizeSmall,
                       right: Dimensions.paddingSizeSmall,
                       child: LocationSearchDialog(
                         getMapController: () => Get.find<LocationController>().mapController,
-                        pickedLocation: serviceAddressController.text.isEmpty ? 'search_location'.tr : serviceAddressController.text,
+                        pickedLocation: addressText.isEmpty ? 'search_location'.tr : addressText,
                         child: Container(
                           height: 35,
                           padding: const EdgeInsets.symmetric(
@@ -104,7 +116,8 @@ class AddressMapSection extends StatelessWidget {
                               const SizedBox(width: Dimensions.paddingSizeExtraSmall),
                               Expanded(
                                 child: Text(
-                                  serviceAddressController.text.isEmpty ? 'search_location'.tr : serviceAddressController.text, style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall,color: Theme.of(context).disabledColor),
+                                  addressText.isEmpty ? 'search_location'.tr : addressText,
+                                  style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall,color: Theme.of(context).disabledColor),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -168,8 +181,7 @@ class AddressMapSection extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        );
+          );
       },
     );
   }

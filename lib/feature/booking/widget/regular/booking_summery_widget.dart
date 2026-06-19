@@ -8,10 +8,7 @@ class BookingSummeryWidget extends StatelessWidget{
 
   @override
   Widget build(BuildContext context){
-    double totalBookingAmount = bookingDetails.payableGrandTotal
-        ?? bookingDetails.paymentDetails?.total
-        ?? bookingDetails.totalBookingAmount
-        ?? 0;
+    double totalBookingAmount = BookingHelper.resolveInvoiceGrandTotal(bookingDetails);
     double additionalCharge = bookingDetails.additionalCharge ?? 0;
 
     return Container(
@@ -102,7 +99,10 @@ class BookingSummeryWidget extends StatelessWidget{
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('grand_total'.tr,
+                Text(
+                  BookingHelper.hasDisputedSettlement(bookingDetails)
+                      ? 'original_invoice_total'.tr
+                      : 'grand_total'.tr,
                   style: robotoBold.copyWith(fontSize: Dimensions.fontSizeSmall, color: Get.isDarkMode ? Theme.of(context).textTheme.bodyLarge?.color : Theme.of(context).colorScheme.primary),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -114,6 +114,40 @@ class BookingSummeryWidget extends StatelessWidget{
                 ),
               ]),
             ),
+
+            if (BookingHelper.hasDisputedSettlement(bookingDetails)) ...[
+              if ((BookingHelper.resolveDisputedRefundTotal(bookingDetails) ?? 0) > 0.009)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: Dimensions.paddingSizeDefault,
+                    right: Dimensions.paddingSizeDefault,
+                    top: Dimensions.paddingSizeSmall,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'refunded_amount'.tr,
+                        style: robotoRegular.copyWith(
+                          fontSize: Dimensions.fontSizeSmall,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(
+                          '-${PriceConverter.convertPrice(BookingHelper.resolveDisputedRefundTotal(bookingDetails) ?? 0, isShowLongPrice: true)}',
+                          style: robotoRegular.copyWith(
+                            fontSize: Dimensions.fontSizeSmall,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              _DisputedFinalAmountRow(bookingDetails: bookingDetails),
+            ],
 
             _BookingPaidDueSummaryRows(bookingDetails: bookingDetails),
             ],
@@ -226,6 +260,57 @@ class _SummaryAmountRow extends StatelessWidget {
   }
 }
 
+class _DisputedFinalAmountRow extends StatelessWidget {
+  final BookingDetailsContent bookingDetails;
+
+  const _DisputedFinalAmountRow({required this.bookingDetails});
+
+  @override
+  Widget build(BuildContext context) {
+    final finalAmount = BookingHelper.resolveDisputedFinalBookingAmount(bookingDetails);
+    if (finalAmount == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: Dimensions.paddingSizeDefault,
+        right: Dimensions.paddingSizeDefault,
+        top: Dimensions.paddingSizeSmall,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'final_booking_amount'.tr,
+              style: robotoBold.copyWith(
+                fontSize: Dimensions.fontSizeSmall,
+                color: Get.isDarkMode
+                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    : Theme.of(context).colorScheme.primary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(
+              PriceConverter.convertPrice(finalAmount, isShowLongPrice: true),
+              style: robotoBold.copyWith(
+                fontSize: Dimensions.fontSizeDefault,
+                color: Get.isDarkMode
+                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    : Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BookingPaidDueSummaryRows extends StatelessWidget {
   final BookingDetailsContent bookingDetails;
 
@@ -233,8 +318,7 @@ class _BookingPaidDueSummaryRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final summary = bookingDetails.bookingSummary;
-    final dueAmount = summary?.dueAmount ?? bookingDetails.paymentDetails?.dueBalance ?? 0;
+    final dueAmount = BookingHelper.getDueBalanceAmount(bookingDetails);
 
     if (dueAmount <= 0) {
       return const SizedBox.shrink();

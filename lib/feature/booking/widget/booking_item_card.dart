@@ -1,5 +1,5 @@
+import 'package:demandium/common/widgets/booking_status_tags_widget.dart';
 import 'package:demandium/common/models/popup_menu_model.dart';
-import 'package:demandium/feature/booking/widget/booking_status_widget.dart';
 import 'package:demandium/helper/booking_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
@@ -31,7 +31,7 @@ class BookingItemCard extends StatelessWidget {
           margin:  const EdgeInsets.symmetric(horizontal: 2,),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
 
 
@@ -157,17 +157,31 @@ class BookingItemCard extends StatelessWidget {
               ]),
               const SizedBox(height: Dimensions.paddingSizeSmall,),
 
-              Row( mainAxisAlignment: MainAxisAlignment.spaceBetween,  children: [
-
-                BookingStatusButtonWidget(bookingStatus: bookingModel.bookingStatus,),
-
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(PriceConverter.convertPrice(bookingModel.totalBookingAmount!.toDouble()),
-                    style: robotoBold.copyWith(color: Get.isDarkMode ? Theme.of(context).textTheme.bodyLarge?.color : Theme.of(context).colorScheme.primary),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: BookingStatusAndTagsRow(
+                      rawStatus: bookingModel.bookingStatus,
+                      ui: bookingModel.statusUi,
+                      compact: true,
+                    ),
                   ),
-                ),
-              ],),
+                  const SizedBox(width: Dimensions.paddingSizeSmall),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      PriceConverter.convertPrice(bookingModel.displayTotalBookingAmount),
+                      style: robotoBold.copyWith(
+                        color: Get.isDarkMode
+                            ? Theme.of(context).textTheme.bodyLarge?.color
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         );

@@ -24,7 +24,7 @@ class _RepeatBookingDetailsScreenState extends State<RepeatBookingDetailsScreen>
 
   @override
   void initState() {
-    tabController = TabController(length: BookingDetailsTabs.values.length, vsync: this);
+    tabController = TabController(length: 2, vsync: this);
     Get.find<BookingDetailsController>().resetBookingDetailsValue(resetBookingDetails: true);
     Get.find<BookingDetailsController>().getBookingDetails(bookingId: widget.bookingId ?? "");
     super.initState();
@@ -68,7 +68,7 @@ class _RepeatBookingDetailsScreenState extends State<RepeatBookingDetailsScreen>
               position: PopupMenuPosition.under, elevation: 8,
               shadowColor: Theme.of(context).hintColor.withValues(alpha: 0.3),
               itemBuilder: (BuildContext context) {
-                return bookingDetailsController.getPopupMenuList(bookingDetailsController.bookingDetailsContent?.bookingStatus ?? "").map((PopupMenuModel option) {
+                return bookingDetailsController.getPopupMenuList(bookingDetailsController.bookingDetailsContent).map((PopupMenuModel option) {
                   return PopupMenuItem<PopupMenuModel>(
                     value: option,
                     padding: EdgeInsets.zero,
@@ -208,7 +208,7 @@ class RepeatBookingTabBar extends StatelessWidget {
                       case 0:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.bookingDetails);
                       break;
 
-                      case 1:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.status);
+                      case 1:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.serviceLog);
                       break;
                     }
                   },
@@ -256,37 +256,33 @@ class RepeatBookingTabBar extends StatelessWidget {
 
                   const SizedBox(width: Dimensions.paddingSizeSmall),
 
-                  Get.find<AuthController>().isLoggedIn() && (bookingDetails.bookingStatus == "completed" ||   bookingDetails.bookingStatus == "pending")?
+                  Get.find<AuthController>().isLoggedIn() && bookingDetails.bookingStatus == "pending"?
                   GetBuilder<ServiceBookingController>(
                     builder: (serviceBookingController) {
                       return InkWell(
                         onTap: () {
-                          if(bookingDetails.bookingStatus == "completed"){
-                            serviceBookingController.checkCartSubcategory(bookingDetails.id!, bookingDetails.subCategoryId!);
-                          }else{
-                            Get.dialog(
-                              ConfirmationDialog(
-                                icon: Images.warning,
-                                title: 'are_you_sure_to_cancel_this_full_booking'.tr,
-                                description: 'once_cancel_full_booking'.tr,
-                                noButtonText: "yes_cancel".tr,
-                                noButtonColor: Theme.of(context).colorScheme.primary,
-                                noTextColor: Colors.white,
-                                yesButtonText: "not_now".tr,
-                                yesButtonColor: Theme.of(context).colorScheme.error,
-                                yesTextColor: Colors.white,
-                                onYesPressed: () {
-                                  Get.back();
-                                },
-                                onNoPressed: () async {
-                                  Get.back();
-                                  Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                  await bookingDetailsController.bookingCancel(bookingId: bookingDetailsController.bookingDetailsContent?.id ?? "");
-                                  Get.back();
-                                },
-                              ),
-                            );
-                          }
+                          Get.dialog(
+                            ConfirmationDialog(
+                              icon: Images.warning,
+                              title: 'are_you_sure_to_cancel_this_full_booking'.tr,
+                              description: 'once_cancel_full_booking'.tr,
+                              noButtonText: "yes_cancel".tr,
+                              noButtonColor: Theme.of(context).colorScheme.primary,
+                              noTextColor: Colors.white,
+                              yesButtonText: "not_now".tr,
+                              yesButtonColor: Theme.of(context).colorScheme.error,
+                              yesTextColor: Colors.white,
+                              onYesPressed: () {
+                                Get.back();
+                              },
+                              onNoPressed: () async {
+                                Get.back();
+                                Get.dialog(const CustomLoader(), barrierDismissible: false);
+                                await bookingDetailsController.bookingCancel(bookingId: bookingDetailsController.bookingDetailsContent?.id ?? "");
+                                Get.back();
+                              },
+                            ),
+                          );
                         },
 
                         child: Container(
@@ -296,16 +292,16 @@ class RepeatBookingTabBar extends StatelessWidget {
                             border: Border.all(color: Theme.of(context).colorScheme.primary),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeEight, horizontal: Dimensions.paddingSizeLarge),
-                          child: (serviceBookingController.isLoading) ?
-                          Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault), child: SizedBox(height: 15, width:15, child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary,))) :
-                          Text(bookingDetails.bookingStatus == "completed" ? "rebook".tr : "cancel_booking".tr, style: robotoMedium.copyWith(color: Theme.of(context).colorScheme.onPrimary)
+                          child: Text("cancel_booking".tr, style: robotoMedium.copyWith(color: Theme.of(context).colorScheme.onPrimary)
                           ),
                         ),
                       );
                     },
                   ) : const SizedBox(),
 
-                  bookingDetails.bookingStatus == "completed" && Get.find<AuthController>().isLoggedIn() ?
+                  bookingDetails.bookingStatus == "completed"
+                      && Get.find<AuthController>().isLoggedIn()
+                      && BookingHelper.canLeaveReview(bookingDetails) ?
                   InkWell(
                     onTap: () {
                       showModalBottomSheet(context: context,

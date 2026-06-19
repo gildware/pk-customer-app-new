@@ -1,11 +1,12 @@
 import 'package:demandium/common/models/popup_menu_model.dart';
 import 'package:demandium/feature/checkout/widget/payment_section/incomplete_offline_payment_dialog.dart';
 import 'package:demandium/feature/home/widget/referal_welcome_dialog.dart';
+import 'package:demandium/helper/booking_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
 
-enum BookingDetailsTabs {bookingDetails, status}
+enum BookingDetailsTabs {bookingDetails, payments, history, serviceLog}
 class BookingDetailsController extends GetxController implements GetxService{
   BookingDetailsRepo bookingDetailsRepo;
   BookingDetailsController({required this.bookingDetailsRepo});
@@ -212,7 +213,8 @@ class BookingDetailsController extends GetxController implements GetxService{
     return bookingDetailsRepo.getLastIncompleteOfflineBookingId();
   }
 
-  List<PopupMenuModel> getPopupMenuList(String status) {
+  List<PopupMenuModel> getPopupMenuList(BookingDetailsContent? booking) {
+    final status = booking?.bookingStatus ?? '';
     if (status == "pending") {
       return [
         PopupMenuModel(title: "download_invoice", icon: Icons.file_download_outlined),
@@ -221,7 +223,8 @@ class BookingDetailsController extends GetxController implements GetxService{
     } else if(status == "completed"){
       return [
         PopupMenuModel(title: "download_invoice", icon: Icons.file_download_outlined),
-        PopupMenuModel(title: "review", icon: Icons.reviews_outlined),
+        if (booking != null && BookingHelper.canLeaveReview(booking))
+          PopupMenuModel(title: "review", icon: Icons.reviews_outlined),
       ];
     }
     return [];

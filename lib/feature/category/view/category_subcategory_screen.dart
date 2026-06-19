@@ -72,14 +72,14 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
                       child: (categoryController.categoryList != null && !categoryController.isSearching!) ?
                       Center(
                         child: Container(
-                          height:ResponsiveHelper.isDesktop(context) ? 140 : ResponsiveHelper.isTab(context)? 140 : 130,
+                          height: ResponsiveHelper.isDesktop(context) ? 145 : ResponsiveHelper.isTab(context) ? 140 : 125,
                           margin: EdgeInsets.only(
-                            left: ResponsiveHelper.isDesktop(context)? 0 : Dimensions.paddingSizeDefault,
+                            left: ResponsiveHelper.isDesktop(context) ? 0 : Dimensions.paddingSizeDefault,
                           ),
                           width: Dimensions.webMaxWidth,
                           padding: const EdgeInsets.only(
-                              bottom: Dimensions.paddingSizeExtraSmall,
-                              top: Dimensions.paddingSizeDefault
+                            bottom: Dimensions.paddingSizeExtraSmall,
+                            top: Dimensions.paddingSizeDefault,
                           ),
                           child: ListView.builder(
                             shrinkWrap: true,
@@ -107,39 +107,67 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
                                     await scrollController!.highlight(index);
                                   },
                                   hoverColor: Colors.transparent,
-                                  child: Container(
-                                    width: ResponsiveHelper.isDesktop(context) ? 140 : ResponsiveHelper.isTab(context)?140 :100,
+                                  child: Builder(
+                                    builder: (context) {
+                                      final isSelected = index == int.parse(categoryIndex!);
+                                      const cardRadius = Dimensions.radiusDefault;
+                                      const selectedBorderWidth = 2.0;
+                                      final innerRadius = isSelected ? cardRadius - selectedBorderWidth : cardRadius;
 
-                                    margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
-                                    decoration: BoxDecoration(
-                                      color: index != int.parse(categoryIndex!) ? Theme.of(context).primaryColorLight : Theme.of(context).colorScheme.primary,
-                                      borderRadius: const BorderRadius.all(Radius.circular(Dimensions.radiusDefault), ),
-                                    ),
-                                    child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                                            child: CustomImage(
-                                              fit: BoxFit.cover,
-                                              height: ResponsiveHelper.isDesktop(context) ? 50 : ResponsiveHelper.isTab(context)?40 :30,
-                                              width: ResponsiveHelper.isDesktop(context) ? 50 : ResponsiveHelper.isTab(context)?40 :30,
-                                              image: '${categoryController.categoryList![index].imageFullPath}',
-                                            ),
+                                      return Container(
+                                        width: ResponsiveHelper.isDesktop(context) ? 120 : ResponsiveHelper.isTab(context) ? 120 : 88,
+                                        height: ResponsiveHelper.isDesktop(context) ? 115 : ResponsiveHelper.isTab(context) ? 110 : 100,
+                                        margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(cardRadius),
+                                          color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                                        ),
+                                        padding: isSelected ? const EdgeInsets.all(selectedBorderWidth) : EdgeInsets.zero,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(innerRadius),
                                           ),
-                                          const SizedBox(height: Dimensions.paddingSizeSmall,),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                                            child: Text(categoryController.categoryList![index].name!,
-                                              style: robotoRegular.copyWith(
-                                                  fontSize: Dimensions.fontSizeSmall,
-                                                  color:index==int.parse(categoryIndex!)? Colors.white:Colors.black
+                                          clipBehavior: Clip.antiAlias,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: [
+                                              Expanded(
+                                                child: ColoredBox(
+                                                  color: Theme.of(context).primaryColorLight,
+                                                  child: CustomImage(
+                                                    fit: BoxFit.cover,
+                                                    placeHolderBoxFit: BoxFit.cover,
+                                                    height: double.infinity,
+                                                    width: double.infinity,
+                                                    image: '${categoryController.categoryList![index].imageFullPath}',
+                                                  ),
+                                                ),
                                               ),
-                                              maxLines: 2,textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,
-                                            ),
+                                              Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: Dimensions.paddingSizeExtraSmall,
+                                                  vertical: Dimensions.paddingSizeExtraSmall,
+                                                ),
+                                                color: isSelected
+                                                    ? Theme.of(context).colorScheme.primary
+                                                    : Theme.of(context).primaryColorLight,
+                                                child: Text(
+                                                  categoryController.categoryList![index].name!,
+                                                  style: robotoMedium.copyWith(
+                                                    fontSize: Dimensions.fontSizeExtraSmall,
+                                                    color: isSelected ? Colors.white : Colors.black,
+                                                  ),
+                                                  maxLines: 2,
+                                                  textAlign: TextAlign.center,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ]),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               );

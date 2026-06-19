@@ -1,3 +1,4 @@
+import 'package:demandium/common/model/booking_status_ui_model.dart';
 import 'package:demandium/feature/booking/model/booking_details_model.dart';
 import 'package:demandium/feature/booking/model/service_booking_model.dart';
 import 'package:demandium/feature/splash/controller/splash_controller.dart';
@@ -303,6 +304,280 @@ class BookingHelper {
       default:
         return displayLabel(paidWith);
     }
+  }
+
+  /// Customer payment obligation (final settled amount when applicable; otherwise invoice grand total).
+  static double resolveCustomerPayableTotal(BookingDetailsContent booking) {
+    final disputedFinal = resolveDisputedFinalBookingAmount(booking);
+    if (disputedFinal != null) {
+      return disputedFinal;
+    }
+    final finalFromSettlement = booking.specialFinancialSettlement?.finalBookingAmount;
+    if (finalFromSettlement != null && finalFromSettlement > 0.009) {
+      return finalFromSettlement;
+    }
+    if (booking.lossMakingSettlement?.isLossMaking == true) {
+      final lossTotal = booking.lossMakingSettlement?.totalBookingAmount;
+      if (lossTotal != null && lossTotal > 0.009) {
+        return lossTotal;
+      }
+    }
+    if (booking.listDisplayTotal != null && booking.listDisplayTotal! > 0.009) {
+      return booking.listDisplayTotal!;
+    }
+    final paymentTotal = booking.paymentDetails?.total;
+    if (paymentTotal != null && paymentTotal > 0.009) {
+      return paymentTotal;
+    }
+    return resolveInvoiceGrandTotal(booking);
+  }
+
+  static double resolveCustomerAmountPaid(BookingDetailsContent booking) {
+    final fromPayment = booking.paymentDetails?.amountPaidDisplay;
+    if (fromPayment != null && fromPayment >= 0) {
+      return fromPayment;
+    }
+    final fromSettlement = booking.lossMakingSettlement?.amountPaid;
+    if (fromSettlement != null && fromSettlement >= 0) {
+      return fromSettlement;
+    }
+    final fromSummary = booking.bookingSummary?.totalPaid;
+    if (fromSummary != null && fromSummary >= 0) {
+      return fromSummary;
+    }
+    var paid = 0.0;
+    if (booking.partialPayments != null && booking.partialPayments!.isNotEmpty) {
+      for (final partial in booking.partialPayments!) {
+        paid += partial.paidAmount ?? 0;
+      }
+    } else if (booking.isPaid == 1) {
+      paid = resolveCustomerPayableTotal(booking);
+    }
+    return paid;
+  }
+
+  static bool isWriteoffSettledBooking(BookingDetailsContent booking) {
+    final payment = booking.paymentDetails;
+    if (payment?.isWriteoffSettled == true) {
+      return true;
+    }
+    if ((payment?.writeOffAmount ?? 0) > 0.009) {
+      return true;
+    }
+    final statusLabel = (payment?.statusLabel ?? '').toLowerCase();
+    if (statusLabel.contains('settled') || statusLabel == 'settled'.tr.toLowerCase()) {
+      return true;
+    }
+    final settlement = booking.lossMakingSettlement;
+    if (settlement?.isWriteoffSettled == true) {
+      return true;
+    }
+    if ((settlement?.writeOffAmount ?? 0) > 0.009) {
+      return true;
+    }
+    if (booking.statusUi?.tags?.any((tag) => tag.key == 'writeoff_settled') ?? false) {
+      return true;
+    }
+
+    return _hasWriteoffGapWithZeroDue(booking);
+  }
+
+  static bool _hasWriteoffGapWithZeroDue(BookingDetailsContent booking) {
+    final payment = booking.paymentDetails;
+    final total = resolveCustomerPayableTotal(booking);
+    final paid = resolveCustomerAmountPaid(booking);
+    final gap = total - paid;
+    if (gap <= 0.009) {
+      return false;
+    }
+
+    if (payment?.dueBalance != null) {
+      return payment!.dueBalance! <= 0.009;
+    }
+
+    return (total - paid) <= 0.009;
+  }
+
+  static double getWriteoffSettlementAmount(BookingDetailsContent booking) {
+    final payment = booking.paymentDetails;
+    if ((payment?.writeOffAmount ?? 0) > 0.009) {
+      return payment!.writeOffAmount!;
+    }
+    final settlement = booking.lossMakingSettlement;
+    if ((settlement?.writeOffAmount ?? 0) > 0.009) {
+      return settlement!.writeOffAmount!;
+    }
+    final total = resolveCustomerPayableTotal(booking);
+    final paid = resolveCustomerAmountPaid(booking);
+    final gap = (total - paid).clamp(0.0, double.infinity);
+    if (isWriteoffSettledBooking(booking) && gap > 0.009) {
+      return gap;
+    }
+    return 0;
+  }
+
+  static double getDueBalanceAmount(BookingDetailsContent booking) {
+    if (hasDisputedSettlement(booking)) {
+      return 0;
+    }
+    if (isWriteoffSettledBooking(booking)) {
+      return 0;
+    }
+
+    final paymentDue = booking.paymentDetails?.dueBalance;
+    if (paymentDue != null) {
+      return paymentDue.clamp(0.0, double.infinity);
+    }
+
+    final cap = resolveCustomerPayableTotal(booking);
+    final paid = resolveCustomerAmountPaid(booking);
+    return (cap - paid).clamp(0.0, double.infinity);
+  }
+
+  /// Review is blocked while a loss-making booking still has unsettled loss.
+  static bool canLeaveReview(BookingDetailsContent booking) {
+    if (booking.lossMakingSettlement?.isLossMaking == true) {
+      return false;
+    }
+    return canLeaveReviewFromStatusUi(booking.statusUi);
+  }
+
+  static bool canLeaveReviewFromStatusUi(BookingStatusUiFields? statusUi) {
+    final tags = statusUi?.tags ?? const [];
+    return !tags.any((tag) => tag.key == 'loss_making');
+  }
+
+  static bool canCustomerPayDueBalance(BookingDetailsContent booking) {
+    if (hasDisputedSettlement(booking)) {
+      return false;
+    }
+    if (isWriteoffSettledBooking(booking)) {
+      return false;
+    }
+
+    if (getDueBalanceAmount(booking) <= 0.009) {
+      return false;
+    }
+
+    final status = (booking.bookingStatus ?? '').toLowerCase();
+    return status != 'canceled' && status != 'cancelled' && status != 'refunded';
+  }
+
+  /// Final settled amount for disputed reopen close bookings.
+  static double? resolveDisputedFinalBookingAmount(BookingDetailsContent booking) {
+    final disputed = booking.disputedSettlement;
+    if (disputed?.hasDisputedSettlement == true) {
+      final amount = disputed?.finalBookingAmount ?? disputed?.retainedFromCustomer;
+      if (amount != null) {
+        return amount;
+      }
+    }
+    final payment = booking.paymentDetails;
+    if (payment?.isDisputedSettlement == true) {
+      return payment?.finalBookingAmount ?? payment?.retainedAmount ?? payment?.total;
+    }
+    return null;
+  }
+
+  static bool hasDisputedSettlement(BookingDetailsContent booking) {
+    if (booking.disputedSettlement?.hasDisputedSettlement == true) {
+      return true;
+    }
+    return booking.paymentDetails?.isDisputedSettlement == true;
+  }
+
+  static double? resolveDisputedCustomerPaidTotal(BookingDetailsContent booking) {
+    final disputed = booking.disputedSettlement;
+    if (disputed?.hasDisputedSettlement == true && disputed?.customerPaidTotal != null) {
+      return disputed!.customerPaidTotal;
+    }
+    return booking.paymentDetails?.customerPaidTotal ?? booking.paymentDetails?.amountPaidDisplay;
+  }
+
+  static double? resolveDisputedRefundTotal(BookingDetailsContent booking) {
+    final disputed = booking.disputedSettlement;
+    if (disputed?.hasDisputedSettlement == true && disputed?.refundTotal != null) {
+      return disputed!.refundTotal;
+    }
+    return booking.paymentDetails?.refundedAmount ?? booking.paymentDetails?.refundTotal;
+  }
+
+  static double? resolvePendingRefundAmount(BookingDetailsContent booking) {
+    final disputed = booking.disputedSettlement;
+    if (disputed?.hasDisputedSettlement == true) {
+      final pending = disputed?.pendingRefund;
+      if (pending != null && pending > 0.009) {
+        return pending;
+      }
+      return null;
+    }
+    final pending = booking.paymentDetails?.pendingRefund ?? booking.paymentDetails?.refundableRemaining;
+    if (pending != null && pending > 0.009) {
+      return pending;
+    }
+    return null;
+  }
+
+  static double? resolveRefundedAmount(BookingDetailsContent booking) {
+    final disputedRefund = resolveDisputedRefundTotal(booking);
+    if (disputedRefund != null && disputedRefund > 0.009) {
+      return disputedRefund;
+    }
+    final refunded = booking.paymentDetails?.refundedAmount;
+    if (refunded != null && refunded > 0.009) {
+      return refunded;
+    }
+    return null;
+  }
+
+  /// Invoice grand total for overview/summary (original catalog total). Use [resolveListDisplayTotal] in lists.
+  static double resolveInvoiceGrandTotal(BookingDetailsContent booking) {
+    final summary = booking.bookingSummary;
+    if (summary?.grandTotal != null && summary!.grandTotal! > 0.009) {
+      return summary.grandTotal!;
+    }
+    if (booking.payableGrandTotal != null && booking.payableGrandTotal! > 0.009) {
+      return booking.payableGrandTotal!;
+    }
+    double total = getDiscountedSubTotal(booking);
+    final additionalLines = summary?.additionalChargeLines ?? getAdditionalChargeLines(booking);
+    for (final line in additionalLines) {
+      total += line.amount ?? 0;
+    }
+    final taxAmount = summary?.tax ?? booking.totalTaxAmount ?? 0;
+    if (summary?.hasTax == true || taxAmount > 0.009) {
+      total += taxAmount;
+    }
+    if (total > 0.009) {
+      return total;
+    }
+    return booking.totalBookingAmount ?? 0;
+  }
+
+  /// Final settled amount for booking lists (special scenarios use reduced totals).
+  static double resolveListDisplayTotal(BookingDetailsContent booking) {
+    return resolveCustomerPayableTotal(booking);
+  }
+
+  /// True when the customer payment was received by the company (not the service provider).
+  static bool isPaymentReceivedByCompany({String? receivedBy, String? receivedByLabel}) {
+    final normalized = (receivedBy ?? '').trim().toLowerCase();
+    if (normalized == 'company') {
+      return true;
+    }
+    if (normalized == 'provider') {
+      return false;
+    }
+
+    final label = (receivedByLabel ?? '').trim().toLowerCase();
+    if (label.contains('provider')) {
+      return false;
+    }
+    if (label.contains('company')) {
+      return true;
+    }
+
+    return normalized.isEmpty;
   }
 
   static String partialPaymentRowLabel(String? paidWith, String? bookingPaymentMethod) {

@@ -19,6 +19,7 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   CameraPosition? _cameraPosition;
   LatLng? _initialPosition;
   bool _isMapReady = false;
+  bool _mapInitializing = true;
 
   @override
   void initState() {
@@ -41,6 +42,8 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
     
     // Set pick data for location controller
     Get.find<LocationController>().setPickData();
+
+    _cameraPosition = CameraPosition(target: _initialPosition!, zoom: 16);
   }
 
   @override
@@ -95,11 +98,22 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   void _onMapCreated(GoogleMapController mapController) {
     _mapController = mapController;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Get.find<LocationController>().getCurrentLocation(
+      _mapInitializing = true;
+      final locationController = Get.find<LocationController>();
+      await locationController.getCurrentLocation(
         false,
         mapController: mapController,
         defaultLatLng: _initialPosition,
       );
+      _cameraPosition = CameraPosition(
+        target: LatLng(
+          locationController.pickPosition.latitude,
+          locationController.pickPosition.longitude,
+        ),
+        zoom: 16,
+      );
+      await Future.delayed(const Duration(milliseconds: 300));
+      _mapInitializing = false;
       _isMapReady = true;
     });
   }
@@ -109,25 +123,19 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   }
 
   void _onCameraMoveStarted() {
-    if (!_isMapReady) return;
+    if (!_isMapReady || _mapInitializing) return;
     Get.find<LocationController>().updateCameraMovingStatus(true);
-    Get.find<LocationController>().disableButton();
   }
 
   void _onCameraIdle() {
-    if (!_isMapReady || _cameraPosition == null) return;
-    Get.find<LocationController>().updateCameraMovingStatus(false);
-    try {
-      Get.find<LocationController>().updatePosition(
-        _cameraPosition!,
-        false,
-        formCheckout: false,
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error updating position: $e');
-      }
-    }
+    if (!_isMapReady || _mapInitializing || _cameraPosition == null) return;
+    final locationController = Get.find<LocationController>();
+    locationController.updateCameraMovingStatus(false);
+    locationController.updatePosition(
+      _cameraPosition!,
+      false,
+      formCheckout: false,
+    );
   }
 
   void _onLocationTap() {

@@ -1,12 +1,11 @@
 import 'package:demandium/common/models/popup_menu_model.dart';
+import 'package:demandium/feature/booking/model/booking_count.dart';
 import 'package:demandium/helper/debounce_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/feature/booking/model/service_availability_model.dart';
 import 'package:demandium/feature/booking/widget/provider_available_bottom_sheet.dart';
 import 'package:demandium/feature/booking/widget/service_unavailable_dialog.dart';
 import 'package:get/get.dart';
-
-enum BookingStatusTabs {all, pending, accepted, ongoing,completed,canceled }
 
 class ServiceBookingController extends GetxController implements GetxService {
   final ServiceBookingRepo serviceBookingRepo;
@@ -29,9 +28,26 @@ class ServiceBookingController extends GetxController implements GetxService {
   int get bookingListPageSize => _bookingListPageSize;
 
   int get bookingListCurrentPage => _bookingListCurrentPage;
-  BookingStatusTabs _selectedBookingStatus = BookingStatusTabs.all;
+  String _selectedBookingStatus = 'all';
 
-  BookingStatusTabs get selectedBookingStatus => _selectedBookingStatus;
+  String get selectedBookingStatus => _selectedBookingStatus;
+
+  List<String> get visibleBookingTabs => _bookingCount?.visibleTabs ?? const ['all'];
+
+  int get selectedBookingTabIndex {
+    final visible = visibleBookingTabs;
+    if (visible.isEmpty) return 0;
+    final idx = visible.indexOf(_selectedBookingStatus);
+    return idx >= 0 ? idx : 0;
+  }
+
+  void _ensureSelectedTabVisible() {
+    final visible = visibleBookingTabs;
+    if (visible.isEmpty) return;
+    if (!visible.contains(_selectedBookingStatus)) {
+      _selectedBookingStatus = visible.first;
+    }
+  }
 
   bool _isNotAvailable = false;
   bool get isNotAvailable => _isNotAvailable;
@@ -54,7 +70,34 @@ class ServiceBookingController extends GetxController implements GetxService {
 
   final DebounceHelper _debounceHelper = DebounceHelper(milliseconds: 300);
 
+  AutoScrollController? bookingTabScrollController;
 
+  BookingCount? _bookingCount;
+  BookingCount? get bookingCount => _bookingCount;
+
+  @override
+  void onInit() {
+    super.onInit();
+    bookingTabScrollController = AutoScrollController(axis: Axis.horizontal);
+  }
+
+  @override
+  void onClose() {
+    bookingTabScrollController?.dispose();
+    super.onClose();
+  }
+
+  Future<void> scrollBookingTabTo(int index) async {
+    final controller = bookingTabScrollController;
+    if (controller == null) return;
+    if (index == selectedBookingTabIndex) return;
+    await controller.scrollToIndex(
+      index,
+      preferPosition: AutoScrollPosition.begin,
+      duration: Duration.zero,
+    );
+    await controller.highlight(index);
+  }
 
   Future<void> refreshCurrentBookingTab() async {
     _bookingList = null;
@@ -62,37 +105,31 @@ class ServiceBookingController extends GetxController implements GetxService {
     update();
     await getAllBookingService(
       offset: 1,
-      bookingStatus: _selectedBookingStatus.name.toLowerCase(),
+      bookingStatus: _selectedBookingStatus,
       isFromPagination: false,
       serviceType: selectedServiceType.name,
     );
   }
 
-  void updateBookingStatusTabs(BookingStatusTabs bookingStatusTabs, {
+  void updateBookingStatusTabs(String bookingStatusTabs, {
     bool firstTimeCall = true, bool fromMenu = false,
   }) {
 
-    // Don't do anything if the same tab is already selected
     if (_selectedBookingStatus == bookingStatusTabs) {
       return;
     }
 
     _selectedBookingStatus = bookingStatusTabs;
-    update(); // Update UI immediately to show selected tab
+    update();
 
     if (firstTimeCall) {
-      // Clear previous booking list data immediately to show shimmer
-      _bookingList = null;
-
-      // Set loading state for tab change
       _isTabLoading = true;
       update();
 
-      // Use DebounceHelper to debounce the API call
       _debounceHelper.run(() {
         getAllBookingService(
           offset: 1,
-          bookingStatus: _selectedBookingStatus.name.toLowerCase(),
+          bookingStatus: _selectedBookingStatus,
           isFromPagination: false,
           serviceType: selectedServiceType.name,
         );
@@ -108,21 +145,45 @@ class ServiceBookingController extends GetxController implements GetxService {
     }
     Response response = await serviceBookingRepo.getBookingList(offset: offset, bookingStatus: bookingStatus, serviceType: serviceType);
     if (response.statusCode == 200) {
-      ServiceBookingList serviceBookingModel = ServiceBookingList.fromJson(
-          response.body);
+      final content = response.body['content'];
+      Map<String, dynamic> bookingsJson;
+      if (content is Map && content['bookings'] != null) {
+        if (content['bookings_count'] != null) {
+          _bookingCount = BookingCount.fromJson(
+            Map<String, dynamic>.from(content['bookings_count']),
+          );
+          _ensureSelectedTabVisible();
+          if (_selectedBookingStatus != bookingStatus && !isFromPagination) {
+            await getAllBookingService(
+              offset: 1,
+              bookingStatus: _selectedBookingStatus,
+              isFromPagination: false,
+              serviceType: serviceType,
+            );
+            return;
+          }
+        }
+        bookingsJson = Map<String, dynamic>.from(content['bookings']);
+      } else {
+        bookingsJson = Map<String, dynamic>.from(content);
+      }
+
+      ServiceBookingList serviceBookingModel = ServiceBookingList.fromJson({
+        ...Map<String, dynamic>.from(response.body),
+        'content': bookingsJson,
+      });
       if (!isFromPagination) {
         _bookingList = [];
       }
       for (var element in serviceBookingModel.content!.bookingModel!) {
         _bookingList!.add(element);
       }
-      _bookingListPageSize = response.body['content']['last_page'];
+      _bookingListPageSize = bookingsJson['last_page'];
       _bookingContent = serviceBookingModel.content!;
     } else {
       ApiChecker.checkApi(response);
     }
 
-    // Clear tab loading state
     _isTabLoading = false;
     update();
   }
@@ -253,7 +314,7 @@ class ServiceBookingController extends GetxController implements GetxService {
     if(type!=null){
       selectedServiceType = type;
       update();
-      getAllBookingService(offset: 1, bookingStatus: _selectedBookingStatus.name, isFromPagination: false, serviceType: type.name);
+      getAllBookingService(offset: 1, bookingStatus: _selectedBookingStatus, isFromPagination: false, serviceType: type.name);
     }else{
       selectedServiceType = ServiceType.all;
     }
@@ -266,17 +327,16 @@ class ServiceBookingController extends GetxController implements GetxService {
         PopupMenuModel(title: "download_invoice", icon: Icons.file_download_outlined),
         PopupMenuModel(title: "cancel", icon: Icons.cancel_outlined),
       ];
-    } else if (status == "accepted" || status == "ongoing") {
+    } else if (status == "accepted" || status == "ongoing" || status == "on_hold") {
       return [
         PopupMenuModel(title: "booking_details", icon: Icons.remove_red_eye_sharp),
         PopupMenuModel(title: "download_invoice", icon: Icons.file_download_outlined),
       ];
     }
-    else if (status == "canceled"|| status == "completed") {
+    else if (status == "canceled"|| status == "completed" || status == "refunded") {
       return [
         PopupMenuModel(title: "booking_details", icon: Icons.remove_red_eye_sharp),
         PopupMenuModel(title: "download_invoice", icon: Icons.file_download_outlined),
-        if(!isRepeatBooking && !isCustomizeBooking)  PopupMenuModel(title: "rebook", icon: Icons.repeat),
       ];
     }
     return [];

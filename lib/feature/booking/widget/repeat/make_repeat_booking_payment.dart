@@ -5,7 +5,13 @@ import 'dart:convert';
 
 class RepeatBookingPaymentDialog extends StatefulWidget {
   final BookingDetailsContent bookingDetails;
-  const RepeatBookingPaymentDialog({super.key, required this.bookingDetails,});
+  final double? paymentAmount;
+
+  const RepeatBookingPaymentDialog({
+    super.key,
+    required this.bookingDetails,
+    this.paymentAmount,
+  });
 
   @override
   State<RepeatBookingPaymentDialog> createState() => _ProductBottomSheetState();
@@ -73,6 +79,16 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
               ),
 
               Text("${'make_payment'.tr} ", style: robotoBold.copyWith(fontSize: Dimensions.fontSizeDefault)),
+              if (widget.paymentAmount != null) ...[
+                const SizedBox(height: Dimensions.paddingSizeSmall),
+                Text(
+                  PriceConverter.convertPrice(widget.paymentAmount!, isShowLongPrice: true),
+                  style: robotoBold.copyWith(
+                    fontSize: Dimensions.fontSizeLarge,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ],
               const SizedBox(height: Dimensions.paddingSizeExtraLarge),
 
               Row( children: [
@@ -143,7 +159,11 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
                         customSnackBar("select_payment_method".tr, type: ToasterMessageType.info, showDefaultSnackBar: false);
                     }else{
                       Get.back();
-                      _makePayment(bookingDetailsController.selectedDigitalPaymentMethod?.gateway ?? "", widget.bookingDetails);
+                      _makePayment(
+                        bookingDetailsController.selectedDigitalPaymentMethod?.gateway ?? "",
+                        widget.bookingDetails,
+                        paymentAmount: widget.paymentAmount,
+                      );
                     }
                   },
                 ),
@@ -158,7 +178,11 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
     );
   }
 
-  Future<void> _makePayment(String paymentGateway , BookingDetailsContent bookingDetails) async {
+  Future<void> _makePayment(
+    String paymentGateway,
+    BookingDetailsContent bookingDetails, {
+    double? paymentAmount,
+  }) async {
 
     String url = '';
     String hostname = html.window.location.hostname!;
@@ -174,7 +198,8 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
     url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=$accessToken'
-        '&callback=$callbackUrl&payment_platform=$platform&is_repeat_single_booking=1&booking_repeat_id=$repeatBookingId&booking_id=$bookingId';
+        '&callback=$callbackUrl&payment_platform=$platform&is_repeat_single_booking=1&booking_repeat_id=$repeatBookingId&booking_id=$bookingId'
+        '${paymentAmount != null ? '&amount=$paymentAmount' : ''}';
 
     if (GetPlatform.isWeb) {
       printLog("url_with_digital_payment:$url");

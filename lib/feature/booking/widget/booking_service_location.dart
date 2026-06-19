@@ -42,23 +42,13 @@ class BookingServiceLocation extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onTertiary,
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeEight),
-                  child: RichText(
-                    text: TextSpan(
-                      text: bookingDetails.serviceLocation == "customer" ?  "provider_will_be_arrived_at_service_location".tr : "you_need_to_go_to_the".tr,
-                      style: robotoRegular.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                        fontSize: Dimensions.fontSizeSmall,
-                      ),
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: " (${bookingDetails.serviceLocation == "customer" ? "customer_location".tr : 'provider_location'.tr})",
-                          style: robotoSemiBold.copyWith(fontSize: Dimensions.fontSizeSmall,  color: Theme.of(context).textTheme.bodyLarge!.color),
-                        ),
-                        TextSpan(
-                          text: " ${bookingDetails.serviceLocation == "customer" ? "to_provide_the_service".tr : 'in_order_to_receive_this_service'.tr} ",
-                          style: robotoRegular,
-                        ),
-                      ],
+                  child: Text(
+                    bookingDetails.serviceLocation == "customer"
+                        ? "provider_will_visit_your_location".tr
+                        : "you_have_to_go_to_provider_location_in_order_to_receive_this_service".tr,
+                    style: robotoRegular.copyWith(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                      fontSize: Dimensions.fontSizeSmall,
                     ),
                   ),
                 ),

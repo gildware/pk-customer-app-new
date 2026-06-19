@@ -478,6 +478,9 @@ class CheckOutController extends GetxController implements GetxService{
 
    if (response!.statusCode == 200) {
      await Get.find<BookingDetailsController>().getBookingDetails(bookingId: bookingId );
+     if (Get.isRegistered<ServiceBookingController>()) {
+       Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+     }
      Get.back();
      customSnackBar("your_payment_confirm_successfully".tr, type: ToasterMessageType.success, showDefaultSnackBar: false);
    } else {

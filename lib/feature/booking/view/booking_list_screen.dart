@@ -21,7 +21,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
       offset: 1,bookingStatus: "all", isFromPagination:false,
       serviceType: "all",
     );
-    Get.find<ServiceBookingController>().updateBookingStatusTabs(BookingStatusTabs.all, firstTimeCall: false);
+    Get.find<ServiceBookingController>().updateBookingStatusTabs('all', firstTimeCall: false);
     Get.find<ServiceBookingController>().updateSelectedServiceType();
     super.initState();
   }
@@ -37,7 +37,6 @@ class _BookingListScreenState extends State<BookingListScreen> {
           isBackButtonExist: widget.isFromMenu? true : false,
           onBackPressed: () => Get.back(),
           title: "my_bookings".tr,
-          actionWidget: const FilterPopUpMenuWidget(),
         ),
         body: GetBuilder<ServiceBookingController>(
           builder: (serviceBookingController){
@@ -46,7 +45,7 @@ class _BookingListScreenState extends State<BookingListScreen> {
               onRefresh: () async {
                 await serviceBookingController.getAllBookingService(
                   offset: 1,
-                  bookingStatus: serviceBookingController.selectedBookingStatus.name.toLowerCase(),
+                  bookingStatus: serviceBookingController.selectedBookingStatus,
                   isFromPagination:false,
                   serviceType: serviceBookingController.selectedServiceType.name,
                 );
@@ -73,24 +72,50 @@ class _BookingListScreenState extends State<BookingListScreen> {
                         totalSize: serviceBookingController.bookingContent!.total!,
                         onPaginate: (int offset) async => await serviceBookingController.getAllBookingService(
                           offset: offset,
-                          bookingStatus: serviceBookingController.selectedBookingStatus.name.toLowerCase(),
+                          bookingStatus: serviceBookingController.selectedBookingStatus,
                           isFromPagination: true,
                           serviceType: serviceBookingController.selectedServiceType.name
                         ),
                         offset: serviceBookingController.bookingContent?.currentPage,
-                        itemView: GridView.builder(
-                          padding: EdgeInsets.symmetric( horizontal: ResponsiveHelper.isDesktop(context) ? 0 : Dimensions.paddingSizeDefault,),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: ResponsiveHelper.isDesktop(context)? 2 : 1,
-                            mainAxisExtent: Get.find<LocalizationController>().isLtr ? 140 : 175,
-                            crossAxisSpacing: Dimensions.paddingSizeDefault,
-                            mainAxisSpacing : Dimensions.paddingSizeDefault,
-                          ),
-                          physics: const NeverScrollableScrollPhysics(),
-                          shrinkWrap: true,
-                          itemCount: bookingList.length,
-                          itemBuilder: (context, index) {
-                            return  BookingItemCard(bookingModel: bookingList.elementAt(index), index: index);
+                        itemView: LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (ResponsiveHelper.isDesktop(context)) {
+                              final itemWidth = (constraints.maxWidth -
+                                      Dimensions.paddingSizeDefault) /
+                                  2;
+                              return Wrap(
+                                spacing: Dimensions.paddingSizeDefault,
+                                runSpacing: Dimensions.paddingSizeDefault,
+                                children: List.generate(
+                                  bookingList.length,
+                                  (index) => SizedBox(
+                                    width: itemWidth,
+                                    child: BookingItemCard(
+                                      bookingModel: bookingList[index],
+                                      index: index,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: Dimensions.paddingSizeDefault,
+                              ),
+                              physics: const NeverScrollableScrollPhysics(),
+                              shrinkWrap: true,
+                              itemCount: bookingList.length,
+                              separatorBuilder: (_, _) => const SizedBox(
+                                height: Dimensions.paddingSizeDefault,
+                              ),
+                              itemBuilder: (context, index) {
+                                return BookingItemCard(
+                                  bookingModel: bookingList.elementAt(index),
+                                  index: index,
+                                );
+                              },
+                            );
                           },
                         ),
                       ),
@@ -126,19 +151,34 @@ class BookingListItemShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: ResponsiveHelper.isDesktop(context) ? 2 : 1,
-        mainAxisExtent: ResponsiveHelper.isDesktop(context)? 130 : 120,
-        crossAxisSpacing: Dimensions.paddingSizeDefault,
-        mainAxisSpacing :  ResponsiveHelper.isDesktop(context) ? Dimensions.paddingSizeSmall : Dimensions.paddingSizeExtraSmall,
-      ),
-      shrinkWrap: true, itemCount: 10,
-      itemBuilder: (context ,index){
-      return Padding(
+    if (ResponsiveHelper.isDesktop(context)) {
+      return GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisExtent: 130,
+          crossAxisSpacing: Dimensions.paddingSizeDefault,
+          mainAxisSpacing: Dimensions.paddingSizeSmall,
+        ),
+        shrinkWrap: true,
+        itemCount: 10,
+        itemBuilder: (context, index) => _bookingListShimmerItem(context),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+      shrinkWrap: true,
+      itemCount: 10,
+      separatorBuilder: (_, _) => const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+      itemBuilder: (context, index) => _bookingListShimmerItem(context),
+    );
+  }
+
+  Widget _bookingListShimmerItem(BuildContext context) {
+    return Padding(
         padding: EdgeInsets.symmetric(
-          vertical: Dimensions.paddingSizeSmall- 3,
-          horizontal: ResponsiveHelper.isDesktop(context) ? 0 : Dimensions.paddingSizeDefault,
+          vertical: Dimensions.paddingSizeSmall - 3,
+          horizontal: ResponsiveHelper.isDesktop(context) ? 0 : 0,
         ),
         child: Shimmer(child: Container(
           height: 90, width: Get.width,
@@ -200,7 +240,6 @@ class BookingListItemShimmer extends StatelessWidget {
           ),
         )),
       );
-    },);
   }
 }
 

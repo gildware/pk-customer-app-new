@@ -70,8 +70,8 @@ class MobileAppIconHelper {
     return trimmed;
   }
 
-  static String? remoteUrl(String key) {
-    final entry = _icons?[key];
+  static String? remoteUrl(String iconKey) {
+    final entry = _icons?[iconKey];
     if (entry == null) {
       return null;
     }
@@ -113,7 +113,7 @@ class MobileAppIconHelper {
   }
 
   static Widget icon({
-    required String key,
+    required String iconKey,
     required String fallbackAsset,
     double height = 30,
     double width = 30,
@@ -121,7 +121,7 @@ class MobileAppIconHelper {
     Color? color,
   }) {
     return _BrandedIcon(
-      iconKey: key,
+      iconKey: iconKey,
       fallbackAsset: fallbackAsset,
       height: height,
       width: width,
@@ -200,22 +200,72 @@ class _BrandedIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<SplashController>(
       builder: (_) {
-        final remote = MobileAppIconHelper.remoteUrl(iconKey);
-        if (remote != null) {
-          return CustomImage(
-            key: ValueKey(remote),
-            image: remote,
-            height: height,
-            width: width,
-            fit: fit,
-            placeholder: fallbackAsset,
-          );
-        }
+        return _NetworkOrAssetImage(
+          url: MobileAppIconHelper.remoteUrl(iconKey),
+          width: width,
+          height: height,
+          fit: fit,
+          fallbackAsset: fallbackAsset,
+          color: color,
+        );
+      },
+    );
+  }
+}
 
+class _NetworkOrAssetImage extends StatelessWidget {
+  final String? url;
+  final double width;
+  final double height;
+  final BoxFit fit;
+  final String fallbackAsset;
+  final Color? color;
+
+  const _NetworkOrAssetImage({
+    required this.url,
+    required this.width,
+    required this.height,
+    required this.fit,
+    required this.fallbackAsset,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (url == null || url!.isEmpty) {
+      return Image.asset(
+        fallbackAsset,
+        width: width,
+        height: height,
+        fit: fit,
+        color: color,
+      );
+    }
+
+    return Image.network(
+      url!,
+      key: ValueKey(url),
+      width: width,
+      height: height,
+      fit: fit,
+      color: color,
+      gaplessPlayback: true,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, error, stack) => Image.asset(
+        fallbackAsset,
+        width: width,
+        height: height,
+        fit: fit,
+        color: color,
+      ),
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) {
+          return child;
+        }
         return Image.asset(
           fallbackAsset,
-          height: height,
           width: width,
+          height: height,
           fit: fit,
           color: color,
         );

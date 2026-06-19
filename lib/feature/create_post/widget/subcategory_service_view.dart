@@ -17,6 +17,7 @@ class _SubcategoryServiceViewState extends State<SubcategoryServiceView>  with S
   void initState() {
     super.initState();
     Get.find<CategoryController>().getSubCategoryList(widget.categorySlug,shouldUpdate: false).then((value) {
+      if(!mounted) return;
       final subCategories = Get.find<CategoryController>().subCategoryList;
       final firstSlug = subCategories != null && subCategories.isNotEmpty
           ? (subCategories.first.slug?.trim().isNotEmpty == true
@@ -26,8 +27,16 @@ class _SubcategoryServiceViewState extends State<SubcategoryServiceView>  with S
       Get.find<ServiceController>().getSubCategoryBasedServiceList(
         firstSlug, showShimmerAlways: true,
       );
-      tabController = TabController(length: Get.find<CategoryController>().subCategoryList?.length??0, vsync: this);
+      setState(() {
+        tabController = TabController(length: subCategories?.length ?? 0, vsync: this);
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    tabController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -70,7 +79,7 @@ class _SubcategoryServiceViewState extends State<SubcategoryServiceView>  with S
                         ),)),
                         const SizedBox(height: Dimensions.paddingSizeDefault,),
 
-                        (categoryController.subCategoryList != null && categoryController.subCategoryList!.isNotEmpty )? Container(
+                        (categoryController.subCategoryList != null && categoryController.subCategoryList!.isNotEmpty && tabController != null)? Container(
                           margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
                           decoration: BoxDecoration(border: Border(bottom: BorderSide(
                               color: Theme.of(context).hintColor

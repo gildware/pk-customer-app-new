@@ -39,13 +39,13 @@ class _PickMapScreenState extends State<PickMapScreen> {
   String? pageTitle;
   String? pageSubTitle;
   bool _isMapReady = false;
+  bool _mapInitializing = true;
 
   @override
   void initState() {
     super.initState();
     if(widget.fromAddAddress!) {
       Get.find<LocationController>().setPickData();
-
     }
 
     if(widget.zone !=null){
@@ -77,6 +77,8 @@ class _PickMapScreenState extends State<PickMapScreen> {
       );
     }
 
+    _cameraPosition = CameraPosition(target: _initialPosition!, zoom: 16);
+
     if(widget.route == "search_service"){
       pageTitle = "search_services_near_you".tr;
       pageSubTitle = "${'you_must_select_location_first_to_view'.tr} ${'services'.tr.toLowerCase()}";
@@ -91,8 +93,6 @@ class _PickMapScreenState extends State<PickMapScreen> {
       pageTitle = widget.route?.replaceAll("/", "").tr;
       pageSubTitle = "${'you_must_select_location_first_to_view'.tr} ${widget.route?.replaceAll("/", "").tr.toLowerCase()}";
     }
-
-
   }
 
   @override
@@ -174,10 +174,10 @@ class _PickMapScreenState extends State<PickMapScreen> {
     );
   }
 
-  // Callback methods for _MapViewWidget
   void _onMapCreated(GoogleMapController mapController) {
     _mapController = mapController;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _mapInitializing = true;
       final locationController = Get.find<LocationController>();
 
       if (widget.fromAddAddress!) {
@@ -194,6 +194,11 @@ class _PickMapScreenState extends State<PickMapScreen> {
               CameraPosition(target: target, zoom: 16),
             ),
           );
+          await locationController.updatePosition(
+            CameraPosition(target: target, zoom: 16),
+            false,
+            formCheckout: widget.formCheckout,
+          );
         } else {
           await locationController.getCurrentLocation(
             false,
@@ -208,6 +213,13 @@ class _PickMapScreenState extends State<PickMapScreen> {
           MapHelper.boundsFromLatLngList(zoneLatLongList),
           100.5,
         ));
+        if (_centerLatLng != null) {
+          await locationController.updatePosition(
+            CameraPosition(target: _centerLatLng!, zoom: 16),
+            false,
+            formCheckout: widget.formCheckout,
+          );
+        }
       } else {
         await locationController.getCurrentLocation(
           false,
@@ -217,6 +229,16 @@ class _PickMapScreenState extends State<PickMapScreen> {
         );
       }
 
+      _cameraPosition = CameraPosition(
+        target: LatLng(
+          locationController.pickPosition.latitude,
+          locationController.pickPosition.longitude,
+        ),
+        zoom: 16,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      _mapInitializing = false;
       _isMapReady = true;
     });
   }
@@ -226,25 +248,19 @@ class _PickMapScreenState extends State<PickMapScreen> {
   }
 
   void _onCameraMoveStarted() {
-    if (!_isMapReady) return;
+    if (!_isMapReady || _mapInitializing) return;
     Get.find<LocationController>().updateCameraMovingStatus(true);
-    Get.find<LocationController>().disableButton();
   }
 
   void _onCameraIdle() {
-    if (!_isMapReady || _cameraPosition == null) return;
-    Get.find<LocationController>().updateCameraMovingStatus(false);
-    try {
-      Get.find<LocationController>().updatePosition(
-        _cameraPosition!,
-        false,
-        formCheckout: widget.formCheckout,
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        print('');
-      }
-    }
+    if (!_isMapReady || _mapInitializing || _cameraPosition == null) return;
+    final locationController = Get.find<LocationController>();
+    locationController.updateCameraMovingStatus(false);
+    locationController.updatePosition(
+      _cameraPosition!,
+      false,
+      formCheckout: widget.formCheckout,
+    );
   }
 
   void _onLocationTap() {

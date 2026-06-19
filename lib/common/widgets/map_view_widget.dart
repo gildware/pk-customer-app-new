@@ -30,47 +30,49 @@ class MapViewWidget extends StatelessWidget {
     required this.getMapController,
   });
 
+  Widget _buildGoogleMap() {
+    return SizedBox.expand(
+      child: GoogleMap(
+        initialCameraPosition: CameraPosition(
+          target: MapHelper.resolveMapTarget(
+            usePickPosition: !fromAddAddress,
+            fallback: initialPosition,
+          ),
+          zoom: 16,
+        ),
+        minMaxZoomPreference: const MinMaxZoomPreference(0, 16),
+        onMapCreated: onMapCreated,
+        onCameraMove: onCameraMove,
+        onCameraMoveStarted: onCameraMoveStarted,
+        onCameraIdle: onCameraIdle,
+        style: Get.isDarkMode
+            ? Get.find<ThemeController>().darkMap
+            : Get.find<ThemeController>().lightMap,
+        myLocationButtonEnabled: false,
+        zoomControlsEnabled: false,
+        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+          Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+        },
+        polygons: polygons,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<LocationController>(
       builder: (locationController) {
-        return Stack(
-          children: [
-            // Wrap GoogleMap with AbsorbPointer to prevent scroll propagation on web
-            AbsorbPointer(
-              absorbing: false,
-              child: GestureDetector(
-                // This prevents scroll events from propagating to parent widgets
+        final mapWidget = kIsWeb
+            ? GestureDetector(
                 onVerticalDragStart: (_) {},
                 onHorizontalDragStart: (_) {},
-                child: SizedBox.expand(
-                  child: GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: MapHelper.resolveMapTarget(
-                      usePickPosition: !fromAddAddress,
-                      fallback: initialPosition,
-                    ),
-                    zoom: 16,
-                  ),
-                  minMaxZoomPreference: const MinMaxZoomPreference(0, 16),
-                  onMapCreated: onMapCreated,
-                  onCameraMove: onCameraMove,
-                  onCameraMoveStarted: onCameraMoveStarted,
-                  onCameraIdle: onCameraIdle,
-                  style: Get.isDarkMode
-                      ? Get.find<ThemeController>().darkMap
-                      : Get.find<ThemeController>().lightMap,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                  gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                    // This allows the map to capture all gestures
-                    Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
-                  },
-                  polygons: polygons,
-                ),
-                ),
-              ),
-            ),
+                child: _buildGoogleMap(),
+              )
+            : _buildGoogleMap();
+
+        return Stack(
+          children: [
+            mapWidget,
 
             // Center map icon
             Center(
@@ -201,8 +203,7 @@ class MapViewWidget extends StatelessWidget {
                     ? 'pick_address'.tr
                     : 'pick_location'.tr
                     : 'service_not_available_in_this_area'.tr,
-                onPressed: (locationController.buttonDisabled ||
-                    locationController.loading)
+                onPressed: (locationController.loading || locationController.buttonDisabled)
                     ? null
                     : onPickLocationTap,
               ),

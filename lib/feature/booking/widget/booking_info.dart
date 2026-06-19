@@ -1,4 +1,4 @@
-import 'package:demandium/feature/booking/widget/booking_status_widget.dart';
+import 'package:demandium/common/widgets/booking_status_tags_widget.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -15,21 +15,39 @@ class BookingInfo extends StatelessWidget {
         boxShadow: Get.find<ThemeController>().darkTheme ? null : searchBoxShadow,
       ),
       child: Padding(padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-        child: Column( crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
 
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.start ,children: [
-            Column( crossAxisAlignment: CrossAxisAlignment.start ,children: [
-              Text('${'booking'.tr} #${bookingDetails.readableId}',
-                style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeLarge,
-                    color: Theme.of(context).textTheme.bodyLarge!.color,decoration: TextDecoration.none),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  '${'booking'.tr} #${bookingDetails.readableId}',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: robotoMedium.copyWith(
+                    fontSize: Dimensions.fontSizeLarge,
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
               ),
-              const SizedBox(height: Dimensions.paddingSizeSmall),
+              if (bookingDetails.bookingStatus != null ||
+                  (bookingDetails.statusUi?.displayKey?.isNotEmpty ?? false)) ...[
+                const SizedBox(width: Dimensions.paddingSizeSmall),
+                BookingStatusBadge(
+                  rawStatus: bookingDetails.bookingStatus,
+                  displayKey: bookingDetails.statusUi?.displayKey,
+                  badgeVariant: bookingDetails.statusUi?.badgeVariant,
+                ),
               ],
-            ),
-            BookingStatusButtonWidget(bookingStatus: bookingDetails.bookingStatus)
-          ]),
-
-          Gaps.verticalGapOf(Dimensions.paddingSizeSmall),
+            ],
+          ),
+          if (bookingDetails.statusUi?.tags.isNotEmpty ?? false) ...[
+            const SizedBox(height: Dimensions.paddingSizeSmall),
+            BookingStatusTagsScrollRow(tags: bookingDetails.statusUi!.tags),
+          ],
+          const SizedBox(height: Dimensions.paddingSizeSmall),
           if (bookingDetails.createdAt != null)
             BookingItem(
               img: Images.calendar1,
@@ -47,16 +65,6 @@ class BookingInfo extends StatelessWidget {
               title: "${'service_schedule_date'.tr} : ",
               date: DateConverter.scheduleStringToDisplay(bookingDetails.serviceSchedule),
             ),
-          Gaps.verticalGapOf(Dimensions.paddingSizeExtraSmall),
-
-
-          BookingItem(
-            img: Images.iconLocation,
-            title: '${'address'.tr} : ${bookingDetails.serviceAddress?.address ?? bookingDetails.subBooking?.serviceAddress?.address ?? 'no_address_found'.tr}',
-            date: '',
-          ),
-
-           Gaps.verticalGapOf(Dimensions.paddingSizeSmall),
 
            // Center(
            //   child: InkWell(

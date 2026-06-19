@@ -11,7 +11,35 @@ import 'package:demandium/util/core_export.dart';
 
 class NotificationHelper {
 
+  static Future<void> createAndroidNotificationChannels(
+    FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin,
+  ) async {
+    if (!GetPlatform.isAndroid) return;
+
+    const withSound = AndroidNotificationChannel(
+      'demandium',
+      'demandium with sound',
+      description: 'Notifications with sound',
+      importance: Importance.max,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('notification'),
+    );
+    const withoutSound = AndroidNotificationChannel(
+      'demandiumWithoutsound',
+      'demandium without sound',
+      description: 'Notifications without sound',
+      importance: Importance.max,
+      playSound: false,
+    );
+
+    final androidPlugin = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(withSound);
+    await androidPlugin?.createNotificationChannel(withoutSound);
+  }
+
   static Future<void> initialize(FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
+    await createAndroidNotificationChannels(flutterLocalNotificationsPlugin);
     var androidInitialize = const AndroidInitializationSettings('notification_icon');
     var iOSInitialize = const DarwinInitializationSettings();
     var initializationsSettings = InitializationSettings(android: androidInitialize, iOS: iOSInitialize);
@@ -294,31 +322,53 @@ class NotificationHelper {
   }
 
   static Future<void> showNotification(RemoteMessage message, FlutterLocalNotificationsPlugin fln, bool data) async {
-    if(!GetPlatform.isIOS) {
-      String? title;
-      String body;
-      String? orderID;
-      String? image;
-      String playLoad = jsonEncode(message.data);
+    final title = message.data['title'] ?? message.notification?.title;
+    final body = message.data['body'] ?? message.notification?.body ?? '';
+    final playLoad = jsonEncode(message.data);
+    if (title == null || title.isEmpty) return;
 
-      title = message.data['title'];
-      body = message.data['body'] ?? "";
-      orderID = message.data['booking_id'].toString();
-      image = (message.data['image'] != null && message.data['image'].isNotEmpty)
-          ? message.data['image'].startsWith('http') ? message.data['image']
-          : '${AppConstants.baseUrl}/storage/app/public/notification/${message.data['image']}' : null;
-
-      if(image != null && image.isNotEmpty) {
-        try{
-          await showBigPictureNotificationHiddenLargeIcon(title!, body, playLoad, image, fln);
-        }catch(e) {
-          await showBigTextNotification(title!, '',playLoad, orderID,fln);
-        }
-
-      }else {
-        await showBigTextNotification(title!, body, playLoad, orderID, fln);
-      }
+    if (GetPlatform.isIOS) {
+      const darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      const platformChannelSpecifics = NotificationDetails(iOS: darwinDetails);
+      await fln.show(
+        id: Random().nextInt(100000),
+        title: title,
+        body: body,
+        notificationDetails: platformChannelSpecifics,
+        payload: playLoad,
+      );
+      return;
     }
+
+    String? orderID;
+    String? image;
+    orderID = message.data['booking_id'].toString();
+    image = (message.data['image'] != null && message.data['image'].isNotEmpty)
+        ? message.data['image'].startsWith('http') ? message.data['image']
+        : '${AppConstants.baseUrl}/storage/app/public/notification/${message.data['image']}' : null;
+
+    if(image != null && image.isNotEmpty) {
+      try{
+        await showBigPictureNotificationHiddenLargeIcon(title, body, playLoad, image, fln);
+      }catch(e) {
+        await showBigTextNotification(title, body, playLoad, orderID, fln);
+      }
+
+    }else {
+      await showBigTextNotification(title, body, playLoad, orderID, fln);
+    }
+  }
+
+  static Future<void> showBackgroundNotification(
+    RemoteMessage message,
+    FlutterLocalNotificationsPlugin fln,
+  ) async {
+    await createAndroidNotificationChannels(fln);
+    await showNotification(message, fln, false);
   }
 
   static Future<void> showTextNotification(String title, String? body, String orderID, FlutterLocalNotificationsPlugin fln) async {
@@ -336,7 +386,7 @@ class NotificationHelper {
       body ?? "", htmlFormatBigText: true,
       contentTitle: title, htmlFormatContentTitle: true,
     );
-    if(!Get.find<AuthController>().isNotificationActive()){
+    if(!_notificationSoundEnabled()){
       AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
         "demandiumWithoutsound","demandium without sound", channelDescription:"description",
         playSound: false,
@@ -372,7 +422,7 @@ class NotificationHelper {
       contentTitle: title, htmlFormatContentTitle: true,
       summaryText: body, htmlFormatSummaryText: true,
     );
-    if(!Get.find<AuthController>().isNotificationActive()){
+    if(!_notificationSoundEnabled()){
       AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
         "demandiumWithoutsound","demandium without sound", channelDescription:"description",
         playSound: false,
@@ -404,6 +454,13 @@ class NotificationHelper {
     final File file = File(filePath);
     await file.writeAsBytes(response.bodyBytes);
     return filePath;
+  }
+
+  static bool _notificationSoundEnabled() {
+    if (Get.isRegistered<AuthController>()) {
+      return Get.find<AuthController>().isNotificationActive();
+    }
+    return true;
   }
 
   static NotificationBody convertNotification(Map<String, dynamic> data){
@@ -439,4 +496,19 @@ Future<dynamic> myBackgroundMessageHandler(RemoteMessage message) async {
   if (kDebugMode) {
     print("onBackground: ${message.notification?.title}/${message.notification?.body}/${message.notification?.titleLocKey}");
   }
+
+  if (message.notification != null) {
+    return;
+  }
+
+  final fln = FlutterLocalNotificationsPlugin();
+  const androidInitialize = AndroidInitializationSettings('notification_icon');
+  const iOSInitialize = DarwinInitializationSettings();
+  await fln.initialize(
+    settings: const InitializationSettings(
+      android: androidInitialize,
+      iOS: iOSInitialize,
+    ),
+  );
+  await NotificationHelper.showBackgroundNotification(message, fln);
 }

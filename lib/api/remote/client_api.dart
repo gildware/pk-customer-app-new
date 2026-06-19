@@ -74,8 +74,10 @@ class ApiClient extends GetxService {
       }
     } catch (_) {}
 
+    final authToken = token ??
+        (SecureTokenStorage.cachedToken().isEmpty ? null : SecureTokenStorage.cachedToken());
     updateHeader(
-      token,
+      authToken,
       zoneId,
       sharedPreferences.getString(AppConstants.languageCode),
       guestId,

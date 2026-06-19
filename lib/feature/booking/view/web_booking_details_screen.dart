@@ -1,10 +1,11 @@
 import 'package:demandium/feature/booking/widget/booking_service_location.dart';
-import 'package:demandium/feature/booking/widget/payment_info_widget.dart';
 import 'package:demandium/feature/booking/widget/timeline/customer_info_widget.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/feature/booking/widget/booking_otp_widget.dart';
 import 'package:demandium/feature/booking/widget/booking_screen_shimmer.dart';
 import 'package:demandium/feature/booking/widget/regular/booking_summery_widget.dart';
+import 'package:demandium/feature/booking/widget/regular/disputed_settlement_widget.dart';
+import 'package:demandium/feature/booking/widget/regular/special_financial_settlement_widget.dart';
 import 'package:get/get.dart';
 
 
@@ -38,7 +39,8 @@ class WebBookingDetailsScreen extends StatelessWidget {
                     height: isOtpStatusActive ? 700 : 650,
                     child: TabBarView(controller: tabController, children: [
                       WebBookingDetailsSection(bookingDetails: bookingDetails, isSubBooking: isSubBooking,),
-                      BookingHistory(id: id, isSubBooking: isSubBooking,)]),
+                      BookingPaymentsWidget(id: id, isSubBooking: isSubBooking,),
+                      BookingEventHistoryWidget(id: id, isSubBooking: isSubBooking,)]),
                   ),
                 ],
                 ),
@@ -124,7 +126,9 @@ class BookingDetailsTopCard extends StatelessWidget {
             style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color: Theme.of(context).textTheme.bodyLarge!.color),
             children: [
               TextSpan(
-                  text: bookingDetailsContent.bookingStatus!.tr,
+                  text: ((bookingDetailsContent.statusUi?.displayKey?.isNotEmpty ?? false)
+                      ? bookingDetailsContent.statusUi!.displayKey!
+                      : bookingDetailsContent.bookingStatus)!.tr,
                   style: robotoMedium.copyWith(
                     fontSize: Dimensions.fontSizeDefault,
                     color: Get.isDarkMode ? Theme.of(context).textTheme.bodyLarge?.color : Theme.of(context).colorScheme.primary,
@@ -150,12 +154,29 @@ class WebBookingDetailsSection extends StatelessWidget {
     return Scaffold(
       body: Column( children: [
         const SizedBox(height: Dimensions.paddingSizeDefault),
+        if (bookingDetails.disputedSettlement?.hasDisputedSettlement == true) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
+            child: DisputedSettlementWidget(settlement: bookingDetails.disputedSettlement!),
+          ),
+          const SizedBox(height: Dimensions.paddingSizeDefault),
+        ] else if (bookingDetails.specialFinancialSettlement?.hasSpecialSettlement == true) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
+            child: SpecialFinancialSettlementWidget(settlement: bookingDetails.specialFinancialSettlement!),
+          ),
+          const SizedBox(height: Dimensions.paddingSizeDefault),
+        ],
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-          Expanded(child: SizedBox(height: 630,
-            child: SingleChildScrollView(child: BookingSummeryWidget(bookingDetails: bookingDetails),
+          Expanded(
+            child: SizedBox(
+              height: 630,
+              child: SingleChildScrollView(
+                child: BookingSummeryWidget(bookingDetails: bookingDetails),
+              ),
             ),
-          )),
+          ),
           const SizedBox(width: Dimensions.paddingSizeDefault),
 
           Expanded(
@@ -169,9 +190,6 @@ class WebBookingDetailsSection extends StatelessWidget {
 
                 (Get.find<SplashController>().configModel.content!.confirmationOtpStatus! && (bookingDetails.bookingStatus == "accepted" || bookingDetails.bookingStatus== "ongoing")) ?
                 const SizedBox() : const SizedBox(height: Dimensions.paddingSizeEight),
-
-                PaymentView(bookingDetails: bookingDetails, isSubBooking: isSubBooking),
-                const SizedBox(height: Dimensions.paddingSizeDefault),
 
                 CustomerInfoWidget(bookingDetails: bookingDetails),
 
@@ -301,37 +319,16 @@ class WebBookingDetailsSection extends StatelessWidget {
             ]),
           ),
 
-          !ResponsiveHelper.isDesktop(context) && bookingDetailsController.bookingDetailsContent!.bookingStatus == 'completed' ?
-          Row(
-            children: [
-              Expanded(
-                child: CustomButton (radius: 0, buttonText: 'review'.tr, onPressed: () {
-                  showModalBottomSheet(context: context,
-                    useRootNavigator: true, isScrollControlled: true,
-                    backgroundColor: Colors.transparent, builder: (context) => ReviewRecommendationDialog(
-                      id: bookingDetailsController.bookingDetailsContent!.id!,
-                    ),
-                  );},
-                ),
+          !ResponsiveHelper.isDesktop(context)
+              && bookingDetailsController.bookingDetailsContent!.bookingStatus == 'completed'
+              && BookingHelper.canLeaveReview(bookingDetailsController.bookingDetailsContent!) ?
+          CustomButton (radius: 0, buttonText: 'review'.tr, onPressed: () {
+            showModalBottomSheet(context: context,
+              useRootNavigator: true, isScrollControlled: true,
+              backgroundColor: Colors.transparent, builder: (context) => ReviewRecommendationDialog(
+                id: bookingDetailsController.bookingDetailsContent!.id!,
               ),
-
-              Container(
-                width: 3, height: 50,
-                color: Theme.of(context).disabledColor,
-              ),
-
-              GetBuilder<ServiceBookingController>(
-                  builder: (serviceBookingController) {
-                    return Expanded(
-                      child: serviceBookingController.isLoading ? const Center(child: CircularProgressIndicator()) : CustomButton (radius: 0, buttonText: 'rebook'.tr,  onPressed: () {
-                        serviceBookingController.checkCartSubcategory(bookingDetailsController.bookingDetailsContent!.id!, bookingDetailsController.bookingDetailsContent!.subCategoryId!);
-
-                      },
-                      ),
-                    );
-                  }
-              ),
-            ],
+            );},
           )
               : const SizedBox()
 

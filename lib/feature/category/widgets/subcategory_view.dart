@@ -26,7 +26,7 @@ class SubCategoryView extends GetView<CategoryController> {
              crossAxisSpacing:ResponsiveHelper.isTab(context) ? 0.0 : Dimensions.paddingSizeSmall,
              mainAxisSpacing: ResponsiveHelper.isDesktop(context) ? Dimensions.paddingSizeDefault : Dimensions.paddingSizeSmall,
              crossAxisCount: ResponsiveHelper.isMobile(context) ? 1 : 3,
-             mainAxisExtent: 120,
+             mainAxisExtent: 95,
            ),
            delegate: SliverChildBuilderDelegate((context, index) {
                return SubCategoryShimmer(isEnabled: true, hasDivider: index != shimmerLength!-1);
@@ -41,7 +41,7 @@ class SubCategoryView extends GetView<CategoryController> {
              crossAxisSpacing:ResponsiveHelper.isTab(context) ? 0.0 : Dimensions.paddingSizeSmall,
              mainAxisSpacing: ResponsiveHelper.isDesktop(context) ? Dimensions.paddingSizeDefault : Dimensions.paddingSizeSmall,
              crossAxisCount: ResponsiveHelper.isMobile(context) ? 1 : 3,
-             mainAxisExtent: 120,
+             mainAxisExtent: 95,
            ),
            delegate: SliverChildBuilderDelegate((context, index) {
              return SubCategoryWidget(categoryModel: subCategoryList[index]);
@@ -74,7 +74,7 @@ class SubCategoryShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal:ResponsiveHelper.isDesktop(context) ? 0 : Dimensions.paddingSizeDefault),
-      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeSmall),
+      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeExtraSmall),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
@@ -89,8 +89,8 @@ class SubCategoryShimmer extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  height: 90,
-                  width: 90,
+                  height: 70,
+                  width: 70,
                   decoration: BoxDecoration(
                     color: Theme.of(context).shadowColor,
                     borderRadius: BorderRadius.circular(Dimensions.radiusDefault)
@@ -129,15 +129,6 @@ class SubCategoryShimmer extends StatelessWidget {
                     Container(
                       height:  8,
                       margin: const EdgeInsets.only(right: 100),
-                      decoration: BoxDecoration(
-                          color: Theme.of(context).shadowColor,
-                          borderRadius: BorderRadius.circular(Dimensions.radiusSmall)
-                      ),
-                    ),
-                    const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-                    Container(
-                      height:  8,
-                      width: 90,
                       decoration: BoxDecoration(
                           color: Theme.of(context).shadowColor,
                           borderRadius: BorderRadius.circular(Dimensions.radiusSmall)

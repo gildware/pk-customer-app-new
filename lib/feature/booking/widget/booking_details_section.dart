@@ -1,10 +1,11 @@
 import 'package:demandium/feature/booking/widget/booking_otp_widget.dart';
 import 'package:demandium/feature/booking/widget/booking_photo_evidence.dart';
 import 'package:demandium/feature/booking/widget/booking_service_location.dart';
-import 'package:demandium/feature/booking/widget/payment_info_widget.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/feature/booking/widget/regular/booking_summery_widget.dart';
+import 'package:demandium/feature/booking/widget/regular/disputed_settlement_widget.dart';
+import 'package:demandium/feature/booking/widget/regular/special_financial_settlement_widget.dart';
 import 'package:demandium/feature/booking/widget/provider_info.dart';
 import 'package:demandium/feature/booking/widget/service_man_info.dart';
 import 'booking_screen_shimmer.dart';
@@ -37,6 +38,28 @@ class BookingDetailsSection extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
 
                   const SizedBox(height: Dimensions.paddingSizeDefault),
+                  if (BookingHelper.hasDisputedSettlement(bookingDetails)) ...[
+                    if (bookingDetails.disputedSettlement?.hasDisputedSettlement == true)
+                      DisputedSettlementWidget(settlement: bookingDetails.disputedSettlement!)
+                    else
+                      DisputedSettlementWidget(
+                        settlement: DisputedSettlement(
+                          hasDisputedSettlement: true,
+                          customerPaidTotal: BookingHelper.resolveDisputedCustomerPaidTotal(bookingDetails),
+                          refundTotal: BookingHelper.resolveDisputedRefundTotal(bookingDetails),
+                          finalBookingAmount: BookingHelper.resolveDisputedFinalBookingAmount(bookingDetails),
+                          retainedFromCustomer: BookingHelper.resolveDisputedFinalBookingAmount(bookingDetails),
+                          isPartialRefund: (BookingHelper.resolveDisputedRefundTotal(bookingDetails) ?? 0) > 0.009
+                              && (BookingHelper.resolveDisputedFinalBookingAmount(bookingDetails) ?? 0) > 0.009,
+                          isFullRefund: (BookingHelper.resolveDisputedRefundTotal(bookingDetails) ?? 0) > 0.009
+                              && (BookingHelper.resolveDisputedFinalBookingAmount(bookingDetails) ?? 0) <= 0.009,
+                        ),
+                      ),
+                    const SizedBox(height: Dimensions.paddingSizeLarge),
+                  ] else if (bookingDetails.specialFinancialSettlement?.hasSpecialSettlement == true) ...[
+                    SpecialFinancialSettlementWidget(settlement: bookingDetails.specialFinancialSettlement!),
+                    const SizedBox(height: Dimensions.paddingSizeLarge),
+                  ],
                   BookingInfo(bookingDetails: bookingDetails, bookingDetailsTabController: bookingDetailsTabController, isSubBooking: isSubBooking,),
 
                   ((Get.find<SplashController>().configModel.content?.confirmationOtpStatus ?? false) && (bookingStatus == "accepted" || bookingStatus== "ongoing")) ?
@@ -44,8 +67,6 @@ class BookingDetailsSection extends StatelessWidget {
                     padding: const EdgeInsets.only(top: Dimensions.paddingSizeDefault),
                     child: BookingOtpWidget(bookingDetails: bookingDetails),
                   ) : const SizedBox(height: Dimensions.paddingSizeDefault,),
-
-                  PaymentView(bookingDetails: bookingDetails, isSubBooking: isSubBooking),
 
                   const SizedBox(height: Dimensions.paddingSizeLarge),
                   BookingServiceLocation(bookingDetails: bookingDetails),
@@ -104,45 +125,18 @@ class BookingDetailsSection extends StatelessWidget {
                 ]),
               ),
 
-              bookingDetailsController.bookingDetailsContent!.bookingStatus == 'completed' ?
+              bookingDetailsController.bookingDetailsContent!.bookingStatus == 'completed'
+                  && BookingHelper.canLeaveReview(bookingDetailsController.bookingDetailsContent!) ?
               Padding(padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                child: Row(
-                  children: [
-                    Get.find<AuthController>().isLoggedIn() ?
-                    Expanded(
-                      child: CustomButton (radius: 5, buttonText: 'review'.tr, onPressed: () {
-                        showModalBottomSheet(context: context,
-                          useRootNavigator: true, isScrollControlled: true,
-                          backgroundColor: Colors.transparent, builder: (context) => ReviewRecommendationDialog(
-                            id: bookingDetailsController.bookingDetailsContent!.id!,
-                          ),
-                        );},
-                      ),
-                    ) : const SizedBox(),
-
-                    if(!(bookingDetailsController.bookingDetailsContent!.isCustomizeBooking ?? false)) ... [
-                      Get.find<AuthController>().isLoggedIn() ? const SizedBox(width: 15,): const SizedBox(),
-
-                      GetBuilder<ServiceBookingController>(
-                          builder: (serviceBookingController) {
-                            return Expanded(
-                              child: CustomButton(
-                                radius: 5,
-                                isLoading: serviceBookingController.isLoading,
-                                buttonText: "rebook".tr,
-                                onPressed: () {
-                                  serviceBookingController.checkCartSubcategory(bookingDetailsController.bookingDetailsContent!.id!, bookingDetailsController.bookingDetailsContent!.subCategoryId!);
-                                },
-                              ),
-                            );
-                          }
-                      ),
-
-                    ],
-
-
-                  ],
-                ),
+                child: Get.find<AuthController>().isLoggedIn() ?
+                CustomButton (radius: 5, buttonText: 'review'.tr, onPressed: () {
+                  showModalBottomSheet(context: context,
+                    useRootNavigator: true, isScrollControlled: true,
+                    backgroundColor: Colors.transparent, builder: (context) => ReviewRecommendationDialog(
+                      id: bookingDetailsController.bookingDetailsContent!.id!,
+                    ),
+                  );},
+                ) : const SizedBox(),
               )
               : const SizedBox()
 

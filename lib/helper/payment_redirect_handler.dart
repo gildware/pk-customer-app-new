@@ -88,10 +88,11 @@ class PaymentRedirectHandler {
       return;
     }
 
-    if (fromPage == 'switch-payment-method') {
+    if (fromPage == 'switch-payment-method' || fromPage == 'booking-due-payment') {
       if (closeCurrentRoute) {
         Get.back();
       }
+      _refreshBookingDetailsAfterPayment(fromPage: fromPage, token: token);
       customSnackBar(
         'your_payment_confirm_successfully'.tr,
         toasterTitle: 'payment_status'.tr,
@@ -137,18 +138,68 @@ class PaymentRedirectHandler {
     }
   }
 
+  static void _refreshBookingDetailsAfterPayment({String? fromPage, String? token}) {
+    if (!Get.isRegistered<BookingDetailsController>()) {
+      return;
+    }
+
+    final bookingDetailsController = Get.find<BookingDetailsController>();
+
+    if (fromPage == 'booking-due-payment' && token != null && token.isNotEmpty) {
+      try {
+        final subBookingId = StringParser.parseString(
+          utf8.decode(base64Url.decode(token)),
+          'booking_repeat_id',
+        );
+        if (subBookingId.isNotEmpty) {
+          bookingDetailsController.getSubBookingDetails(bookingId: subBookingId);
+          final parentBookingId = bookingDetailsController.subBookingDetailsContent?.bookingId;
+          if (parentBookingId != null && parentBookingId.isNotEmpty) {
+            bookingDetailsController.getBookingDetails(bookingId: parentBookingId, reload: false);
+          }
+          if (Get.isRegistered<ServiceBookingController>()) {
+            Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+          }
+          return;
+        }
+      } catch (e, stack) {
+        ErrorLogger.record(e, stack, reason: 'PaymentRedirectHandler.booking-due-payment.token');
+      }
+    }
+
+    final subBooking = bookingDetailsController.subBookingDetailsContent;
+    if (subBooking?.id != null && subBooking!.id!.isNotEmpty) {
+      bookingDetailsController.getSubBookingDetails(bookingId: subBooking.id!);
+      final parentBookingId = subBooking.bookingId;
+      if (parentBookingId != null && parentBookingId.isNotEmpty) {
+        bookingDetailsController.getBookingDetails(bookingId: parentBookingId, reload: false);
+      }
+    } else {
+      final bookingId = bookingDetailsController.bookingDetailsContent?.id;
+      if (bookingId != null && bookingId.isNotEmpty) {
+        bookingDetailsController.getBookingDetails(bookingId: bookingId, reload: false);
+      }
+    }
+
+    if (Get.isRegistered<ServiceBookingController>()) {
+      Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+    }
+  }
+
   static void _handleFailure(String fromPage, bool closeCurrentRoute) {
     if (fromPage == 'add-fund') {
       Get.offNamed(RouteHelper.getMyWalletScreen(flag: 'failed'));
       return;
     }
 
-    if (fromPage == 'repeat-booking') {
+    if (fromPage == 'repeat-booking' || fromPage == 'booking-due-payment' || fromPage == 'switch-payment-method') {
       if (closeCurrentRoute) {
         Get.back();
       }
+      _refreshBookingDetailsAfterPayment(fromPage: fromPage);
       customSnackBar(
         'payment_failed_try_again'.tr,
+        toasterTitle: 'payment_status'.tr,
         type: ToasterMessageType.error,
         showDefaultSnackBar: false,
       );

@@ -52,7 +52,12 @@ class SplashScreenState extends State<SplashScreen> {
       await splashController.setGuestId(const Uuid().v1());
     }
 
-    Get.find<AuthController>().updateToken();
+    await AuthSessionHelper.syncFromStorage();
+
+    if (Get.find<AuthController>().isLoggedIn()) {
+      await Get.find<AuthController>().updateToken();
+    }
+
     _route();
   }
 

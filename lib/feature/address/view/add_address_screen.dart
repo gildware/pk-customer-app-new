@@ -99,6 +99,26 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         _prefillDefaultContactInfo();
       });
     }
+
+    if (_initialPosition != null) {
+      _cameraPosition = CameraPosition(target: _initialPosition!, zoom: 16);
+    }
+  }
+
+  Future<void> _onMapCameraIdle() async {
+    if (_cameraPosition == null) return;
+    final locationController = Get.find<LocationController>();
+    await locationController.updatePosition(
+      _cameraPosition!,
+      true,
+      formCheckout: widget.fromCheckout,
+    );
+    if (!mounted) return;
+    _serviceAddressController.text = locationController.address.address ?? '';
+    _cityController.text = locationController.address.city ?? '';
+    _streetController.text = locationController.address.street ?? '';
+    _zipController.text = locationController.address.zipCode ?? '';
+    _houseController.text = locationController.address.house ?? '';
   }
 
   void _prefillDefaultContactInfo() {
@@ -211,6 +231,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       double.tryParse(address.latitude ?? '') ?? 0,
       double.tryParse(address.longitude ?? '') ?? 0,
     );
+    _cameraPosition = CameraPosition(target: _initialPosition!, zoom: 16);
     if (mounted) {
       setState(() {});
     }
@@ -282,15 +303,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                     onSave: () => _saveAddress(Get.find<LocationController>()),
                     isUpdate: true,
                     onCameraMove: (position) => _cameraPosition = position,
-                    onCameraIdle: () {
-                      try {
-                        Get.find<LocationController>().updatePosition(_cameraPosition!, true, formCheckout: widget.fromCheckout);
-                      } catch (error) {
-                        if (kDebugMode) {
-                          print('error : $error');
-                        }
-                      }
-                    },
+                    onCameraIdle: _onMapCameraIdle,
                     onMapCreated: (GoogleMapController controller) {
                       Get.find<LocationController>().setMapController(controller);
                       _controller.complete(controller);
@@ -330,15 +343,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                         serviceAddressController: _serviceAddressController,
                         onContinue: _continueToAddressDetails,
                         onCameraMove: (position) => _cameraPosition = position,
-                        onCameraIdle: () {
-                          try {
-                            Get.find<LocationController>().updatePosition(_cameraPosition!, true, formCheckout: widget.fromCheckout);
-                          } catch (error) {
-                            if (kDebugMode) {
-                              print('error : $error');
-                            }
-                          }
-                        },
+                        onCameraIdle: _onMapCameraIdle,
                         onMapCreated: (GoogleMapController controller) {
                           Get.find<LocationController>().setMapController(controller);
                           _controller.complete(controller);
@@ -373,15 +378,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 isUpdate: widget.address != null,
                 bottomPadding: bottomPadding,
                 onCameraMove: (position) => _cameraPosition = position,
-                onCameraIdle: () {
-                  try {
-                    Get.find<LocationController>().updatePosition(_cameraPosition!, true, formCheckout: widget.fromCheckout);
-                  } catch (error) {
-                    if (kDebugMode) {
-                      print('error : $error');
-                    }
-                  }
-                },
+                onCameraIdle: _onMapCameraIdle,
                 onMapCreated: (GoogleMapController controller) {
                   Get.find<LocationController>().setMapController(controller);
                   _controller.complete(controller);

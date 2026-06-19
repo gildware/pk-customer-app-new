@@ -1,37 +1,25 @@
-import 'package:get/get.dart';
+import 'package:demandium/feature/booking/model/booking_count.dart';
+import 'package:demandium/feature/booking/widget/booking_filter_tab_chip.dart';
 import 'package:demandium/util/core_export.dart';
 
-class BookingStatusTabItem extends GetView<ServiceBookingController> {
-  const BookingStatusTabItem({super.key, required this.title}) ;
+class BookingStatusTabItem extends StatelessWidget {
+  const BookingStatusTabItem({
+    super.key,
+    required this.title,
+    required this.isSelected,
+    this.bookingCount,
+  });
+
   final String title;
+  final bool isSelected;
+  final BookingCount? bookingCount;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 30,
-      margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeEight),
-      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault,vertical: 5),
-      decoration: BoxDecoration(
-        color: controller.selectedBookingStatus.name != title ? Colors.grey.withValues(alpha: 0.2): Theme.of(context).colorScheme.primary,
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min ,children: [
-        Image.asset(title.png, height: 25, width: 20,),
-        const SizedBox(width: 5,),
-        Text( title.tr,
-          textAlign: TextAlign.center,
-          style:robotoMedium.copyWith(
-            fontSize: Dimensions.fontSizeSmall,
-            color: controller.selectedBookingStatus.name != title?
-            Theme.of(context).textTheme.bodyLarge!.color: Colors.white,
-          ),
-        ),
-
-      ],),
+    return BookingFilterTabChip(
+      tab: title,
+      isSelected: isSelected,
+      bookingCount: bookingCount,
     );
   }
-}
-
-extension on String {
-  String get png => 'assets/images/$this.png';
 }

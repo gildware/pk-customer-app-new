@@ -13,10 +13,8 @@ class LocationController extends GetxController implements GetxService {
   LocationController({required this.locationRepo});
 
   void refreshUi({bool notify = true}) {
-    if (!notify) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!isClosed) update();
-    });
+    if (!notify || isClosed) return;
+    update();
   }
 
   Position _position = Position(longitude: 0, latitude: 0, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1);
@@ -37,7 +35,7 @@ class LocationController extends GetxController implements GetxService {
   GoogleMapController? _mapController;
   List<PredictionModel> _predictionList = [];
   PredictionModel? _firstPredictionModel;
-  bool _updateAddAddressData = true;
+  bool _skipNextPositionUpdate = false;
   Address _selectedAddressType = Address.service;
   AddressLabel _selectedAddressLabel = AddressLabel.home;
   TextEditingController searchController = TextEditingController();
@@ -231,59 +229,91 @@ class LocationController extends GetxController implements GetxService {
   }
 
   Future<void> updatePosition(CameraPosition position, bool fromAddress, {bool formCheckout = false}) async {
-    if(_updateAddAddressData) {
-      _loading = true;
-      refreshUi();
-      try {
-        if (fromAddress) {
-          _position = Position(
-            latitude: position.target.latitude, longitude: position.target.longitude, timestamp: DateTime.now(),
-            heading: 1, accuracy: 1, altitude: 1, speedAccuracy: 1, speed: 1,
-              altitudeAccuracy: 1, headingAccuracy: 1
-          );
-        } else {
-          _pickPosition = Position(
-            latitude: position.target.latitude, longitude: position.target.longitude, timestamp: DateTime.now(),
-            heading: 1, accuracy: 1, altitude: 1, speedAccuracy: 1, speed: 1,
-              altitudeAccuracy: 1, headingAccuracy: 1
-          );
-        }
-        ZoneResponseModel responseModel = await getZone(position.target.latitude.toString(), position.target.longitude.toString(), true, isLoading: formCheckout);
-        if( formCheckout && !responseModel.zoneIds.contains(getUserAddress()?.zoneId??'')){
-          Get.dialog(
-            ConfirmationDialog(
-                description: null, icon: null, onYesPressed: null,
-                widget: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('this_service_not_available'.tr),
-                  const SizedBox(height: Dimensions.paddingSizeDefault),
-                  CustomButton(buttonText: 'ok'.tr, onPressed: ()=> Get.back()),
-                ],)),
-          );
-
-        }else{
-          if(responseModel.isSuccess) {
-            print('------------here00000');
-            _buttonDisabled = false;
-          }
-        }
-        if (_changeAddress) {
-          AddressModel address = await getAddressFromGeocode(LatLng(position.target.latitude, position.target.longitude));
-
-          fromAddress ? _address= address : _pickAddress = address;
-
-        } else {
-          _changeAddress = true;
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          print('');
-        }
-      }
-    }else {
-      _updateAddAddressData = true;
+    if (_skipNextPositionUpdate) {
+      _skipNextPositionUpdate = false;
+      return;
     }
-    _loading = false;
-    refreshUi();
+
+    _loading = true;
+    update();
+
+    try {
+      if (fromAddress) {
+        _position = Position(
+          latitude: position.target.latitude,
+          longitude: position.target.longitude,
+          timestamp: DateTime.now(),
+          heading: 1,
+          accuracy: 1,
+          altitude: 1,
+          speedAccuracy: 1,
+          speed: 1,
+          altitudeAccuracy: 1,
+          headingAccuracy: 1,
+        );
+      } else {
+        _pickPosition = Position(
+          latitude: position.target.latitude,
+          longitude: position.target.longitude,
+          timestamp: DateTime.now(),
+          heading: 1,
+          accuracy: 1,
+          altitude: 1,
+          speedAccuracy: 1,
+          speed: 1,
+          altitudeAccuracy: 1,
+          headingAccuracy: 1,
+        );
+      }
+
+      final zoneResponse = await getZone(
+        position.target.latitude.toString(),
+        position.target.longitude.toString(),
+        true,
+        isLoading: true,
+      );
+
+      if (formCheckout && !zoneResponse.zoneIds.contains(getUserAddress()?.zoneId ?? '')) {
+        _buttonDisabled = true;
+      } else {
+        _buttonDisabled = !zoneResponse.isSuccess;
+      }
+
+      if (_changeAddress) {
+        final address = await getAddressFromGeocode(
+          LatLng(position.target.latitude, position.target.longitude),
+        );
+        if (fromAddress) {
+          _address = address;
+        } else {
+          _pickAddress = address;
+        }
+      } else {
+        _changeAddress = true;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('updatePosition error: $e');
+      }
+      _buttonDisabled = true;
+    } finally {
+      _loading = false;
+      if (!isClosed) {
+        update();
+      }
+    }
+  }
+
+  Future<void> resolvePickMapPosition(
+    LatLng latLng, {
+    bool fromAddress = false,
+    bool formCheckout = false,
+  }) async {
+    await updatePosition(
+      CameraPosition(target: latLng, zoom: 16),
+      fromAddress,
+      formCheckout: formCheckout,
+    );
   }
 
   Future<ResponseModel> deleteUserAddressByID(AddressModel address) async {
@@ -624,14 +654,14 @@ class LocationController extends GetxController implements GetxService {
 
   void disableButton() {
     _buttonDisabled = true;
-    _inZone = true;
-    refreshUi();
+    update();
   }
 
   void setAddAddressData() {
     _position = _pickPosition;
     _address = _pickAddress;
-    _updateAddAddressData = false;
+    _skipNextPositionUpdate = true;
+    _buttonDisabled = false;
     refreshUi();
   }
 
@@ -656,7 +686,7 @@ class LocationController extends GetxController implements GetxService {
       _zoneID = address.zoneId!.trim();
       _inZone = true;
     }
-    _updateAddAddressData = false;
+    _skipNextPositionUpdate = true;
     refreshUi(notify: shouldUpdate);
   }
 
@@ -711,7 +741,6 @@ class LocationController extends GetxController implements GetxService {
 
   void resetAddress({bool clearMapController = true, bool notify = true}) {
     _address = AddressModel();
-    _updateAddAddressData = true;
     _changeAddress = true;
     _loading = false;
     if (clearMapController) {
@@ -742,6 +771,8 @@ class LocationController extends GetxController implements GetxService {
   void setPickData() {
     _pickPosition = _position;
     _pickAddress = _address;
+    _changeAddress = true;
+    _skipNextPositionUpdate = false;
   }
 
   void setMapController(GoogleMapController mapController) {

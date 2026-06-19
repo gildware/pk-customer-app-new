@@ -28,7 +28,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
   @override
   void initState() {
     super.initState();
-    tabController = TabController(length: BookingDetailsTabs.values.length, vsync: this);
+    tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
@@ -90,16 +90,28 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
   }
 
 
+  String? _bookingIdSubtitle(BookingDetailsContent? bookingDetailsContent) {
+    final readableId = bookingDetailsContent?.readableId;
+    if (readableId == null || readableId.isEmpty) return null;
+    return '${'booking'.tr} #$readableId';
+  }
+
   @override
   Widget build(BuildContext context) {
 
     return CustomPopWidget(
-      child: Scaffold(
+      child: GetBuilder<BookingDetailsController>(builder: (bookingDetailsController) {
+        BookingDetailsContent? bookingDetailsContent = isSubBooking
+            ? bookingDetailsController.subBookingDetailsContent
+            : bookingDetailsController.bookingDetailsContent;
+
+        return Scaffold(
         drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
 
         endDrawer:ResponsiveHelper.isDesktop(context) ? const MenuDrawer():null,
         appBar: CustomAppBar(
           title: "booking_details".tr,
+          subTitle: _bookingIdSubtitle(bookingDetailsContent),
           onBackPressed: () {
             if(widget.fromPage == 'fromNotification'){
               Get.offAllNamed(RouteHelper.getInitialRoute());
@@ -127,7 +139,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
                 padding: EdgeInsets.zero,
                 menuPadding: EdgeInsets.zero,
                 itemBuilder: (BuildContext context) {
-                  return bookingDetailsController.getPopupMenuList(bookingDetailsContent.bookingStatus ?? "").map((PopupMenuModel option) {
+                  return bookingDetailsController.getPopupMenuList(bookingDetailsContent).map((PopupMenuModel option) {
                     return PopupMenuItem<PopupMenuModel>(
                       value: option,
                       padding: EdgeInsets.zero,
@@ -213,23 +225,28 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
           : ResponsiveHelper.isDesktop(context) 
             ? WebBookingDetailsScreen(isSubBooking: isSubBooking, id: isSubBooking ? widget.subBookingId : widget.bookingID, tabController: tabController) 
             : DefaultTabController(
-                length: 2, 
+                length: 3,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start, 
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     BookingTabBar(tabController: tabController, isSubBooking: isSubBooking),
 
                     Expanded(
                       child: TabBarView(
-                        controller: tabController, 
+                        controller: tabController,
                         children: [
                           BookingDetailsSection(
-                            id: isSubBooking ? widget.subBookingId : widget.bookingID, 
+                            id: isSubBooking ? widget.subBookingId : widget.bookingID,
                             isSubBooking: isSubBooking,
                           ),
 
-                          BookingHistory(
-                            id: isSubBooking ? widget.subBookingId : widget.bookingID, 
+                          BookingPaymentsWidget(
+                            id: isSubBooking ? widget.subBookingId : widget.bookingID,
+                            isSubBooking: isSubBooking,
+                          ),
+
+                          BookingEventHistoryWidget(
+                            id: isSubBooking ? widget.subBookingId : widget.bookingID,
                             isSubBooking: isSubBooking,
                           ),
                         ],
@@ -238,7 +255,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
                   ],
                 ),
               ),
-      ),
+      );
+      }),
     );
   }
   Future<void> _launchUrl(Uri url) async {
@@ -268,21 +286,28 @@ class BookingTabBar extends StatelessWidget {
             children: [
               Expanded(
                 child: TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
                   unselectedLabelColor: Colors.grey,
                   indicatorColor: Theme.of(context).colorScheme.primary,
                   labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).colorScheme.primary,
                   controller: tabController,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  labelPadding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
                   tabs: [
-                    Tab(child: Text('booking_details'.tr),),
-                    Tab(child: Text('status'.tr),),
+                    Tab(child: Text('booking_overview'.tr),),
+                    Tab(child: Text('payments'.tr),),
+                    Tab(child: Text('history'.tr),),
                   ],
                   onTap: (int? index) {
                     switch (index) {
                       case 0:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.bookingDetails);
                       break;
 
-                      case 1:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.status);
+                      case 1:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.payments);
+                      break;
+
+                      case 2:bookingDetailsTabsController.updateBookingStatusTabs(BookingDetailsTabs.history);
                       break;
                     }
                   },
@@ -332,40 +357,35 @@ class BookingTabBar extends StatelessWidget {
                   const SizedBox(width: Dimensions.paddingSizeSmall),
 
                   Get.find<AuthController>().isLoggedIn()
-                      && ((bookingDetailsContent.bookingStatus == "completed" && !isSubBooking && !(bookingDetailsContent.isCustomizeBooking ?? false))
-                      ||   bookingDetailsContent.bookingStatus == "pending") ?
+                      && bookingDetailsContent.bookingStatus == "pending" ?
                   GetBuilder<ServiceBookingController>(
                     builder: (serviceBookingController) {
                       return InkWell(
                         onTap: () {
-                          if(bookingDetailsContent.bookingStatus == "completed"){
-                            serviceBookingController.checkCartSubcategory(bookingDetailsContent.id!,bookingDetailsContent.subCategoryId!);
-                          }else{
-                            Get.dialog(
-                                ConfirmationDialog(
-                                  icon: Images.warning,
-                                  title: 'are_you_sure_to_cancel_your_order'.tr, description: 'your_order_will_be_cancel'.tr,
-                                  noButtonText: "yes_cancel".tr,
-                                  noButtonColor: Theme.of(context).colorScheme.primary,
-                                  noTextColor: Colors.white,
-                                  yesButtonText: "not_now".tr,
-                                  yesButtonColor: Theme.of(context).colorScheme.error,
-                                  yesTextColor: Colors.white,
-                                  buttonFontSize: Dimensions.fontSizeSmall + 1,
-                                  onNoPressed : () async  {
-                                    Get.back();
-                                    Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                    if(isSubBooking){
-                                      await bookingDetailsController.subBookingCancel(subBookingId: bookingDetailsContent.id ?? "");
-                                    }else{
-                                      await bookingDetailsController.bookingCancel(bookingId: bookingDetailsContent.id ?? "");
-                                    }
-                                    Get.back();
-                                  },
-                                  onYesPressed: ()=> Get.back(),
-                                ), useSafeArea: false,
-                            );
-                          }
+                          Get.dialog(
+                              ConfirmationDialog(
+                                icon: Images.warning,
+                                title: 'are_you_sure_to_cancel_your_order'.tr, description: 'your_order_will_be_cancel'.tr,
+                                noButtonText: "yes_cancel".tr,
+                                noButtonColor: Theme.of(context).colorScheme.primary,
+                                noTextColor: Colors.white,
+                                yesButtonText: "not_now".tr,
+                                yesButtonColor: Theme.of(context).colorScheme.error,
+                                yesTextColor: Colors.white,
+                                buttonFontSize: Dimensions.fontSizeSmall + 1,
+                                onNoPressed : () async  {
+                                  Get.back();
+                                  Get.dialog(const CustomLoader(), barrierDismissible: false);
+                                  if(isSubBooking){
+                                    await bookingDetailsController.subBookingCancel(subBookingId: bookingDetailsContent.id ?? "");
+                                  }else{
+                                    await bookingDetailsController.bookingCancel(bookingId: bookingDetailsContent.id ?? "");
+                                  }
+                                  Get.back();
+                                },
+                                onYesPressed: ()=> Get.back(),
+                              ), useSafeArea: false,
+                          );
                         },
 
                         child: Container(
@@ -375,10 +395,8 @@ class BookingTabBar extends StatelessWidget {
                             border: Border.all(color: Theme.of(context).colorScheme.primary),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeEight, horizontal: Dimensions.paddingSizeLarge),
-                          child: (serviceBookingController.isLoading) ?
-                          Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault), child: SizedBox(height: 15, width:15, child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary,))) :
-                          Text(
-                              bookingDetailsContent.bookingStatus == "completed" ? "rebook".tr : "cancel_booking".tr,
+                          child: Text(
+                              "cancel_booking".tr,
                               style: robotoMedium.copyWith(color: Get.isDarkMode ? Theme.of(context).textTheme.bodyLarge?.color : Theme.of(context).colorScheme.onPrimary)
                           ),
                         ),
@@ -386,7 +404,10 @@ class BookingTabBar extends StatelessWidget {
                     },
                   ) : const SizedBox(),
 
-                  bookingDetailsContent.bookingStatus == "completed"  && !isSubBooking && Get.find<AuthController>().isLoggedIn() ?
+                  bookingDetailsContent.bookingStatus == "completed"
+                      && !isSubBooking
+                      && Get.find<AuthController>().isLoggedIn()
+                      && BookingHelper.canLeaveReview(bookingDetailsContent) ?
                   InkWell(
                     onTap: () {
                       showModalBottomSheet(context: context,

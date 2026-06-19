@@ -17,6 +17,10 @@ Future<void> main() async {
 
   final languages = await AppStartup.prepareForRunApp();
 
+  if (!kIsWeb && GetPlatform.isMobile) {
+    FirebaseMessaging.onBackgroundMessage(myBackgroundMessageHandler);
+  }
+
   runApp(MyApp(languages: languages));
   AppStartup.scheduleDeferredInit(flutterLocalNotificationsPlugin);
 }
@@ -30,10 +34,18 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  void _route() async {
+  @override
+  void reassemble() {
+    super.reassemble();
+    AuthSessionHelper.syncFromStorage();
+  }
+
+  Future<void> _route() async {
     final success = await Get.find<SplashController>().getConfigData();
     await Get.find<LocationController>().refreshSavedAddressZone();
-    Get.find<AuthController>().updateToken();
+    if (Get.find<AuthController>().isLoggedIn()) {
+      await Get.find<AuthController>().updateToken();
+    }
     await BookingAuthHelper.ensureGuestSessionIfNeeded();
     if (success && Get.isRegistered<CartController>() && BookingAuthHelper.shouldSyncCartFromServer()) {
       await Get.find<CartController>().getCartListFromServer();
@@ -45,20 +57,25 @@ class _MyAppState extends State<MyApp> {
     super.initState();
 
     if (kIsWeb || AppStartup.initialDeepLinkPath != null) {
-      Get.find<SplashController>().initSharedData();
-      Get.find<SplashController>().getCookiesData();
-      Get.find<AuthRepo>().preloadRememberMeCredentials();
-
-      if (Get.find<AuthController>().isLoggedIn()) {
-        Get.find<UserController>().getUserInfo();
-      }
-
-      if (Get.find<SplashController>().getGuestId().isEmpty) {
-        var uuid = const Uuid().v1();
-        Get.find<SplashController>().setGuestId(uuid);
-      }
-      _route();
+      _prepareSessionAndRoute();
     }
+  }
+
+  Future<void> _prepareSessionAndRoute() async {
+    await Get.find<SplashController>().initSharedData();
+    Get.find<SplashController>().getCookiesData();
+    await Get.find<AuthRepo>().preloadRememberMeCredentials();
+    await AuthSessionHelper.syncFromStorage();
+
+    if (Get.find<AuthController>().isLoggedIn()) {
+      Get.find<UserController>().getUserInfo();
+    }
+
+    if (Get.find<SplashController>().getGuestId().isEmpty) {
+      await Get.find<SplashController>().setGuestId(const Uuid().v1());
+    }
+
+    await _route();
   }
 
   @override

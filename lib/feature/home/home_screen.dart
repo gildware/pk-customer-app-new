@@ -267,10 +267,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     HomeScreen.reloadHomeContent = ({required bool reload}) => _loadHomeContent(reload: reload);
 
     Get.find<LocalizationController>().filterLanguage(shouldUpdate: false);
-    if(Get.find<AuthController>().isLoggedIn()) {
-      Get.find<UserController>().getUserInfo();
-      Get.find<LocationController>().getAddressList();
-    }
+    AuthSessionHelper.syncFromStorage().then((_) {
+      if (!mounted) return;
+      if (Get.find<AuthController>().isLoggedIn()) {
+        Get.find<UserController>().getUserInfo();
+        Get.find<LocationController>().getAddressList();
+      }
+    });
 
     _availableServiceCount = _serviceCountFromAddress();
 

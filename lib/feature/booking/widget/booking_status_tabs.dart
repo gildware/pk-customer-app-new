@@ -1,99 +1,130 @@
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
-class   ServiceRequestSectionMenu extends SliverPersistentHeaderDelegate{
+class ServiceRequestSectionMenu extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return GetBuilder<ServiceBookingController>(builder: (serviceBookingController){
-      return Center(
+    return GetBuilder<ServiceBookingController>(builder: (serviceBookingController) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(Dimensions.radiusLarge),
+            bottomRight: Radius.circular(Dimensions.radiusLarge),
+          ),
+        ),
         child: Container(
-          margin: EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
+          width: Dimensions.webMaxWidth,
+          padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
           decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
+            color: ResponsiveHelper.isDesktop(context) && Get.isDarkMode
+                ? Theme.of(context).cardColor
+                : ResponsiveHelper.isDesktop(context)
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.07)
+                    : Get.isDarkMode
+                        ? Colors.transparent
+                        : Theme.of(context).cardColor,
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(Dimensions.radiusLarge),
               bottomRight: Radius.circular(Dimensions.radiusLarge),
             ),
           ),
-          child: Container(
-            height: double.infinity, width: Dimensions.webMaxWidth,
-            padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
-            decoration: BoxDecoration(
-                color: ResponsiveHelper.isDesktop(context) && Get.isDarkMode ?
-                Theme.of(context).cardColor : ResponsiveHelper.isDesktop(context)
-                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.07) : Get.isDarkMode ? Colors.transparent
-                    : Theme.of(context).cardColor,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(Dimensions.radiusLarge),
-                  bottomRight: Radius.circular(Dimensions.radiusLarge),
-                )
-            ),
-
-            child: ResponsiveHelper.isDesktop(context) ? Column(
-              mainAxisSize: MainAxisSize.max, mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-
-                const SizedBox(),
-                Text('my_bookings'.tr, style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge),),
-
-
-                Row( mainAxisAlignment: MainAxisAlignment.spaceBetween,children: [
-                  const SizedBox(),
-                  Padding( padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeEight),
-                    child: Wrap(alignment: WrapAlignment.center, children: BookingStatusTabs.values.map((e) {
-                      return GetBuilder<ServiceBookingController>(builder: (controller){
-                        return InkWell(
-                          child: BookingStatusTabItem(
-                            title: e.name,
-                          ),
-                          onTap: (){
-                            controller.updateBookingStatusTabs(e);
-                          },
-                        );
-                      },);
-                    }
-                    ).toList()),
-                  ),
-                  const FilterPopUpMenuWidget()
-                ]),
-
-              ],
-            ) : Center(
-              child: SizedBox(
-                height: 30,
-                child: ListView.builder(
-                  itemCount: BookingStatusTabs.values.length,
-                  scrollDirection: Axis.horizontal,
-                  itemBuilder: (context,index){
-                    return GetBuilder<ServiceBookingController>(builder: (controller){
-                      return InkWell(
-                        child: BookingStatusTabItem(
-                          title: BookingStatusTabs.values.elementAt(index).name,
+          child: ResponsiveHelper.isDesktop(context)
+              ? Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(),
+                    Text(
+                      'my_bookings'.tr,
+                      style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeEight),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+                        child: Row(
+                          children: serviceBookingController.visibleBookingTabs.map((tab) {
+                            final isSelected = serviceBookingController.selectedBookingStatus == tab;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: InkWell(
+                                onTap: () => serviceBookingController.updateBookingStatusTabs(tab),
+                                child: BookingStatusTabItem(
+                                  title: tab,
+                                  isSelected: isSelected,
+                                  bookingCount: serviceBookingController.bookingCount,
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
-                        onTap: (){
-                          controller.updateBookingStatusTabs(BookingStatusTabs.values.elementAt(index));
-                        },
-                      );
-                    });
-                  },
-                ),
-              ),
-            ),
-          ),
+                      ),
+                    ),
+                  ],
+                )
+              : const _MobileBookingStatusTabBar(),
         ),
       );
     });
   }
 
   @override
-  double get maxExtent => ResponsiveHelper.isDesktop(Get.context!)  ? 110 : 60;
+  double get maxExtent => ResponsiveHelper.isDesktop(Get.context!) ? 110 : 60;
 
   @override
-  double get minExtent => ResponsiveHelper.isDesktop(Get.context!)  ? 110 : 60;
+  double get minExtent => ResponsiveHelper.isDesktop(Get.context!) ? 110 : 60;
 
   @override
   bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
     return true;
   }
+}
 
+class _MobileBookingStatusTabBar extends StatelessWidget {
+  const _MobileBookingStatusTabBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return GetBuilder<ServiceBookingController>(builder: (controller) {
+      final visibleTabs = controller.visibleBookingTabs;
+      final scrollController = controller.bookingTabScrollController;
+      if (scrollController == null || visibleTabs.isEmpty) {
+        return const SizedBox(height: 46);
+      }
+
+      return SizedBox(
+        height: 46,
+        width: double.infinity,
+        child: ListView.builder(
+          key: const PageStorageKey('user_booking_tabs'),
+          controller: scrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
+          itemCount: visibleTabs.length,
+          itemBuilder: (context, index) {
+            final tab = visibleTabs[index];
+            return InkWell(
+              onTap: () => controller.updateBookingStatusTabs(tab),
+              child: AutoScrollTag(
+                controller: scrollController,
+                key: ValueKey(tab),
+                index: index,
+                highlightColor: Colors.transparent,
+                child: BookingStatusTabItem(
+                  title: tab,
+                  isSelected: controller.selectedBookingStatus == tab,
+                  bookingCount: controller.bookingCount,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    });
+  }
 }

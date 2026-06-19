@@ -117,41 +117,19 @@ class RepeatBookingDetailsWidget extends StatelessWidget {
                 ]),
               ),
 
-              !ResponsiveHelper.isDesktop(context) && bookingDetailsController.bookingDetailsContent!.bookingStatus == 'completed' ?
+              !ResponsiveHelper.isDesktop(context)
+                  && bookingDetailsController.bookingDetailsContent!.bookingStatus == 'completed'
+                  && BookingHelper.canLeaveReview(bookingDetailsController.bookingDetailsContent!) ?
               Padding(padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                child: Row(
-                  children: [
-                    Get.find<AuthController>().isLoggedIn() ?
-                    Expanded(
-                      child: CustomButton (radius: 5, buttonText: 'review'.tr, onPressed: () {
-                        showModalBottomSheet(context: context,
-                          useRootNavigator: true, isScrollControlled: true,
-                          backgroundColor: Colors.transparent, builder: (context) => ReviewRecommendationDialog(
-                            id: bookingDetailsController.bookingDetailsContent!.id!,
-                          ),
-                        );},
-                      ),
-                    ) : const SizedBox(),
-
-
-                    Get.find<AuthController>().isLoggedIn() ? const SizedBox(width: 15,): const SizedBox(),
-
-                    GetBuilder<ServiceBookingController>(
-                        builder: (serviceBookingController) {
-                          return Expanded(
-                            child: CustomButton(
-                              radius: 5,
-                              isLoading: serviceBookingController.isLoading,
-                              buttonText: "rebook".tr,
-                              onPressed: () {
-                                serviceBookingController.checkCartSubcategory(bookingDetailsController.bookingDetailsContent!.id!, bookingDetailsController.bookingDetailsContent!.subCategoryId!);
-                              },
-                            ),
-                          );
-                        }
+                child: Get.find<AuthController>().isLoggedIn() ?
+                CustomButton (radius: 5, buttonText: 'review'.tr, onPressed: () {
+                  showModalBottomSheet(context: context,
+                    useRootNavigator: true, isScrollControlled: true,
+                    backgroundColor: Colors.transparent, builder: (context) => ReviewRecommendationDialog(
+                      id: bookingDetailsController.bookingDetailsContent!.id!,
                     ),
-                  ],
-                ),
+                  );},
+                ) : const SizedBox(),
               )
                   : const SizedBox()
 

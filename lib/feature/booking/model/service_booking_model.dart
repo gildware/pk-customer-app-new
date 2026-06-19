@@ -1,3 +1,4 @@
+import 'package:demandium/common/model/booking_status_ui_model.dart';
 import 'package:demandium/util/core_export.dart';
 
 class ServiceBookingList {
@@ -96,6 +97,8 @@ class BookingModel {
   String? paymentMethod;
   String? transactionId;
   double? totalBookingAmount;
+  double? listDisplayTotal;
+  double? payableGrandTotal;
   double? totalTaxAmount;
   double? totalDiscountAmount;
   String? serviceSchedule;
@@ -108,6 +111,17 @@ class BookingModel {
   int? isRepeatBooking;
   List<RepeatBooking>? repeatBookingList;
   bool? isCustomizeBooking;
+  BookingStatusUiFields? statusUi;
+
+  double get displayTotalBookingAmount {
+    if (listDisplayTotal != null && listDisplayTotal! > 0.009) {
+      return listDisplayTotal!;
+    }
+    if (payableGrandTotal != null && payableGrandTotal! > 0.009) {
+      return payableGrandTotal!;
+    }
+    return totalBookingAmount ?? 0;
+  }
 
   BookingModel({this.id,
     this.readableId,
@@ -119,6 +133,8 @@ class BookingModel {
     this.paymentMethod,
     this.transactionId,
     this.totalBookingAmount,
+    this.listDisplayTotal,
+    this.payableGrandTotal,
     this.totalTaxAmount,
     this.totalDiscountAmount,
     this.serviceSchedule,
@@ -131,6 +147,7 @@ class BookingModel {
     this.isRepeatBooking,
     this.repeatBookingList,
     this.isCustomizeBooking,
+    this.statusUi,
   });
 
   BookingModel.fromJson(Map<String, dynamic> json) {
@@ -144,6 +161,8 @@ class BookingModel {
     paymentMethod = json['payment_method'];
     transactionId = json['transaction_id'];
     totalBookingAmount = double.tryParse(json['total_booking_amount'].toString());
+    listDisplayTotal = double.tryParse(json['list_display_total']?.toString() ?? '');
+    payableGrandTotal = double.tryParse(json['payable_grand_total']?.toString() ?? '');
     totalTaxAmount = double.tryParse( json['total_tax_amount'].toString());
     totalDiscountAmount = double.tryParse(json['total_discount_amount'].toString());
     serviceSchedule = json['service_schedule'];
@@ -161,6 +180,7 @@ class BookingModel {
       });
     }
     isCustomizeBooking = '${json['is_customize_booking']}'.contains('1');
+    statusUi = BookingStatusUiFields.fromJson(json);
   }
 
   Map<String, dynamic> toJson() {
@@ -175,6 +195,8 @@ class BookingModel {
     data['payment_method'] = paymentMethod;
     data['transaction_id'] = transactionId;
     data['total_booking_amount'] = totalBookingAmount;
+    data['list_display_total'] = listDisplayTotal;
+    data['payable_grand_total'] = payableGrandTotal;
     data['total_tax_amount'] = totalTaxAmount;
     data['total_discount_amount'] = totalDiscountAmount;
     data['service_schedule'] = serviceSchedule;

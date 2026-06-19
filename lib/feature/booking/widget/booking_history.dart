@@ -77,25 +77,16 @@ class BookingHistory extends StatelessWidget {
                              ),
                            ],
                          ),
-                       const SizedBox(height: Dimensions.paddingSizeSmall,),
-                       RichText(
-                         text:  TextSpan(text: '${'payment_status'.tr} : ',
-                           style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color: Theme.of(context).textTheme.bodyLarge!.color),
-                           children: [
-                             TextSpan(text: '${bookingDetails.isPaid == 0 ? 'unpaid'.tr: 'paid'.tr} ',
-                                 style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault,
-                                     color: bookingDetails.isPaid == 0?Theme.of(context).colorScheme.error : Colors.green,decoration: TextDecoration.none)),
-                           ],
-                         ),
-                       ),
-                       const SizedBox(height: Dimensions.paddingSizeSmall,),
-                       RichText(
-                         text:  TextSpan(
-                           text: '${'booking_status'.tr} : ',
+                      const SizedBox(height: Dimensions.paddingSizeSmall,),
+                      RichText(
+                        text:  TextSpan(
+                          text: '${'booking_status'.tr} : ',
                            style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color: Theme.of(context).textTheme.bodyLarge!.color),
                            children: [
                              TextSpan(
-                                 text: (bookingDetails.bookingStatus ?? '').tr,
+                                 text: ((bookingDetails.statusUi?.displayKey?.isNotEmpty ?? false)
+                                     ? bookingDetails.statusUi!.displayKey!
+                                     : bookingDetails.bookingStatus ?? '').tr,
                                  style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color:  Theme.of(context).colorScheme.primary)),
                            ],
                          ),

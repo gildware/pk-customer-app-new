@@ -1,3 +1,4 @@
+import 'package:demandium/helper/booking_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
@@ -61,7 +62,7 @@ class AllBookingSummaryWidget extends StatelessWidget {
             _ItemWidget(title: "total_booking", subtitle: "${bookingDetails.totalCount ?? ""}"),
             _ItemWidget(title: "completed", subtitle: "${bookingDetails.completedCount ?? ""}"),
             _ItemWidget(title: "canceled", subtitle: "${bookingDetails.canceledCount ?? ""}"),
-            _ItemWidget(title: "payment", subtitle: "${bookingDetails.paymentMethod}".tr),
+            _ItemWidget(title: "payment", subtitle: BookingHelper.paymentMethodLabel(bookingDetails.paymentMethod)),
           ]))
 
         ]) : Column(children: [
@@ -81,7 +82,7 @@ class AllBookingSummaryWidget extends StatelessWidget {
           _ItemWidget(title: "completed", subtitle: "${bookingDetails.completedCount ?? ""}"),
           _ItemWidget(title: "canceled", subtitle: "${bookingDetails.canceledCount ?? ""}"),
           _ItemWidget(title: "total_amount", subtitle: PriceConverter.convertPrice( bookingDetails.totalBookingAmount ?? 0)),
-          _ItemWidget(title: "payment", subtitle: "${bookingDetails.paymentMethod}".tr),
+          _ItemWidget(title: "payment", subtitle: BookingHelper.paymentMethodLabel(bookingDetails.paymentMethod)),
         ])
 
 
