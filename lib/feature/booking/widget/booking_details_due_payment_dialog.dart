@@ -20,7 +20,6 @@ class BookingDuePaymentAmountDialog extends StatefulWidget {
 class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountDialog> {
   static const _payFull = 'full';
   static const _payOther = 'other';
-  static const _razorpayGateway = 'razor_pay';
 
   String _selectedType = _payFull;
   bool _isLaunchingPayment = false;
@@ -50,14 +49,9 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
     });
   }
 
-  DigitalPaymentMethod? _resolveRazorpayGateway() {
+  DigitalPaymentMethod? _resolveDigitalGateway() {
     final gateways = CheckoutHelper.enabledDigitalPaymentGateways();
-    for (final gateway in gateways) {
-      if ((gateway.gateway ?? '').trim().toLowerCase() == _razorpayGateway) {
-        return gateway;
-      }
-    }
-    return null;
+    return gateways.isNotEmpty ? gateways.first : null;
   }
 
   @override
@@ -170,7 +164,7 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
       return;
     }
 
-    final gateway = _resolveRazorpayGateway();
+    final gateway = _resolveDigitalGateway();
     if (gateway == null) {
       customSnackBar(
         'no_payment_method_available'.tr,
@@ -182,9 +176,9 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
 
     setState(() => _isLaunchingPayment = true);
     Get.back();
-    await _launchRazorpayPayment(
+    await _launchDigitalPayment(
       paymentAmount: paymentAmount,
-      gateway: gateway.gateway ?? _razorpayGateway,
+      gateway: gateway.gateway ?? '',
     );
   }
 
@@ -220,7 +214,7 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
     return amount;
   }
 
-  Future<void> _launchRazorpayPayment({
+  Future<void> _launchDigitalPayment({
     required double paymentAmount,
     required String gateway,
   }) async {

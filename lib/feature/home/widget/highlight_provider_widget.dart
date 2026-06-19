@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 
 
 class HighlightProviderWidget extends StatelessWidget {
-  const HighlightProviderWidget({super.key});
+  final String? titleOverride;
+  const HighlightProviderWidget({super.key, this.titleOverride});
 
   @override
   Widget build(BuildContext context) {
@@ -12,6 +13,9 @@ class HighlightProviderWidget extends StatelessWidget {
     if (kDebugMode) {
       print("Width : $width");
     }
+    final title = (titleOverride != null && titleOverride!.trim().isNotEmpty)
+        ? titleOverride!.trim()
+        : 'highlight_for_you'.tr;
     return GetBuilder<AdvertisementController>(builder: (advertisementController){
       return advertisementController.advertisementList != null &&  advertisementController.advertisementList!.isNotEmpty ? Container(
         decoration: BoxDecoration(
@@ -24,7 +28,7 @@ class HighlightProviderWidget extends StatelessWidget {
 
               const SizedBox(height: Dimensions.paddingSizeDefault,),
               Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                child: Text('highlight_for_you'.tr, style: robotoBold.copyWith(
+                child: Text(title, style: robotoBold.copyWith(
                   fontSize: Dimensions.fontSizeLarge,
                 ),),
               ),

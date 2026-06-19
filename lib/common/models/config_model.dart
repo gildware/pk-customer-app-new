@@ -1091,6 +1091,7 @@ class HomeSectionConfig {
   final List<String> providerIds;
   final List<String> bannerIds;
   final List<String> categoryIds;
+  final List<String> campaignIds;
 
   const HomeSectionConfig({
     required this.key,
@@ -1105,6 +1106,7 @@ class HomeSectionConfig {
     this.providerIds = const [],
     this.bannerIds = const [],
     this.categoryIds = const [],
+    this.campaignIds = const [],
   });
 
   bool get isManualData => dataMode == 'manual';
@@ -1112,6 +1114,11 @@ class HomeSectionConfig {
   bool get isBannerContent {
     if (key == 'banners') return true;
     return isCustom && contentType == 'banners';
+  }
+
+  bool get isCampaignContent {
+    if (key == 'campaigns') return true;
+    return isCustom && contentType == 'campaigns';
   }
 
   bool get isCategoryContent {
@@ -1174,6 +1181,7 @@ class HomeSectionConfig {
       providerIds: parseIds(json['provider_ids']),
       bannerIds: parseIds(json['banner_ids']),
       categoryIds: parseIds(json['category_ids']),
+      campaignIds: parseIds(json['campaign_ids']),
     );
   }
 

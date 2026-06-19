@@ -164,6 +164,12 @@ class HomeScreen extends StatefulWidget {
           reload: reload,
           limit: limit,
         ));
+      } else if (section.isCampaignContent) {
+        futures.add(Get.find<CampaignController>().loadCuratedCampaigns(
+          section.key,
+          reload: reload,
+          limit: limit,
+        ));
       } else if (section.key == 'feathered_categories') {
         futures.add(Get.find<ServiceController>().loadCuratedFeatheredCategories(
           section.key,

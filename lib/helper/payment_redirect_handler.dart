@@ -127,6 +127,7 @@ class PaymentRedirectHandler {
         Get.find<BookingDetailsController>().getSubBookingDetails(
           bookingId: subBookingId,
         );
+        customSnackBar('paid_successfully'.tr, type: ToasterMessageType.success);
       } else {
         customSnackBar(
           'payment_failed_try_again'.tr,
@@ -134,7 +135,6 @@ class PaymentRedirectHandler {
           showDefaultSnackBar: false,
         );
       }
-      customSnackBar('paid_successfully'.tr, type: ToasterMessageType.success);
     }
   }
 

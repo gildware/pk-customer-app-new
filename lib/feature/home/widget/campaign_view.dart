@@ -2,38 +2,40 @@ import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
 class CampaignView extends StatelessWidget {
-  const CampaignView({super.key});
+  final String sectionKey;
+  const CampaignView({super.key, this.sectionKey = 'campaigns'});
 
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<CampaignController>(
         builder: (campaignController){
-          if(campaignController.campaignList != null && campaignController.campaignList!.isEmpty){
+          final campaigns = campaignController.campaignsForSection(sectionKey);
+          if(campaigns != null && campaigns.isEmpty){
             return const SizedBox();
           }else{
             return Container(
                 width: MediaQuery.of(context).size.width,
                 height: ResponsiveHelper.isTab(context) || MediaQuery.of(context).size.width > 450 ? 350 :MediaQuery.of(context).size.width * 0.40,
                 padding: const EdgeInsets.only(bottom : Dimensions.paddingSizeSmall),
-                child: campaignController.campaignList != null ?
+                child: campaigns != null ?
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
                       child: CarouselSlider.builder(
                         options: CarouselOptions(
-                          enableInfiniteScroll: campaignController.campaignList!.length > 1 ? true : false,
+                          enableInfiniteScroll: campaigns.length > 1 ? true : false,
                           autoPlay: true,
                           enlargeCenterPage: false,
-                          viewportFraction: campaignController.campaignList!.length  == 1 ? 0.96 : .94,
+                          viewportFraction: campaigns.length  == 1 ? 0.96 : .94,
                           disableCenter: true,
                           autoPlayInterval: const Duration(seconds: 7),
                           onPageChanged: (index, reason) {
                             campaignController.setCurrentIndex(index, true);
                           },
                         ),
-                        itemCount: campaignController.campaignList!.isEmpty ? 1 : campaignController.campaignList!.length,
+                        itemCount: campaigns.length,
                         itemBuilder: (context, index, _) {
 
                           return InkWell(
@@ -41,7 +43,7 @@ class CampaignView extends StatelessWidget {
                               if(isRedundentClick(DateTime.now())){
                                 return;
                               }
-                              campaignController.navigateFromCampaign(campaignController.campaignList![index].id!,campaignController.campaignList![index].discount!.discountType!);
+                              campaignController.navigateFromCampaign(campaigns[index].id!,campaigns[index].discount!.discountType!);
                             },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
@@ -54,7 +56,7 @@ class CampaignView extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                                   child: GetBuilder<SplashController>(builder: (splashController) {
                                     return CustomImage(
-                                      image: campaignController.campaignList![index].coverImageFullPath ?? "",
+                                      image: campaigns[index].coverImageFullPath ?? "",
                                       fit: BoxFit.cover,
                                       placeholder: Images.placeholder,
                                     );
@@ -68,11 +70,11 @@ class CampaignView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-                    campaignController.campaignList!.length > 1 ? Align(
+                    campaigns.length > 1 ? Align(
                       alignment: Alignment.center,
                       child: AnimatedSmoothIndicator(
                         activeIndex: campaignController.currentIndex!,
-                        count: campaignController.campaignList!.length,
+                        count: campaigns.length,
                         effect: ExpandingDotsEffect(
                           dotHeight: 8, dotWidth: 8,
                           activeDotColor: Theme.of(context).colorScheme.primary,

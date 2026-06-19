@@ -88,6 +88,10 @@ class SplashScreenState extends State<SplashScreen> {
       await AppStartup.ensureDeferredReady();
       if (!mounted) return;
 
+      if (!ResponsiveHelper.isWeb()) {
+        unawaited(DigitalPaymentLauncher.tryResumePendingVerification());
+      }
+
       final notificationBody = widget.body ?? AppStartup.initialNotificationBody;
 
       try {

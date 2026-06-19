@@ -9,4 +9,15 @@ class CampaignRepo extends DataSyncRepo{
     return await fetchData<T>(AppConstants.campaignUri, source);
   }
 
+  Future<ApiResponseModel<T>> getMobileAppHomeSectionCampaigns<T>({
+    required String sectionKey,
+    required DataSourceEnum source,
+    int limit = 10,
+  }) async {
+    return await fetchData<T>(
+      '${AppConstants.mobileAppHomeSectionUri}$sectionKey/campaigns?limit=$limit&offset=1',
+      source,
+    );
+  }
+
 }

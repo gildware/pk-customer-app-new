@@ -114,7 +114,8 @@ class CustomerHomeSections {
 
       case 'highlight_providers':
         if (MobileAppHomeHelper.usesManualData('highlight_providers')) {
-          if (providerBooking != 1) return null;
+          final curated = Get.find<ProviderBookingController>().providersForHomeSection('highlight_providers');
+          if (curated != null && curated.isEmpty) return null;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
             child: CuratedProviderHorizontalView(
@@ -124,9 +125,11 @@ class CustomerHomeSections {
             ),
           );
         }
-        return const Padding(
-          padding: EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-          child: HighlightProviderWidget(),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+          child: HighlightProviderWidget(
+            titleOverride: MobileAppHomeHelper.sectionTitle('highlight_providers', 'highlight_for_you'),
+          ),
         );
 
       case 'popular_services':
@@ -142,7 +145,7 @@ class CustomerHomeSections {
         );
 
       case 'campaigns':
-        return const CampaignView();
+        return const CampaignView(sectionKey: 'campaigns');
 
       case 'recommended_services':
         if (MobileAppHomeHelper.usesManualData('recommended_services')) {
@@ -281,6 +284,9 @@ class CustomerHomeSections {
         }
         if (section.isBannerContent) {
           return BannerView(sectionKey: section.key);
+        }
+        if (section.isCampaignContent) {
+          return CampaignView(sectionKey: section.key);
         }
         if (section.isCategoryContent) {
           return Padding(

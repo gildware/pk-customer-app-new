@@ -2,6 +2,7 @@ import 'package:demandium/api/local/cache_response.dart';
 import 'package:demandium/common/enums/enums.dart';
 import 'package:demandium/feature/home/helper/mobile_app_home_api_helper.dart';
 import 'package:demandium/feature/home/helper/mobile_app_home_helper.dart';
+import 'package:demandium/feature/home/model/campaign_model.dart';
 import 'package:demandium/feature/home/repository/home_bundle_repo.dart';
 import 'package:demandium/helper/data_sync_helper.dart';
 import 'package:get/get.dart';
@@ -120,6 +121,11 @@ class HomeBundleHelper {
             .map((item) => BannerModel.fromJson(item))
             .toList();
         Get.find<BannerController>().applyHomeBundleCuratedBanners(key, banners);
+      } else if (section.isCampaignContent) {
+        final campaigns = MobileAppHomeApiHelper.extractContentDataMaps(wrapped)
+            .map((item) => CampaignData.fromJson(item))
+            .toList();
+        Get.find<CampaignController>().applyHomeBundleCuratedCampaigns(key, campaigns);
       } else if (section.isCategoryContent || section.isSubCategoryContent) {
         final categories = MobileAppHomeApiHelper.extractContentDataMaps(wrapped)
             .map((item) => CategoryModel.fromJson(item))

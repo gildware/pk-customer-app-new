@@ -77,6 +77,16 @@ class CheckOutController extends GetxController implements GetxService{
   bool _isLoading= false;
   bool get isLoading => _isLoading;
 
+  bool _isPaymentInProgress = false;
+  bool get isPaymentInProgress => _isPaymentInProgress;
+
+  void setPaymentInProgress(bool value, {bool shouldUpdate = true}) {
+    _isPaymentInProgress = value;
+    if (shouldUpdate) {
+      update();
+    }
+  }
+
  bool _loading= false;
  bool get loading => _loading;
 

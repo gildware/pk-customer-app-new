@@ -225,8 +225,12 @@ class ProviderBookingController extends GetxController implements GetxService {
   }
 
   Future<void> loadCuratedProviders(String sectionKey, {bool reload = false, int limit = 10}) async {
-    if (!reload && _curatedProvidersBySection[sectionKey] != null) {
-      return;
+    final cached = _curatedProvidersBySection[sectionKey];
+    if (!reload && cached != null) {
+      final pickIds = MobileAppHomeHelper.section(sectionKey)?.providerIds ?? const [];
+      if (cached.isNotEmpty || pickIds.isEmpty) {
+        return;
+      }
     }
     await DataSyncHelper.fetchAndSyncData(
       fetchFromLocal: () => providerBookingRepo.getMobileAppHomeSectionProviders<CacheResponseData>(

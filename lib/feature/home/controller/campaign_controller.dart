@@ -1,4 +1,6 @@
 import 'package:demandium/api/local/cache_response.dart';
+import 'package:demandium/feature/home/helper/mobile_app_home_api_helper.dart';
+import 'package:demandium/feature/home/helper/mobile_app_home_helper.dart';
 import 'package:demandium/helper/data_sync_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
@@ -9,11 +11,13 @@ class CampaignController extends GetxController implements GetxService {
   CampaignController({required this.campaignRepo});
 
   List<CampaignData>? _campaignList ;
+  final Map<String, List<CampaignData>?> _curatedCampaignsBySection = {};
   List<Service>? _itemCampaignList;
   int? _currentIndex = 0;
   bool? _isLoading = false;
 
   List<CampaignData>? get campaignList => _campaignList;
+  List<CampaignData>? curatedCampaignsFor(String sectionKey) => _curatedCampaignsBySection[sectionKey];
   List<Service>? get itemCampaignList => _itemCampaignList;
   int? get currentIndex => _currentIndex;
   bool? get isLoading => _isLoading;
@@ -33,6 +37,41 @@ class CampaignController extends GetxController implements GetxService {
         },
       );
     }
+  }
+
+  List<CampaignData>? campaignsForSection(String sectionKey) {
+    if (MobileAppHomeHelper.usesManualData(sectionKey)) {
+      return curatedCampaignsFor(sectionKey);
+    }
+    return _campaignList;
+  }
+
+  Future<void> loadCuratedCampaigns(String sectionKey, {bool reload = false, int limit = 10}) async {
+    final cached = _curatedCampaignsBySection[sectionKey];
+    if (!reload && cached != null) {
+      final pickIds = MobileAppHomeHelper.section(sectionKey)?.campaignIds ?? const [];
+      if (cached.isNotEmpty || pickIds.isEmpty) {
+        return;
+      }
+    }
+    await DataSyncHelper.fetchAndSyncData(
+      fetchFromLocal: () => campaignRepo.getMobileAppHomeSectionCampaigns<CacheResponseData>(
+        sectionKey: sectionKey,
+        source: DataSourceEnum.local,
+        limit: limit,
+      ),
+      fetchFromClient: () => campaignRepo.getMobileAppHomeSectionCampaigns(
+        sectionKey: sectionKey,
+        source: DataSourceEnum.client,
+        limit: limit,
+      ),
+      onResponse: (data, source) {
+        _curatedCampaignsBySection[sectionKey] = MobileAppHomeApiHelper.extractContentDataMaps(data)
+            .map((item) => CampaignData.fromJson(item))
+            .toList();
+        update();
+      },
+    );
   }
 
   void setCurrentIndex(int index, bool notify) {
@@ -70,8 +109,14 @@ class CampaignController extends GetxController implements GetxService {
     update();
   }
 
+  void applyHomeBundleCuratedCampaigns(String sectionKey, List<CampaignData> campaigns) {
+    _curatedCampaignsBySection[sectionKey] = campaigns;
+    update();
+  }
+
   void clearSessionData({bool notify = true}) {
     _campaignList = null;
+    _curatedCampaignsBySection.clear();
     _itemCampaignList = null;
     _currentIndex = 0;
     if (notify) update();

@@ -39,17 +39,25 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
 
 
         return GetBuilder<CheckOutController>(builder: (checkoutController){
+          final bool onPaymentStep = widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment;
+          final double displayAmount = (onPaymentStep && showPaymentAmountOptions)
+              ? checkoutController.payableCheckoutAmount(totalAmount)
+              : totalAmount;
+          final String priceLabel = (onPaymentStep && showPaymentAmountOptions && requiresUpfront)
+              ? 'pay_now'.tr
+              : 'total_price'.tr;
+
           return Padding( padding: const EdgeInsets.symmetric(horizontal : Dimensions.paddingSizeDefault),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [ Padding(padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
 
               child: Center(child: Row(mainAxisAlignment: MainAxisAlignment.center, children:[
-                Text("total_price".tr, style: robotoRegular.copyWith(
+                Text(priceLabel, style: robotoRegular.copyWith(
                   fontSize: Dimensions.fontSizeDefault , color: Theme.of(context).textTheme.bodyLarge!.color,
                 )),
                 const SizedBox(width: 5,),
                 Directionality(
                   textDirection: TextDirection.ltr,
-                  child: Text(PriceConverter.convertPrice(totalAmount),
+                  child: Text(PriceConverter.convertPrice(displayAmount),
                     style: robotoBold.copyWith(
                       color: Theme.of(context).colorScheme.error,
                       fontSize: Dimensions.fontSizeDefault,
@@ -61,10 +69,10 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
               CustomButton(
                 height: 50,
                 radius: Dimensions.radiusDefault,
-                isLoading: checkoutController.isLoading,
+                isLoading: checkoutController.isLoading || checkoutController.isPaymentInProgress,
                 fontSize: Dimensions.fontSizeDefault + 1,
                 buttonText: cartController.cartList.isEmpty ? "empty_cart_go_back".tr : (widget.pageState == "orderDetails" && checkoutController.currentPageState == PageState.orderDetails) ? "make_payment".tr : 'confirm_booking'.tr,
-                onPressed : (widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment) && checkoutController.othersPaymentList.isEmpty && checkoutController.digitalPaymentList.isEmpty
+                onPressed : checkoutController.isPaymentInProgress ? null : ((widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment) && checkoutController.othersPaymentList.isEmpty && checkoutController.digitalPaymentList.isEmpty
                     ? () => customSnackBar("no_payment_method_available".tr, type: ToasterMessageType.info)
                     : () {
                   final bool onPaymentStep = widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment;
@@ -271,13 +279,16 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                       else if( checkoutController.selectedPaymentMethod == PaymentMethodName.digitalPayment){
 
                         if(checkoutController.selectedDigitalPaymentMethod != null && checkoutController.selectedDigitalPaymentMethod?.gateway != "offline"){
+                          checkoutController.setPaymentInProgress(true);
                           _makeDigitalPayment(
                             addressModel,
                             checkoutController.selectedDigitalPaymentMethod,
                             isPartialPayment,
                             checkoutController,
                             paymentAmountType,
-                          ).catchError((_) {
+                          ).whenComplete(() {
+                            checkoutController.setPaymentInProgress(false);
+                          }).catchError((_) {
                             customSnackBar('connection_to_api_server_failed'.tr, type: ToasterMessageType.error);
                           });
                         }else{
@@ -298,7 +309,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                   else{
                     customSnackBar('please_agree_with_terms_conditions'.tr, type: ToasterMessageType.info);
                   }
-                },
+                }),
               ),
             ]),
           );
@@ -351,7 +362,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
       html.window.open(url, "_self");
     } else {
       printLog("url_with_digital_payment_mobile:$url");
-      DigitalPaymentLauncher.start(
+      await DigitalPaymentLauncher.start(
         paymentUrl: url,
         fromPage: 'checkout',
         gateway: paymentMethod?.gateway,

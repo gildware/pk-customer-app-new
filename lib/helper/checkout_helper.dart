@@ -44,7 +44,7 @@ class CheckoutHelper {
     if (isRepeatBooking || fromPage == 'custom-checkout') {
       return false;
     }
-    return fromPage == 'checkout' || fromPage == 'payment_dialog';
+    return fromPage == 'checkout';
   }
 
   static double bookingConfirmationAmountPerService() {
