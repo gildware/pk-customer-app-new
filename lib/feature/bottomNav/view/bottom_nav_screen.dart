@@ -14,6 +14,10 @@ class BottomNavScreen extends StatefulWidget {
 class _BottomNavScreenState extends State<BottomNavScreen> {
   bool _canExit = GetPlatform.isWeb ? true : false;
 
+  /// Bidding/post system — controlled by admin (Mobile App Management → App Features).
+  bool get _isBiddingEnabled =>
+      Get.find<SplashController>().configModel.content?.biddingStatus == 1;
+
   @override
   void initState() {
     super.initState();
@@ -23,16 +27,24 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
         nav.changePage(BnbItem.bookings, shouldUpdate: false);
         break;
       case 2:
-        nav.changePage(BnbItem.biddings, shouldUpdate: false);
+        nav.changePage(BnbItem.favorites, shouldUpdate: false);
         break;
       case 3:
+        // Bidding tab — only when enabled via admin settings.
+        if (_isBiddingEnabled) {
+          nav.changePage(BnbItem.biddings, shouldUpdate: false);
+        } else {
+          nav.changePage(BnbItem.homePage, shouldUpdate: false);
+        }
+        break;
+      case 4:
         if (AppConstants.enableAiChat) {
           nav.changePage(BnbItem.aiChat, shouldUpdate: false);
         } else {
           nav.changePage(BnbItem.homePage, shouldUpdate: false);
         }
         break;
-      case 4:
+      case 5:
         nav.changePage(BnbItem.more, shouldUpdate: false);
         break;
       default:
@@ -137,6 +149,19 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                   },
                 ),
 
+                _bnbItem(
+                  icon: Images.myFavorite,
+                  bnbItem: BnbItem.favorites,
+                  context: context,
+                  onTap: () {
+                    if (!isUserLoggedIn) {
+                      Get.toNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
+                    } else {
+                      Get.find<BottomNavController>().changePage(BnbItem.favorites);
+                    }
+                  },
+                ),
+
                 // AI chat nav slot — disabled (see AppConstants.enableAiChat).
                 if (AppConstants.enableAiChat)
                   _bnbItem(
@@ -144,18 +169,20 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                     onTap: () {},
                   ),
 
-                _bnbItem(
-                  icon: Images.customPostIcon,
-                  bnbItem: BnbItem.biddings,
-                  context: context,
-                  onTap: () {
-                    if (!isUserLoggedIn) {
-                      Get.toNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
-                    } else {
-                      Get.find<BottomNavController>().changePage(BnbItem.biddings);
-                    }
-                  },
-                ),
+                // Bidding/post nav — hidden unless enabled via admin (Mobile App Management → App Features).
+                if (_isBiddingEnabled)
+                  _bnbItem(
+                    icon: Images.customPostIcon,
+                    bnbItem: BnbItem.biddings,
+                    context: context,
+                    onTap: () {
+                      if (!isUserLoggedIn) {
+                        Get.toNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
+                      } else {
+                        Get.find<BottomNavController>().changePage(BnbItem.biddings);
+                      }
+                    },
+                  ),
 
                 _bnbItem(
                   icon: Images.menu, bnbItem: BnbItem.more, context: context,
@@ -213,6 +240,8 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
         return 'home';
       case BnbItem.bookings:
         return 'bookings';
+      case BnbItem.favorites:
+        return 'favourites';
       case BnbItem.biddings:
         return 'biddings';
       case BnbItem.aiChat:
@@ -223,18 +252,35 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   }
 
   int _bottomNavStackIndex(BnbItem currentPage, bool isLoggedIn) {
-    switch (currentPage) {
-      case BnbItem.homePage:
-        return 0;
-      case BnbItem.bookings:
-        return isLoggedIn ? 1 : 0;
-      case BnbItem.biddings:
-        return isLoggedIn ? 2 : 0;
-      case BnbItem.aiChat:
-        return AppConstants.enableAiChat ? 3 : 0;
-      case BnbItem.more:
-        return 0;
+    if (currentPage == BnbItem.homePage || !isLoggedIn) {
+      return 0;
     }
+
+    var index = 1;
+    if (currentPage == BnbItem.bookings) {
+      return index;
+    }
+
+    index++;
+    if (currentPage == BnbItem.favorites) {
+      return index;
+    }
+
+    if (_isBiddingEnabled) {
+      index++;
+      if (currentPage == BnbItem.biddings) {
+        return index;
+      }
+    }
+
+    if (AppConstants.enableAiChat) {
+      index++;
+      if (currentPage == BnbItem.aiChat) {
+        return index;
+      }
+    }
+
+    return 0;
   }
 
   Widget _bottomNavigationBody(AddressModel? previousAddress, bool showServiceNotAvailableDialog) {
@@ -251,7 +297,9 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
           showServiceNotAvailableDialog: showServiceNotAvailableDialog,
         ),
         if (isLoggedIn) const BookingListScreen() else const SizedBox.shrink(),
-        if (isLoggedIn) const AllPostScreen(embedInBottomNav: true) else const SizedBox.shrink(),
+        if (isLoggedIn) const MyFavoriteScreen(embedInBottomNav: true) else const SizedBox.shrink(),
+        // Bidding/post screen — hidden unless enabled via admin (Mobile App Management → App Features).
+        if (isLoggedIn && _isBiddingEnabled) const AllPostScreen(embedInBottomNav: true) else const SizedBox.shrink(),
         // AI chat screen — disabled (see AppConstants.enableAiChat).
         if (AppConstants.enableAiChat) const AiChatScreen(embedInBottomNav: true),
       ],

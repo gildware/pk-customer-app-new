@@ -4,7 +4,7 @@ import 'package:demandium/util/core_export.dart';
 class ConfirmationDialog extends StatelessWidget {
   final String? icon;
   final double iconSize;
-  final Icon? iconWidget;
+  final Widget? iconWidget;
   final String? title;
   final String? description;
   final Color? yesButtonColor;
@@ -36,7 +36,10 @@ class ConfirmationDialog extends StatelessWidget {
 
           Padding(
             padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
-            child: iconWidget ?? Image.asset(icon!, width: iconSize),
+            child: iconWidget ??
+                (icon != null
+                    ? Image.asset(icon!, width: iconSize, height: iconSize, fit: BoxFit.contain)
+                    : const SizedBox.shrink()),
           ),
 
           title != null ? Padding(

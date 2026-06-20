@@ -286,9 +286,22 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
+      final locationController = Get.find<LocationController>();
+      final activeAddress = locationController.getUserAddress();
+
+      // After login, [navigateAfterAuth] already validated the address — avoid a
+      // second zone refresh that can clear it and leave home stuck on the loader.
+      if (AddressSessionHelper.isServiceableAddress(activeAddress)) {
+        await _loadHomeContent(reload: true);
+        return;
+      }
+
       if (!AddressSessionHelper.hasValidActiveAddress()) {
         await AddressSessionHelper.openAddressPicker(mandatory: true);
-        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) return;
+        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) {
+          AddressSessionHelper.markHomeRefreshPending();
+          return;
+        }
       }
 
       final valid = await AddressSessionHelper.validateAndRefreshActiveAddress();
@@ -296,10 +309,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
       if (!valid) {
         await AddressSessionHelper.openAddressPicker(mandatory: true);
-        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) return;
+        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) {
+          AddressSessionHelper.markHomeRefreshPending();
+          return;
+        }
       }
 
-      final address = Get.find<LocationController>().getUserAddress();
+      final address = locationController.getUserAddress();
       if (!AddressSessionHelper.isServiceableAddress(address)) {
         if (mounted) Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
         return;

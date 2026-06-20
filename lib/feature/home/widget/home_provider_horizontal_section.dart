@@ -53,7 +53,6 @@ class HomeProviderHorizontalSection extends StatelessWidget {
             Dimensions.paddingSizeExtraSmall,
           ),
           child: TitleWidget(
-            textDecoration: TextDecoration.underline,
             title: titleKey,
             displayTitle: displayTitle,
             onTap: onSeeAll,
@@ -88,6 +87,7 @@ class HomeProviderHorizontalSection extends StatelessWidget {
             },
           ),
         ),
+        const SizedBox(height: Dimensions.paddingSizeLarge),
       ],
     );
   }

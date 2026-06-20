@@ -982,6 +982,7 @@
   "single_file_size_can_not_be_more_than": "لا يمكن أن يزيد حجم الملف الواحد عن",
   "valid_for_minimum_booking_amount_of": "صالحة للحد الأدنى لمبلغ الحجز",
   "my_favorite": "أُفضله",
+  "favourites": "المفضلة",
   "want_to_remove_provider": "هل تريد إزالة هذا المزود من القائمة المفضلة؟",
   "want_to_remove_service": "هل تريد إزالة هذه الخدمة من القائمة المفضلة؟",
   "provider_remove_message": "من خلال إزالة الموفر من قائمتك المفضلة، لن تتمكن من العثور على الموفر في القائمة المفضلة مرة أخرى. ",

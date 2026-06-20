@@ -19,6 +19,7 @@ class CategoryController extends GetxController implements GetxService {
   List<CategoryModel>? _subCategoryList;
   List<Service>? _searchProductList = [];
   List<CategoryModel>? _campaignBasedCategoryList ;
+  int _subCategoryRequestId = 0;
 
   bool _isLoading = false;
   int? _pageSize;
@@ -176,11 +177,15 @@ class CategoryController extends GetxController implements GetxService {
 
 
   Future<void> getSubCategoryList(String categorySlug, {bool shouldUpdate = true}) async {
+    final requestId = ++_subCategoryRequestId;
     _subCategoryList = null;
     if(shouldUpdate){
       update();
     }
     Response response = await categoryRepo.getSubCategoryList(categorySlug);
+    if (requestId != _subCategoryRequestId) {
+      return;
+    }
     if (response.statusCode == 200 && response.body['response_code'] == 'default_200') {
       _subCategoryList= [];
       response.body['content']['data'].forEach((category) {

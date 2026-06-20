@@ -57,7 +57,6 @@ class HorizontalScrollServiceView extends GetView<ServiceController> {
                     Dimensions.paddingSizeExtraSmall,
                   ),
                   child: TitleWidget(
-                    textDecoration: TextDecoration.underline,
                     title: fromPage!,
                     displayTitle: titleOverride,
                     onTap: () => fromPage == "popular_services" ? Get.toNamed(RouteHelper.getSearchResultRoute(fromPage: "popular")) : Get.toNamed(RouteHelper.allServiceScreenRoute(fromPage!)),

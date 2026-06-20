@@ -4,6 +4,7 @@ class CartServiceInfoModel {
   String? zoneId;
   String? serviceAddressId;
   String? serviceSchedule;
+  bool isAsapBooking = false;
 
   CartServiceInfoModel({
     this.id,
@@ -11,6 +12,7 @@ class CartServiceInfoModel {
     this.zoneId,
     this.serviceAddressId,
     this.serviceSchedule,
+    this.isAsapBooking = false,
   });
 
   static String? _asString(dynamic value) {
@@ -26,6 +28,7 @@ class CartServiceInfoModel {
     zoneId = _asString(json['zone_id']);
     serviceAddressId = _asString(json['service_address_id']);
     serviceSchedule = _asString(json['service_schedule']);
+    isAsapBooking = false;
   }
 
   Map<String, dynamic> toJson() {

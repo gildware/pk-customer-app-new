@@ -18,7 +18,6 @@ class WebRecentlyServiceView extends StatelessWidget {
 
               const SizedBox(height: Dimensions.paddingSizeTextFieldGap),
               TitleWidget(
-                textDecoration: TextDecoration.underline,
                 title: 'recently_view_services'.tr,
                 onTap: () => Get.toNamed(RouteHelper.allServiceScreenRoute("recently_view_services")),
                 isShowSeeAllButton: serviceController.recentlyViewServiceList!.length > 7,

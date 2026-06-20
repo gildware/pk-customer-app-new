@@ -25,7 +25,6 @@ class CategoryView extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
               TitleWidget(
-                textDecoration: TextDecoration.underline,
                 title: MobileAppHomeHelper.sectionTitle(sectionKey, 'all_categories'),
                 onTap: ()=> Get.toNamed(RouteHelper.getAllCategoriesScreen()),
                 isShowSeeAllButton: categoryList.length > 7,

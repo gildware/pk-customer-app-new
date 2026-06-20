@@ -190,13 +190,15 @@ class RouteHelper {
   
   static String getCategoryRoute(String fromPage,String campaignID) => '$categories?fromPage=$fromPage&campaignID=$campaignID';
   static String getCategoryProductRoute(String slug, String name, String subCategoryIndex) {
-    String slug = name.toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
-        .replaceAll(RegExp(r'\s+'), '-')
-        .replaceAll(RegExp(r'-+'), '-')
-        .trim();
+    final categorySlug = slug.trim().isNotEmpty
+        ? slug.trim()
+        : name.toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+            .replaceAll(RegExp(r'\s+'), '-')
+            .replaceAll(RegExp(r'-+'), '-')
+            .trim();
 
-    return '$categoryProduct/$slug?index=$subCategoryIndex';
+    return '$categoryProduct/$categorySlug?index=$subCategoryIndex';
   }
   static String getSupportRoute() => support;
   static String getUpdateRoute(String fromPage) => '$update?update=$fromPage';
@@ -390,11 +392,14 @@ class RouteHelper {
       return getRoute( BottomNavScreen(
         pageIndex: Get.parameters['page'] == 'home' ? 0 :
         Get.parameters['page'] == 'booking' ? 1 :
-        Get.parameters['page'] == 'biddings' ? 2 :
-        Get.parameters['page'] == 'cart' ? 2 :
-        Get.parameters['page'] == 'ai-chat' ? (AppConstants.enableAiChat ? 3 : 0) :
-        Get.parameters['page'] == 'order' ? 3 :
-        Get.parameters['page'] == 'menu' ? 4 : 0,
+        Get.parameters['page'] == 'favorites' ? 2 :
+        // Biddings tab — only when bidding enabled via admin (Mobile App Management → App Features).
+        Get.parameters['page'] == 'biddings'
+            ? (Get.find<SplashController>().configModel.content?.biddingStatus == 1 ? 3 : 0) :
+        Get.parameters['page'] == 'cart' ? 3 :
+        Get.parameters['page'] == 'ai-chat' ? (AppConstants.enableAiChat ? 4 : 0) :
+        Get.parameters['page'] == 'order' ? 4 :
+        Get.parameters['page'] == 'menu' ? 5 : 0,
         previousAddress: addressData,
         showServiceNotAvailableDialog: Get.parameters['showDialog'] == 'false' ? false : true,
       ));
@@ -817,21 +822,34 @@ class RouteHelper {
   }
 
   static ({String path, Map<String, String>? parameters}) parseRedirectRouteToNavigate(String redirectRoute) {
-    try {
-      final decodedParams = jsonDecode(redirectRoute) as Map<String, dynamic>;
-      final redirectPath = decodedParams['redirect_to'] ?? RouteHelper.initial;
-
-      final uri = Uri.parse(redirectPath);
-      final mergedParameters = _mergeRouteParameters(uri, decodedParams);
-      final cleanPath = uri.path.isNotEmpty ? uri.path : RouteHelper.initial;
-
-      return (path: cleanPath, parameters: mergedParameters);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error parsing redirect route: $e');
-      }
+    final trimmed = redirectRoute.trim();
+    if (trimmed.isEmpty) {
       return _defaultRouteData();
     }
+
+    // Sign-in screens pass JSON; OTP/login flows often pass a plain route string.
+    if (trimmed.startsWith('{')) {
+      try {
+        final decodedParams = jsonDecode(trimmed) as Map<String, dynamic>;
+        final redirectPath = decodedParams['redirect_to'] ?? RouteHelper.initial;
+
+        final uri = Uri.parse(redirectPath);
+        final mergedParameters = _mergeRouteParameters(uri, decodedParams);
+        final cleanPath = uri.path.isNotEmpty ? uri.path : RouteHelper.initial;
+
+        return (path: cleanPath, parameters: mergedParameters);
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error parsing redirect route: $e');
+        }
+        return _defaultRouteData();
+      }
+    }
+
+    final uri = Uri.parse(trimmed.startsWith('/') ? trimmed : '/$trimmed');
+    final path = uri.path.isEmpty ? RouteHelper.initial : uri.path;
+    final parameters = uri.queryParameters.isEmpty ? null : uri.queryParameters;
+    return (path: path, parameters: parameters);
   }
 
   /// Merges query parameters from URI and decoded JSON, excluding 'redirect_to'

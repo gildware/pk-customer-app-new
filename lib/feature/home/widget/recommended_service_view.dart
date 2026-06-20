@@ -46,7 +46,6 @@ class RecommendedServiceView extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(Dimensions.paddingSizeDefault, 15, Dimensions.paddingSizeDefault,  Dimensions.paddingSizeSmall,),
                           child: TitleWidget(
-                            textDecoration: TextDecoration.underline,
                             title: 'recommended_for_you',
                             displayTitle: titleOverride,
                             onTap: () => Get.toNamed(RouteHelper.getSearchResultRoute(fromPage: "recommended")),

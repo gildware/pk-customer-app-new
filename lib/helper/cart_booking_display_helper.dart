@@ -41,10 +41,34 @@ class CartBookingDisplayHelper {
     return null;
   }
 
+  static String formatAsapWithDateTime(DateTime parsed) {
+    return '${'ASAP'.tr} (${DateConverter.dateMonthYearTimeTwentyFourFormat(parsed)})';
+  }
+
+  static bool isAsapBookingSchedule(String raw, DateTime parsed) {
+    if (Get.isRegistered<CartController>()) {
+      final info = Get.find<CartController>().cartServiceInfo;
+      final storedSchedule = info?.serviceSchedule?.trim();
+      if (info?.isAsapBooking == true &&
+          storedSchedule != null &&
+          storedSchedule.isNotEmpty &&
+          storedSchedule == raw.trim()) {
+        return true;
+      }
+    }
+    return isAsapSchedule(parsed);
+  }
+
   static bool isAsapSchedule(DateTime parsed) {
     final now = DateTime.now();
-    return parsed.difference(now).inMinutes <= 5 &&
-        parsed.isAfter(now.subtract(const Duration(minutes: 1)));
+    // Legacy ASAP bookings stored ~2 minutes ahead.
+    if (parsed.difference(now).inMinutes <= 5 &&
+        parsed.isAfter(now.subtract(const Duration(minutes: 1)))) {
+      return true;
+    }
+    // ASAP bookings use the minimum 2-hour lead time.
+    final minimumLeadTime = now.add(const Duration(hours: 2));
+    return parsed.difference(minimumLeadTime).inMinutes.abs() <= 2;
   }
 
   static bool isCartItemScheduleInPast(CartModel cart) {
@@ -75,10 +99,8 @@ class CartBookingDisplayHelper {
     final parsed = DateConverter.tryParseScheduleDateTime(raw);
     if (parsed == null) return raw;
 
-    final now = DateTime.now();
-    if (parsed.difference(now).inMinutes <= 5 &&
-        parsed.isAfter(now.subtract(const Duration(minutes: 1)))) {
-      return 'ASAP'.tr;
+    if (isAsapBookingSchedule(raw, parsed)) {
+      return formatAsapWithDateTime(parsed);
     }
     return DateConverter.dateOrdinalMonthYearTimeFormat(parsed);
   }

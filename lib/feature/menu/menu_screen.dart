@@ -29,18 +29,7 @@ class _MenuScreenState extends State<MenuScreen> {
       MenuModel(iconKey: 'language', icon: Images.translate, title: 'language'.tr, route: RouteHelper.getLanguageScreen('fromSettingsPage')),
       MenuModel(iconKey: 'settings', icon: Images.settings, title: 'settings'.tr, route: RouteHelper.getSettingRoute()),
 
-      MenuModel(
-        iconKey: 'bookings',
-        icon: Images.bookingsIcon,
-        title: configModel.content?.guestCheckout == 0 || isLoggedIn ? 'bookings'.tr : "track_booking".tr,
-        route: !isLoggedIn && configModel.content?.guestCheckout == 1
-            ? RouteHelper.getTrackBookingRoute()
-            : RouteHelper.getBookingScreenRoute(true),
-      ),
-
-      MenuModel(iconKey: 'vouchers', icon: Images.voucherIcon, title: 'vouchers'.tr, route: RouteHelper.getVoucherRoute(fromPage: 'menu')),
-
-      MenuModel(iconKey: 'my_favorite', icon: Images.myFavorite, title: 'my_favorite'.tr, route: RouteHelper.getMyFavoriteScreen()),
+      // Bidding/post menu — hidden unless enabled via admin (Mobile App Management → App Features).
       if(configModel.content?.biddingStatus == 1)
         MenuModel(
           iconKey: 'custom_post',

@@ -88,6 +88,9 @@ class CartController extends GetxController implements GetxService {
   List<ProviderData>? _filteredBookingProviders;
   List<ProviderData>? get filteredBookingProviders => _filteredBookingProviders;
 
+  bool _isLoadingBookingProviders = false;
+  bool get isLoadingBookingProviders => _isLoadingBookingProviders;
+
   String subcategoryId ='';
 
   int selectedProviderIndex = -1;
@@ -151,6 +154,13 @@ class CartController extends GetxController implements GetxService {
       _cartServiceInfo = CartServiceInfoModel.fromJson(
         Map<String, dynamic>.from(content['cart_service_info'] as Map),
       );
+      final schedule = _cartServiceInfo?.serviceSchedule;
+      if (schedule != null && schedule.isNotEmpty) {
+        final parsed = DateConverter.tryParseScheduleDateTime(schedule);
+        if (parsed != null && CartBookingDisplayHelper.isAsapSchedule(parsed)) {
+          _cartServiceInfo!.isAsapBooking = true;
+        }
+      }
       _applyCartServiceInfoToCheckout();
     } else {
       _cartServiceInfo = null;
@@ -160,6 +170,7 @@ class CartController extends GetxController implements GetxService {
   Future<void> getCartListFromServer({
     bool shouldUpdate = true,
     bool forceFromServer = false,
+    bool skipZoneRefresh = false,
   }) async {
     if (!BookingAuthHelper.shouldSyncCartFromServer()) {
       _cartList = [];
@@ -173,7 +184,9 @@ class CartController extends GetxController implements GetxService {
       _isCartLoading = true;
       _cartLoadFailed = false;
       if (shouldUpdate) update();
-      await Get.find<LocationController>().refreshSavedAddressZone();
+      if (!skipZoneRefresh) {
+        await Get.find<LocationController>().refreshSavedAddressZone();
+      }
       await cartRepo.clearCartListCache();
       final clientResponse = await cartRepo.getCartListFromServer(source: DataSourceEnum.client);
       if (clientResponse.isSuccess &&
@@ -466,6 +479,7 @@ class CartController extends GetxController implements GetxService {
     String? serviceAddressId,
     String? serviceSchedule,
     bool showApiErrors = true,
+    bool refreshCartAfterAdd = true,
   }) async {
     final items = _initialCartList.where((cart) => cart.quantity > 0).toList();
     if (items.isEmpty) {
@@ -484,22 +498,27 @@ class CartController extends GetxController implements GetxService {
       return false;
     }
 
-    var addedCount = 0;
-    for (final item in items) {
-      final added = await addToCartApi(
-        item,
-        providerId: providerId ?? '',
-        showApiErrors: showApiErrors,
-        serviceOverride: service,
-        zoneId: zoneId,
-        serviceAddressId: serviceAddressId,
-        serviceSchedule: serviceSchedule,
-      );
-      if (added) addedCount++;
-    }
+    final results = await Future.wait(
+      items.map(
+        (item) => addToCartApi(
+          item,
+          providerId: providerId ?? '',
+          showApiErrors: showApiErrors,
+          serviceOverride: service,
+          zoneId: zoneId,
+          serviceAddressId: serviceAddressId,
+          serviceSchedule: serviceSchedule,
+        ),
+      ),
+    );
+    final addedCount = results.where((added) => added).length;
 
-    if (addedCount > 0) {
-      await getCartListFromServer(shouldUpdate: false, forceFromServer: true);
+    if (addedCount > 0 && refreshCartAfterAdd) {
+      await getCartListFromServer(
+        shouldUpdate: false,
+        forceFromServer: true,
+        skipZoneRefresh: true,
+      );
     }
 
     return addedCount == items.length;
@@ -537,6 +556,7 @@ class CartController extends GetxController implements GetxService {
     _pendingBookingSchedule = null;
     _pendingBookingProvider = null;
     _filteredBookingProviders = null;
+    _isLoadingBookingProviders = false;
     _totalPrice = 0;
     _walletBalance = 0;
     _referralAmount = 0;
@@ -680,6 +700,7 @@ class CartController extends GetxController implements GetxService {
     _pendingBookingSchedule = null;
     _pendingBookingProvider = null;
     _filteredBookingProviders = null;
+    _isLoadingBookingProviders = false;
     selectedProviderIndex = -1;
     if (shouldUpdate) update();
   }
@@ -716,7 +737,9 @@ class CartController extends GetxController implements GetxService {
         Get.find<LocationController>().getUserAddress()?.zoneId ??
         '';
     final origin = _providerListOriginCoordinates();
-    _isLoading = true;
+    _isLoadingBookingProviders = true;
+    selectedProviderIndex = -1;
+    _pendingBookingProvider = null;
     update();
     try {
       Response response = await cartRepo.getProviderBasedOnSubcategory(
@@ -746,10 +769,8 @@ class CartController extends GetxController implements GetxService {
       if (_filteredBookingProviders != null && _filteredBookingProviders!.isNotEmpty) {
         _sortProvidersByDistance(_filteredBookingProviders!);
       }
-      selectedProviderIndex = -1;
-      _pendingBookingProvider = null;
     } finally {
-      _isLoading = false;
+      _isLoadingBookingProviders = false;
       update();
     }
   }
@@ -796,11 +817,13 @@ class CartController extends GetxController implements GetxService {
     required String zoneId,
     required String addressId,
     required String schedule,
+    bool isAsapBooking = false,
   }) {
     _cartServiceInfo = CartServiceInfoModel(
       zoneId: zoneId,
       serviceAddressId: addressId,
       serviceSchedule: schedule,
+      isAsapBooking: isAsapBooking,
     );
   }
 
@@ -843,7 +866,6 @@ class CartController extends GetxController implements GetxService {
     _isLoading = true;
     update();
 
-    var otherInfoSaved = false;
     try {
       cartRepo.apiClient.updateHeader(
         cartRepo.apiClient.token,
@@ -853,40 +875,47 @@ class CartController extends GetxController implements GetxService {
       );
 
       final providerId = _pendingBookingProvider?.id;
-    final formattedSchedule = cartRepo.formatScheduleForApi(_pendingBookingSchedule!);
-    final cartAdded = await addBookingCartItemsToServer(
-      service: service,
-      providerId: providerId,
-      zoneId: zoneId,
-      serviceAddressId: addressId,
-      serviceSchedule: formattedSchedule,
-      showApiErrors: true,
-    );
+      final formattedSchedule = cartRepo.formatScheduleForApi(_pendingBookingSchedule!);
+      final cartAdded = await addBookingCartItemsToServer(
+        service: service,
+        providerId: providerId,
+        zoneId: zoneId,
+        serviceAddressId: addressId,
+        serviceSchedule: formattedSchedule,
+        showApiErrors: true,
+        refreshCartAfterAdd: false,
+      );
 
       if (!cartAdded) return;
 
-      final otherInfoResponse = await cartRepo.updateCartOtherInfo(
-        zoneId: zoneId!,
-        serviceAddressId: addressId!,
-        serviceSchedule: formattedSchedule,
-      );
+      await Future.wait([
+        cartRepo.updateCartOtherInfo(
+          zoneId: zoneId!,
+          serviceAddressId: addressId!,
+          serviceSchedule: formattedSchedule,
+        ),
+        getCartListFromServer(
+          shouldUpdate: false,
+          forceFromServer: true,
+          skipZoneRefresh: true,
+        ),
+      ]);
 
-      otherInfoSaved = otherInfoResponse.statusCode == 200 &&
-          otherInfoResponse.body is Map &&
-          (otherInfoResponse.body['response_code']?.toString() == 'default_update_200' ||
-              otherInfoResponse.body['response_code']?.toString() == 'default_store_200');
+      final scheduleController = Get.find<ScheduleController>();
+      final isAsapBooking = scheduleController.selectedScheduleType == ScheduleType.asap ||
+          scheduleController.initialSelectedScheduleType == ScheduleType.asap;
 
-    _persistBookingCartServiceInfo(
+      _persistBookingCartServiceInfo(
         zoneId: zoneId!,
         addressId: addressId!,
         schedule: formattedSchedule,
+        isAsapBooking: isAsapBooking,
       );
 
       final locationController = Get.find<LocationController>();
       address.zoneId = zoneId;
       locationController.updateSelectedAddress(address, shouldUpdate: false);
-      await locationController.saveUserAddress(address);
-      final scheduleController = Get.find<ScheduleController>();
+      unawaited(locationController.saveUserAddress(address));
       if (scheduleController.selectedScheduleType == ScheduleType.asap) {
         scheduleController.buildSchedule(shouldUpdate: false, scheduleType: ScheduleType.asap);
       } else {
@@ -896,7 +925,6 @@ class CartController extends GetxController implements GetxService {
           schedule: _pendingBookingSchedule,
         );
       }
-      await getCartListFromServer(shouldUpdate: false, forceFromServer: true);
 
       try {
         for (CartModel item in _initialCartList) {
@@ -914,7 +942,7 @@ class CartController extends GetxController implements GetxService {
 
       resetBookingFlow(shouldUpdate: false);
       Get.back();
-      _showAddedToCartDialog(bookingDetailsSaved: otherInfoSaved);
+      _showAddedToCartDialog(service: service);
       onSuccess();
     } catch (e, stack) {
       ErrorLogger.record(e, stack, reason: 'CartController.completeBookingAndAddToCart');
@@ -925,14 +953,29 @@ class CartController extends GetxController implements GetxService {
     }
   }
 
-  void _showAddedToCartDialog({required bool bookingDetailsSaved}) {
-    Future.delayed(const Duration(milliseconds: 400), () {
+  void _showAddedToCartDialog({Service? service}) {
+    Future.delayed(const Duration(milliseconds: 300), () {
       final context = Get.overlayContext ?? Get.context;
       if (context == null) return;
 
+      final thumbnail = service?.thumbnailFullPath?.trim();
+      final hasThumbnail = thumbnail != null && thumbnail.isNotEmpty;
+
       Get.dialog(
         ConfirmationDialog(
-          icon: Images.cart,
+          iconWidget: hasThumbnail
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                  child: CustomImage(
+                    image: thumbnail!,
+                    height: 72,
+                    width: 72,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : null,
+          icon: Images.successIcon,
+          iconSize: 72,
           title: 'item_added_to_cart'.tr,
           description: 'item_added_to_cart_message'.tr,
           yesButtonText: 'go_to_cart',

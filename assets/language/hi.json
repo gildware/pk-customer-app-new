@@ -982,6 +982,7 @@
   "single_file_size_can_not_be_more_than": "एकल फ़ाइल का आकार इससे अधिक नहीं हो सकता",
   "valid_for_minimum_booking_amount_of": "न्यूनतम बुकिंग राशि के लिए मान्य",
   "my_favorite": "मेरे पसंदीदा",
+  "favourites": "पसंदीदा",
   "want_to_remove_provider": "क्या आप इस प्रदाता को पसंदीदा सूची से हटाना चाहते हैं?",
   "want_to_remove_service": "क्या आप इस सेवा को पसंदीदा सूची से हटाना चाहते हैं?",
   "provider_remove_message": "प्रदाता को अपनी पसंदीदा सूची से हटाने पर, आप प्रदाता को पसंदीदा सूची में दोबारा नहीं ढूंढ पाएंगे। ",

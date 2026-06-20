@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:demandium/feature/booking/controller/service_booking_controller.dart';
 import 'package:demandium/feature/create_post/controller/create_post_controller.dart';
+import 'package:demandium/feature/favorite/controller/my_favorite_controller.dart';
 import 'package:demandium/helper/address_session_helper.dart';
 import 'package:demandium/feature/auth/controller/auth_controller.dart';
 import 'package:get/get.dart';
 
-enum BnbItem {homePage, bookings, biddings, aiChat, more}
+enum BnbItem {homePage, bookings, favorites, biddings, aiChat, more}
 class BottomNavController extends GetxController implements GetxService{
   static BottomNavController get to => Get.find();
 
@@ -37,6 +38,12 @@ class BottomNavController extends GetxController implements GetxService{
       case BnbItem.bookings:
         if (Get.isRegistered<ServiceBookingController>()) {
           await Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+        }
+        break;
+      case BnbItem.favorites:
+        if (Get.isRegistered<MyFavoriteController>()) {
+          await Get.find<MyFavoriteController>().getFavoriteServiceList(1, true);
+          await Get.find<MyFavoriteController>().getProviderList(1, true);
         }
         break;
       case BnbItem.biddings:

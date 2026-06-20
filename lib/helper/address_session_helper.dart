@@ -341,6 +341,7 @@ class AddressSessionHelper {
       final valid = await validateAndRefreshActiveAddress();
       if (valid && isServiceableAddress(locationController.getUserAddress())) {
         await resetHomeData();
+        markHomeRefreshPending();
         return false;
       }
       if (valid && !isServiceableAddress(locationController.getUserAddress())) {

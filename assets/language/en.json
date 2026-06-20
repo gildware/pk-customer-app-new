@@ -1008,6 +1008,7 @@
   "single_file_size_can_not_be_more_than": "Single file size can not be more than",
   "valid_for_minimum_booking_amount_of" : "Valid for minimum booking amount of",
   "my_favorite": "My Favorite",
+  "favourites": "Favourites",
   "want_to_remove_provider": "Want to remove this provider from favorite list?",
   "want_to_remove_service": "Want to remove this service from favorite list?",
   "provider_remove_message": "By removing the provider from your favorite list, you won’t be able to find the provider in the favorite list again. ",

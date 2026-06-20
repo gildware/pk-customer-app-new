@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 enum ScheduleType {asap, schedule}
 
+const Duration _kMinimumAsapLeadTime = Duration(hours: 2);
+
 class ScheduleController extends GetxController implements GetxService{
 
   final ScheduleRepo scheduleRepo;
@@ -26,8 +28,8 @@ class ScheduleController extends GetxController implements GetxService{
   ScheduleType? _initialSelectedScheduleType;
   ScheduleType? get initialSelectedScheduleType => _initialSelectedScheduleType;
 
-  String selectedDate =   DateFormat('yyyy-MM-dd').format(DateTime.now());
-  String selectedTime = DateFormat('HH:mm:ss').format(DateTime.now().add(const Duration(minutes: 2)));
+  String selectedDate = DateFormat('yyyy-MM-dd').format(_asapScheduleDateTime());
+  String selectedTime = DateFormat('HH:mm:ss').format(_asapScheduleDateTime());
 
   String? scheduleTime;
 
@@ -88,7 +90,7 @@ class ScheduleController extends GetxController implements GetxService{
       scheduleTime = schedule;
     }else if(_initialSelectedScheduleType == ScheduleType.asap){
       _selectedScheduleType = ScheduleType.asap;
-     scheduleTime = "${DateFormat('yyyy-MM-dd').format(DateTime.now())} ${DateFormat('HH:mm:ss').format(DateTime.now().add(const Duration(minutes: 2)))}";
+     scheduleTime = _formatAsapScheduleTime();
    }else{
       _selectedScheduleType = ScheduleType.schedule;
      scheduleTime = "$selectedDate $selectedTime";
@@ -137,7 +139,7 @@ class ScheduleController extends GetxController implements GetxService{
     if(Get.find<SplashController>().configModel.content?.instantBooking == 1){
       _selectedScheduleType = ScheduleType.asap;
       _initialSelectedScheduleType = ScheduleType.asap;
-      scheduleTime = "${DateFormat('yyyy-MM-dd').format(DateTime.now())} ${DateFormat('HH:mm:ss').format(DateTime.now().add(const Duration(minutes: 2)))}";
+      scheduleTime = _formatAsapScheduleTime();
     }else{
       _selectedScheduleType = ScheduleType.schedule;
       scheduleTime = null;
@@ -148,9 +150,8 @@ class ScheduleController extends GetxController implements GetxService{
   void initBookingScheduleForFlow() {
     _selectedScheduleType = ScheduleType.asap;
     _initialSelectedScheduleType = ScheduleType.asap;
-    scheduleTime =
-        "${DateFormat('yyyy-MM-dd').format(DateTime.now())} ${DateFormat('HH:mm:ss').format(DateTime.now().add(const Duration(minutes: 2)))}";
-    final minTime = DateTime.now().add(const Duration(hours: 2));
+    scheduleTime = _formatAsapScheduleTime();
+    final minTime = _asapScheduleDateTime();
     selectedDate = DateFormat('yyyy-MM-dd').format(minTime);
     selectedTime = DateFormat('HH:mm:ss').format(minTime);
     update();
@@ -307,6 +308,13 @@ class ScheduleController extends GetxController implements GetxService{
       _pickedCustomRepeatBookingDateTimeList.addAll(_pickedInitialCustomRepeatBookingDateTimeList);
       update();
     }
+  }
+
+  static DateTime _asapScheduleDateTime() => DateTime.now().add(_kMinimumAsapLeadTime);
+
+  static String _formatAsapScheduleTime() {
+    final asap = _asapScheduleDateTime();
+    return '${DateFormat('yyyy-MM-dd').format(asap)} ${DateFormat('HH:mm:ss').format(asap)}';
   }
 
   void calculateScheduleCountDays ({ServiceType? serviceType, required RepeatBookingType repeatBookingType}){

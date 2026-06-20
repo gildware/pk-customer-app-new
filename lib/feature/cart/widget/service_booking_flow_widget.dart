@@ -248,7 +248,10 @@ class _ScheduleStep extends StatelessWidget {
 
       String displayTime = 'select_schedule_time'.tr;
       if (isAsap && scheduleController.scheduleTime != null) {
-        displayTime = 'ASAP'.tr;
+        final parsed = _parseScheduleTime(scheduleController.scheduleTime!);
+        displayTime = parsed != null
+            ? CartBookingDisplayHelper.formatAsapWithDateTime(parsed)
+            : 'ASAP'.tr;
       } else if (isCustom && scheduleController.scheduleTime != null) {
         final parsed = _parseScheduleTime(scheduleController.scheduleTime!);
         displayTime = parsed != null
@@ -402,13 +405,7 @@ class _ProviderStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<CartController>(builder: (cartController) {
-      if (cartController.isLoading) {
-        return const Padding(
-          padding: EdgeInsets.all(Dimensions.paddingSizeLarge),
-          child: Center(child: CircularProgressIndicator()),
-        );
-      }
-
+      final isLoadingProviders = cartController.isLoadingBookingProviders;
       final providers = cartController.filteredBookingProviders ?? [];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,9 +413,11 @@ class _ProviderStep extends StatelessWidget {
         children: [
           _StepHeader(
             title: 'available_providers'.tr,
-            subtitle: providers.isEmpty
-                ? 'no_provider_available_for_slot'.tr
-                : '${providers.length} ${providers.length > 1 ? 'providers_available'.tr : 'provider_available'.tr}',
+            subtitle: isLoadingProviders
+                ? 'loading'.tr
+                : providers.isEmpty
+                    ? 'no_provider_available_for_slot'.tr
+                    : '${providers.length} ${providers.length > 1 ? 'providers_available'.tr : 'provider_available'.tr}',
           ),
           GestureDetector(
             onTap: () {
@@ -456,16 +455,21 @@ class _ProviderStep extends StatelessWidget {
           ),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: Get.height * 0.3),
-            child: providers.isEmpty
-                ? const SizedBox()
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: providers.length,
-                    itemBuilder: (context, index) => ProviderCartItemView(
-                      providerData: providers[index],
-                      index: index,
-                    ),
-                  ),
+            child: isLoadingProviders
+                ? const Padding(
+                    padding: EdgeInsets.all(Dimensions.paddingSizeLarge),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : providers.isEmpty
+                    ? const SizedBox()
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: providers.length,
+                        itemBuilder: (context, index) => ProviderCartItemView(
+                          providerData: providers[index],
+                          index: index,
+                        ),
+                      ),
           ),
           const SizedBox(height: Dimensions.paddingSizeLarge),
           _BookingNavButtons(
@@ -488,10 +492,16 @@ class _PreviewStep extends StatelessWidget {
 
   String _formatPreviewSchedule(String schedule) {
     final parsed = DateConverter.tryParseScheduleDateTime(schedule);
-    if (parsed != null) {
-      return DateConverter.dateMonthYearTimeTwentyFourFormat(parsed);
+    if (parsed == null) return schedule;
+
+    final scheduleController = Get.find<ScheduleController>();
+    final isAsap = scheduleController.selectedScheduleType == ScheduleType.asap ||
+        scheduleController.initialSelectedScheduleType == ScheduleType.asap;
+
+    if (isAsap) {
+      return CartBookingDisplayHelper.formatAsapWithDateTime(parsed);
     }
-    return schedule;
+    return DateConverter.dateMonthYearTimeTwentyFourFormat(parsed);
   }
 
   @override

@@ -13,6 +13,12 @@ class _ServiceScheduleState extends State<ServiceSchedule> {
 
   String _formatScheduleDisplay(ScheduleController scheduleController) {
     if (scheduleController.selectedScheduleType == ScheduleType.asap) {
+      if (scheduleController.scheduleTime != null) {
+        final parsed = DateConverter.tryParseScheduleDateTime(scheduleController.scheduleTime!);
+        if (parsed != null) {
+          return CartBookingDisplayHelper.formatAsapWithDateTime(parsed);
+        }
+      }
       return 'ASAP'.tr;
     }
     if (scheduleController.selectedScheduleType == ScheduleType.schedule &&

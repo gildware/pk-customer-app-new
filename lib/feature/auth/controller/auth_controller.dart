@@ -1,5 +1,6 @@
 import 'package:demandium/feature/auth/controller/facebook_login_controller.dart';
 import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/auth_session_helper.dart';
 import 'package:demandium/helper/db_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
@@ -172,7 +173,8 @@ class AuthController extends GetxController implements GetxService {
       await resetCustomerSession(clearAddress: false);
     }
 
-    authRepo.saveUserToken(token);
+    await authRepo.saveUserToken(token);
+    await AuthSessionHelper.syncFromStorage();
 
     Get.find<SplashController>().updateLanguage(true);
 
@@ -195,13 +197,18 @@ class AuthController extends GetxController implements GetxService {
 
     if (redirectRoute != null) {
       final routeData = RouteHelper.parseRedirectRouteToNavigate(redirectRoute);
-      Get.offAllNamed(
+      await Get.offAllNamed(
         routeData.path,
         parameters: (routeData.parameters?.isEmpty ?? true) ? null : routeData.parameters,
       );
     } else {
-      Get.offAllNamed(RouteHelper.getMainRoute('home'));
+      await Get.offAllNamed(RouteHelper.getMainRoute('home'));
     }
+
+    AddressSessionHelper.markHomeRefreshPending();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(AddressSessionHelper.performPendingHomeRefresh());
+    });
   }
 
   Future<void> updateSavedLocalAddress({bool saveContactPersonInfo = true}) async {

@@ -44,7 +44,7 @@ class HomeRecommendedProviderShimmer extends StatelessWidget {
         Dimensions.paddingSizeDefault,
         Dimensions.paddingSizeSmall,
         Dimensions.paddingSizeDefault,
-        0,
+        Dimensions.paddingSizeLarge,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

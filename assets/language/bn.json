@@ -982,6 +982,7 @@
   "single_file_size_can_not_be_more_than": "একক ফাইলের আকার এর বেশি হতে পারে না",
   "valid_for_minimum_booking_amount_of": "মিনিমাম বুকিং এমাউন্টের জন্য ভ্যালিড ",
   "my_favorite": "ফেভারিট",
+  "favourites": "ফেভারিট",
   "want_to_remove_provider": "প্রিয় তালিকা থেকে এই প্রভাইডার অপসারণ করতে চান?",
   "want_to_remove_service": "প্রিয় তালিকা থেকে এই সার্ভিসটি সরাতে চান?",
   "provider_remove_message": "আপনার পছন্দের তালিকা থেকে প্রভাইডারকে সরিয়ে দিয়ে, আপনি আবার প্রিয় তালিকায় প্রভাইডারকে খুঁজে পাবেন না। ",

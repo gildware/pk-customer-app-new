@@ -42,7 +42,6 @@ class _FeatheredCategoryViewState extends State<FeatheredCategoryView> {
                     Dimensions.paddingSizeExtraSmall,
                   ),
                   child: TitleWidget(
-                    textDecoration: TextDecoration.underline,
                     title: categoryList[categoryIndex].name??"",
                     onTap: () =>  Get.toNamed(RouteHelper.getFeatheredCategoryService(
                         categoryList[categoryIndex].name??"", categoryList[categoryIndex].slug ?? ""),

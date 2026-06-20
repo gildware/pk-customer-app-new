@@ -85,7 +85,6 @@ class _WebFeatheredCategoryViewState extends State<WebFeatheredCategoryView> {
                             padding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall, right: Dimensions.paddingSizeDefault, left: Dimensions.paddingSizeDefault ),
                             child: Text('see_all'.tr,
                               style: robotoRegular.copyWith(
-                                decoration: TextDecoration.underline,
                                 color:Get.isDarkMode ? Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .8) : Theme.of(context).colorScheme.primary,
                                 fontSize: Dimensions.fontSizeLarge,
                               ),

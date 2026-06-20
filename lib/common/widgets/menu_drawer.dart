@@ -30,30 +30,12 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
       Get.back();
       Get.toNamed(RouteHelper.getSettingRoute());
     }),
-    Menu(iconKey: 'bookings', icon: Images.bookingsIcon, title:  Get.find<SplashController>().configModel.content?.guestCheckout == 0 || Get.find<AuthController>().isLoggedIn() ? 'bookings'.tr : "track_booking".tr, onTap: () {
-      Get.back();
 
-      Get.toNamed(!Get.find<AuthController>().isLoggedIn()
-          && Get.find<SplashController>().configModel.content?.guestCheckout == 1
-          ? RouteHelper.getTrackBookingRoute() :
-      RouteHelper.getBookingScreenRoute(true),
-      );
-    }),
-
+    // Bidding/post menu — hidden unless enabled via admin (Mobile App Management → App Features).
     if(Get.find<SplashController>().configModel.content?.biddingStatus==1)
     Menu(iconKey: 'custom_post', icon: Images.customPostIcon, title: 'my_posts'.tr, onTap: () {
       Get.back();
       Get.toNamed(RouteHelper.getMyPostScreen());
-    }),
-
-    Menu(iconKey: 'vouchers', icon: Images.voucherIcon, title: 'vouchers'.tr, onTap: () {
-      Get.back();
-
-      if(Get.find<LocationController>().getUserAddress() !=null ){
-        Get.toNamed(RouteHelper.getVoucherRoute(fromPage: "menu"));
-      }else{
-        Get.toNamed(RouteHelper.getPickMapRoute( RouteHelper.voucherScreen , true, 'false', null, null,));
-      }
     }),
 
     Menu(iconKey: 'my_favorite', icon: Images.myFavorite, title: 'my_favorite'.tr, onTap: () {

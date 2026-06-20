@@ -38,7 +38,6 @@ class _HomeSubCategoryViewState extends State<HomeSubCategoryView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TitleWidget(
-                  textDecoration: TextDecoration.underline,
                   title: title,
                   onTap: () => Get.toNamed(RouteHelper.getAllCategoriesScreen()),
                   isShowSeeAllButton: (subCategoryList?.length ?? 0) > 3,

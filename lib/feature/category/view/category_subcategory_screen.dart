@@ -30,9 +30,8 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
       availableServiceCount = Get.find<LocationController>().getUserAddress()?.availableServiceCountInZone ?? 0;
     }
 
+    categoryIndex = widget.categoryIndex;
     Get.find<CategoryController>().getCategoryList(false);
-    categoryIndex = widget.categoryIndex ;
-    Get.find<CategoryController>().getSubCategoryList(widget.categorySlug, shouldUpdate: false);
     _syncZoneAndCounts();
 
     super.initState();
