@@ -45,6 +45,14 @@ class ProviderInfo extends StatelessWidget {
             fontSize: provider == null ? Dimensions.fontSizeSmall : Dimensions.fontSizeDefault,
           ),
         ),
+        if (provider != null && provider?.avgRating != null) ...[
+          Gaps.verticalGapOf(Dimensions.paddingSizeExtraSmall),
+          RatingBar(
+            rating: provider?.avgRating,
+            ratingCount: provider?.ratingCount,
+            size: 16,
+          ),
+        ],
         Gaps.verticalGapOf(Dimensions.paddingSizeSmall),
       ]),
     );

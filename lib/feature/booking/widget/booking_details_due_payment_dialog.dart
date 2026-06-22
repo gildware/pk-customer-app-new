@@ -25,12 +25,39 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
   bool _isLaunchingPayment = false;
   final TextEditingController _amountController = TextEditingController();
   final FocusNode _amountFocusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _amountFieldKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _amountFocusNode.addListener(_scrollAmountFieldIntoView);
+  }
 
   @override
   void dispose() {
+    _amountFocusNode.removeListener(_scrollAmountFieldIntoView);
     _amountController.dispose();
     _amountFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollAmountFieldIntoView() {
+    if (!_amountFocusNode.hasFocus) {
+      return;
+    }
+    Future.delayed(const Duration(milliseconds: 300), () {
+      final fieldContext = _amountFieldKey.currentContext;
+      if (fieldContext != null && mounted) {
+        Scrollable.ensureVisible(
+          fieldContext,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          alignment: 0.2,
+        );
+      }
+    });
   }
 
   double get _dueBalance => BookingHelper.getDueBalanceAmount(widget.bookingDetails);
@@ -57,8 +84,13 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Container(
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
       decoration: BoxDecoration(
@@ -80,6 +112,8 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
           clipBehavior: Clip.none,
           children: [
             SingleChildScrollView(
+              controller: _scrollController,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,11 +150,37 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
                   ),
                   if (_selectedType == _payOther) ...[
                     const SizedBox(height: Dimensions.paddingSizeSmall),
-                    CustomTextField(
-                      controller: _amountController,
-                      focusNode: _amountFocusNode,
-                      inputType: TextInputType.number,
-                      hintText: 'enter_amount'.tr,
+                    Padding(
+                      key: _amountFieldKey,
+                      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+                      child: TextFormField(
+                        controller: _amountController,
+                        focusNode: _amountFocusNode,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.done,
+                        style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge),
+                        decoration: InputDecoration(
+                          hintText: 'enter_amount'.tr,
+                          hintStyle: robotoRegular.copyWith(
+                            fontSize: Dimensions.fontSizeLarge,
+                            color: Theme.of(context).hintColor.withValues(alpha: 0.6),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: Dimensions.paddingSizeDefault,
+                            vertical: Dimensions.paddingSizeDefault,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).hintColor.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                   const SizedBox(height: Dimensions.paddingSizeDefault),
@@ -155,6 +215,7 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
           ],
         ),
       ),
+    ),
     );
   }
 

@@ -340,6 +340,7 @@ export 'package:demandium/helper/certificate_pinning.dart';
 export 'package:demandium/helper/payment_redirect_handler.dart';
 export 'package:demandium/helper/address_helper.dart';
 export 'package:demandium/helper/cart_booking_display_helper.dart';
+export 'package:demandium/helper/provider_availability_helper.dart';
 export 'package:demandium/common/widgets/custom_loader_widget.dart';
 export 'package:demandium/feature/cart/widget/provider_item_view.dart';
 export 'package:demandium/feature/home/widget/bottom_create_post_dialog.dart';

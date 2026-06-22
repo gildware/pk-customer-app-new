@@ -44,7 +44,12 @@ class SubmitReviewController extends GetxController {
     if(response.statusCode == 200){
       isEditable[serviceId] = false;
       reviewComments[serviceId]= review;
-      customSnackBar('review_submitted_successfully'.tr,type : ToasterMessageType.success);
+      final message = (response.body is Map && response.body['message'] != null)
+          ? response.body['message'].toString()
+          : 'review_submitted_successfully'.tr;
+      customSnackBar(message, type : ToasterMessageType.success);
+    } else {
+      ApiChecker.checkApi(response);
     }
     _isLoading = false;
     update();
@@ -52,6 +57,8 @@ class SubmitReviewController extends GetxController {
 
 
   Future<void> getReviewList(String bookingId)async{
+    _loading = true;
+    update();
 
     Response response =await submitReviewRepo.getReviewList(bookingId: bookingId);
     if(response.statusCode == 200){

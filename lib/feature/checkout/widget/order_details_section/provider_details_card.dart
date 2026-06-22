@@ -10,23 +10,10 @@ class ProviderDetailsCard extends StatelessWidget {
     return GetBuilder<CartController>(builder: (cartController){
 
 
-      bool timeSlotAvailable;
-      if(  cartController.cartList[0].provider!= null && cartController.cartList[0].provider!.timeSchedule != null ){
-        String? startTime = cartController.cartList[0].provider?.timeSchedule?.startTime;
-        String? endTime = cartController.cartList[0].provider?.timeSchedule?.endTime;
-        final weekends = cartController.cartList[0].provider?.weekends ?? [];
-        String currentTime = DateConverter.convertStringTimeToDate(DateTime.now());
-
-        String dayOfWeek = DateConverter.dateToWeek(DateTime.now());
-
-        if(startTime!=null && endTime !=null){
-          timeSlotAvailable = _isUnderTime(currentTime, startTime, endTime) && (!weekends.contains(dayOfWeek.toLowerCase()));
-        }else{
-          timeSlotAvailable = false;
-        }
-      }else{
-        timeSlotAvailable = false;
-      }
+      final provider = cartController.cartList[0].provider;
+      final bool timeSlotAvailable = provider != null
+          ? ProviderAvailabilityHelper.isWithinWorkingHours(provider, DateTime.now())
+          : false;
 
 
       return Column(children: [
@@ -131,9 +118,5 @@ class ProviderDetailsCard extends StatelessWidget {
         ),
       ]);
     });
-  }
-  bool _isUnderTime(String time, String startTime, String? endTime) {
-    return DateConverter.convertTimeToDateTime(time).isAfter(DateConverter.convertTimeToDateTime(startTime))
-        && DateConverter.convertTimeToDateTime(time).isBefore(DateConverter.convertTimeToDateTime(endTime!));
   }
 }

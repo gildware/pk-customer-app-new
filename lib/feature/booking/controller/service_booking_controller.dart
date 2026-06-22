@@ -120,11 +120,11 @@ class ServiceBookingController extends GetxController implements GetxService {
     }
 
     _selectedBookingStatus = bookingStatusTabs;
+    _bookingList = null;
+    _isTabLoading = true;
     update();
 
     if (firstTimeCall) {
-      _isTabLoading = true;
-      update();
 
       _debounceHelper.run(() {
         getAllBookingService(

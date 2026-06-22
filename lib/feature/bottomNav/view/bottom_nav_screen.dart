@@ -203,6 +203,23 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
     );
   }
 
+  String _iconKeyFor(BnbItem item) {
+    switch (item) {
+      case BnbItem.homePage:
+        return 'bottom_home';
+      case BnbItem.bookings:
+        return 'bookings';
+      case BnbItem.favorites:
+        return 'my_favorite';
+      case BnbItem.biddings:
+        return 'custom_post';
+      case BnbItem.more:
+        return 'bottom_more';
+      case BnbItem.aiChat:
+        return '';
+    }
+  }
+
   Widget _bnbItem({
     required String icon,
     required BnbItem bnbItem,
@@ -218,7 +235,11 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
             isCenterFab
                 ? const SizedBox(width: 20, height: 20)
-                : Image.asset(icon, width: 18, height: 18,
+                : MobileAppIconHelper.icon(
+                    iconKey: _iconKeyFor(bnbItem),
+                    fallbackAsset: icon,
+                    width: 18,
+                    height: 18,
                     color: isSelected ? Colors.white : Colors.white60,
                   ),
             const SizedBox(height: Dimensions.paddingSizeExtraSmall),

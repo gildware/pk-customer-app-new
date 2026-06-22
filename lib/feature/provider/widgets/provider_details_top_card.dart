@@ -63,26 +63,34 @@ class ProviderDetailsTopCard extends StatelessWidget {
                                 ),
                               ),
 
-                              Container(
-                                decoration: BoxDecoration(
-                                  boxShadow: searchBoxShadow,
-                                  color: Theme.of(context).cardColor,
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeEight, vertical: Dimensions.paddingSizeExtraSmall),
-                                child: Row(children: [
-                                  Icon(
-                                    Icons.circle, size: 10,
-                                    color: providerDetails.serviceAvailability == 1 ? Colors.green : Theme.of(context).colorScheme.error,
+                              Builder(builder: (context) {
+                                final availabilityStatus = ProviderAvailabilityHelper.getLiveAvailabilityStatus(providerDetails);
+                                final (statusColor, statusText) = switch (availabilityStatus) {
+                                  ProviderLiveAvailability.available => (Colors.green, 'available'.tr),
+                                  ProviderLiveAvailability.onBreak => (Colors.orange, 'on_break'.tr),
+                                  ProviderLiveAvailability.unavailable => (
+                                    Theme.of(context).colorScheme.error,
+                                    'unavailable'.tr,
                                   ),
-                                  const SizedBox(width: Dimensions.paddingSizeTine),
+                                };
 
-                                  Text(providerDetails.serviceAvailability == 1 ? "available".tr : "unavailable".tr, style: robotoMedium.copyWith(
-                                    color: providerDetails.serviceAvailability == 1 ? Colors.green : Theme.of(context).colorScheme.error,
-                                    fontSize: Dimensions.fontSizeSmall- 2,
-                                  ))
-                                ]),
-                              )
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    boxShadow: searchBoxShadow,
+                                    color: Theme.of(context).cardColor,
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeEight, vertical: Dimensions.paddingSizeExtraSmall),
+                                  child: Row(children: [
+                                    Icon(Icons.circle, size: 10, color: statusColor),
+                                    const SizedBox(width: Dimensions.paddingSizeTine),
+                                    Text(statusText, style: robotoMedium.copyWith(
+                                      color: statusColor,
+                                      fontSize: Dimensions.fontSizeSmall - 2,
+                                    )),
+                                  ]),
+                                );
+                              })
                             ]),
                             const SizedBox(width: Dimensions.paddingSizeDefault),
 

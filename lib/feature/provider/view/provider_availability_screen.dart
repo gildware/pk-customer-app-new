@@ -22,17 +22,12 @@ class ProviderAvailabilityWidget extends StatelessWidget {
             workingDays.add(element);
           }
         }
-        String? startTime = providerBookingController.providerDetailsContent?.provider?.timeSchedule?.startTime;
-        String? endTime = providerBookingController.providerDetailsContent?.provider?.timeSchedule?.endTime;
-        String currentTime = DateConverter.convertStringTimeToDate(DateTime.now());
-        String dayOfWeek = DateConverter.dateToWeek(DateTime.now());
-
-        bool timeSlotAvailable;
-        if(startTime !=null && endTime !=null){
-          timeSlotAvailable = _isUnderTime(currentTime, startTime, endTime) && (!weekends.contains(dayOfWeek.toLowerCase()));
-        }else{
-          timeSlotAvailable = false;
-        }
+        final provider = providerBookingController.providerDetailsContent?.provider;
+        final String? startTime = provider?.timeSchedule?.startTime;
+        final String? endTime = provider?.timeSchedule?.endTime;
+        final bool timeSlotAvailable = provider != null
+            ? ProviderAvailabilityHelper.isWithinWorkingHours(provider, DateTime.now())
+            : false;
 
 
         return SizedBox(
@@ -141,8 +136,4 @@ class ProviderAvailabilityWidget extends StatelessWidget {
     );
   }
 
-  bool _isUnderTime(String time, String startTime, String? endTime) {
-    return DateConverter.convertTimeToDateTime(time).isAfter(DateConverter.convertTimeToDateTime(startTime))
-        && DateConverter.convertTimeToDateTime(time).isBefore(DateConverter.convertTimeToDateTime(endTime!));
-  }
 }
