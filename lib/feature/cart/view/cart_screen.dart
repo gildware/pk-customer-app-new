@@ -205,7 +205,9 @@ class _PriceButtonWidget extends StatelessWidget {
                       cartController.showMinimumAndMaximumOrderValueToaster();
                     }
                   : () {
-                      Get.find<CheckOutController>().updateState(PageState.orderDetails);
+                      final checkout = Get.find<CheckOutController>();
+                      checkout.changePaymentAmountType('full', shouldUpdate: false);
+                      checkout.updateState(PageState.orderDetails);
                       Get.toNamed(RouteHelper.getCheckoutRoute('cart', 'orderDetails', 'null'));
                     },
         ),

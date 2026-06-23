@@ -20,12 +20,6 @@ class _PaymentPageState extends State<PaymentPage> {
   void initState() {
     super.initState();
     final checkout = Get.find<CheckOutController>();
-    if (CheckoutHelper.showBookingPaymentAmountOptions(
-      fromPage: widget.fromPage,
-      isRepeatBooking: Get.find<ScheduleController>().selectedServiceType == ServiceType.repeat,
-    )) {
-      checkout.changePaymentAmountType('full', shouldUpdate: false);
-    }
     Get.find<SplashController>().getConfigData();
     checkout.getPaymentMethodList(avoidPartialPayment: (widget.avoidPartialPayment || Get.find<SplashController>().configModel.content?.partialPayment == 0) );
     checkout.changePaymentMethod(shouldUpdate: false);

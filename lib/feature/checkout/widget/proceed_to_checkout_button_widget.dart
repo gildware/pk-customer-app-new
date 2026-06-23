@@ -225,6 +225,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
 
                       if (showPaymentAmountOptions && (checkoutController.paymentAmountType == null || checkoutController.paymentAmountType!.isEmpty)) {
                         customSnackBar("select_payment_amount_type".tr, type: ToasterMessageType.info);
+                        return;
                       }
                       else if(isRepeatBooking){
                         checkoutController.placeBookingRequest(
@@ -349,13 +350,15 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
     String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-    url = '${AppConstants.baseUrl}/payment?payment_method=${paymentMethod?.gateway}&access_token=$accessToken&zone_id=$zoneId'
+  // Keep payment_amount_type near the start — long base64 address params can truncate trailing query keys.
+    final String amountTypeQuery = (paymentAmountType != null && paymentAmountType.isNotEmpty)
+        ? '&payment_amount_type=$paymentAmountType'
+        : '';
+    url = '${AppConstants.baseUrl}/payment?payment_method=${paymentMethod?.gateway}$amountTypeQuery'
+        '&access_token=$accessToken&zone_id=$zoneId'
         '&service_schedule=$schedule&service_address_id=$addressId&callback=$callbackUrl'
         '&service_address=$encodedAddress&new_user_info=$encodedNewUserInfo&is_partial=$isPartial'
         '&payment_platform=$platform&service_location=$serviceLocation';
-    if (paymentAmountType != null && paymentAmountType.isNotEmpty) {
-      url += '&payment_amount_type=$paymentAmountType';
-    }
 
     if (GetPlatform.isWeb) {
       printLog("url_with_digital_payment:$url");

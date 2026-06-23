@@ -51,13 +51,16 @@ class CheckoutHelper {
     return configModel.content?.bookingConfirmationAmountPerService ?? 100;
   }
 
+  /// Distinct cart service lines (quantity does not multiply confirmation units).
   static int bookingConfirmationUnits() {
     if (!Get.isRegistered<CartController>()) {
       return 0;
     }
     int units = 0;
     for (final cart in Get.find<CartController>().cartList) {
-      units += cart.quantity;
+      if (cart.quantity > 0) {
+        units += 1;
+      }
     }
     return units;
   }
