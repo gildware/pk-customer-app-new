@@ -88,8 +88,8 @@ class SearchShimmerWidget extends StatelessWidget {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisSpacing: Dimensions.paddingSizeDefault,
               mainAxisSpacing:  Dimensions.paddingSizeDefault,
-              mainAxisExtent: ResponsiveHelper.isDesktop(context) ?  270 : 240 ,
-              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 5 : ResponsiveHelper.isTab(context) ? 3 : 2,
+              mainAxisExtent: ServiceCardLayout.gridMainAxisExtent(context),
+              crossAxisCount: ServiceCardLayout.gridCrossAxisCount(context),
             ),
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap:  true, itemCount: 15,

@@ -27,12 +27,7 @@ class WebTrendingServiceView extends StatelessWidget {
 
                   GridView.builder(
                     key: UniqueKey(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisSpacing: Dimensions.paddingSizeDefault,
-                      mainAxisSpacing:  Dimensions.paddingSizeDefault,
-                      mainAxisExtent: ResponsiveHelper.isMobile(context) ?  240 : 270 ,
-                      crossAxisCount: ResponsiveHelper.isMobile(context) ? 2 : ResponsiveHelper.isTab(context) ? 3 : 5,
-                    ),
+                    gridDelegate: ServiceCardLayout.gridDelegate(context),
                     physics:const NeverScrollableScrollPhysics(),
                     shrinkWrap: true,
                     itemCount: serviceController.trendingServiceList!.length>5?5:serviceController.trendingServiceList!.length,

@@ -386,13 +386,7 @@ class _AllServiceViewState extends State<AllServiceView> {
               if(ResponsiveHelper.isWeb())
               const SliverToBoxAdapter(child: SizedBox(height: Dimensions.paddingSizeExtraMoreLarge,)),
               SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisSpacing: Dimensions.paddingSizeDefault,
-                  mainAxisSpacing:  Dimensions.paddingSizeDefault,
-                  childAspectRatio: ResponsiveHelper.isDesktop(context) || ResponsiveHelper.isTab(context)  ? .9 : .75,
-                  crossAxisCount: ResponsiveHelper.isMobile(context) ? 2 : ResponsiveHelper.isTab(context) ? 3 : 5,
-                  mainAxisExtent: 240,
-                ),
+                gridDelegate: ServiceCardLayout.gridDelegate(context),
                 delegate: SliverChildBuilderDelegate(
                       (context, index) {
                     return ServiceWidgetVertical(service: serviceList[index],fromType: widget.fromPage ?? "" ,);

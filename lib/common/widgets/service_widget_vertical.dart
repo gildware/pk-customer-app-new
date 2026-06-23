@@ -26,183 +26,206 @@ class ServiceWidgetVertical extends StatelessWidget {
     return OnHover(
       isItem: true,
       child: GetBuilder<ServiceController>(builder: (serviceController){
-        return Stack(alignment: Alignment.bottomRight, children: [
-          Stack(children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
+        final imageFlex = ServiceCardLayout.imageFlex(context);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+            boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: imageFlex,
+                child: _buildImageStack(context, service, discountModel),
               ),
 
-              child: Padding(padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.start, children: [
-                  Expanded(
-                    flex: ResponsiveHelper.isDesktop(context) && !Get.find<LocalizationController>().isLtr ? 5 : 8,
-                    child: Stack(children: [
-
-                      ClipRRect(
-                        borderRadius: const BorderRadius.all(Radius.circular(Dimensions.radiusSmall)),
-                        child: CustomImage(
-                          image: '${service.thumbnailFullPath}',
-                          fit: BoxFit.cover,width: double.maxFinite,
-                          height: double.infinity,
-                        ),
-                      ),
-
-                      discountModel.discountAmount! > 0 ? Align(alignment: Alignment.topLeft,
-                        child: DiscountTagWidget(
-                          discountAmount: discountModel.discountAmount,
-                          discountAmountType: discountModel.discountAmountType,
-                        ),
-                      ) : const SizedBox(),
-
-                    ],),
-                  ),
-
+              Stack(
+                children: [
+                  Positioned.fill(child: RippleButton(onTap: () => _openService(service))),
                   Padding(
-                    padding: const EdgeInsets.only(top: Dimensions.paddingSizeEight -2 ),
-                    child: Text(
-                      service.name ?? "",
-                      style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeLarge),
-                      maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.start,
+                    padding: const EdgeInsets.fromLTRB(
+                      Dimensions.paddingSizeExtraSmall,
+                      4,
+                      2,
+                      4,
                     ),
-                  ),
-
-                  Row(children: [
-                    SizedBox(
-                      height: 20,
-                      child: Row(children: [
-                        Gaps.horizontalGapOf(3),
-
-                        Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Text(
-                            service.avgRating!.toStringAsFixed(2),
-                            style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall),
-                          ),
-                        ),
-                        Gaps.horizontalGapOf(3),
-
-                        Image(image: AssetImage(Images.starIcon), height: 12, width: 12),
-
-                      ]),
-                    ),
-                    Gaps.horizontalGapOf(5),
-
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Text("(${service.ratingCount})", style: robotoBold.copyWith(
-                        color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .6),
-                        fontSize: Dimensions.fontSizeSmall
-                      )),
-                    )
-                  ]),
-
-                  Expanded(
-                    flex: 3,
                     child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            'starts_from'.tr,
-                            style: robotoRegular.copyWith(
-                                fontSize: Dimensions.fontSizeSmall,
-                                color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .5)),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          service.name ?? "",
+                          style: robotoMedium.copyWith(
+                            fontSize: Dimensions.fontSizeSmall,
+                            height: 1.1,
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'starts_from'.tr,
+                          style: robotoRegular.copyWith(
+                            fontSize: Dimensions.fontSizeExtraSmall,
+                            height: 1.1,
+                            color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .5),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if(showDiscountedPrice)
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(
+                              PriceConverter.convertPrice(lowestPrice.toDouble()),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: robotoRegular.copyWith(
+                                fontSize: Dimensions.fontSizeExtraSmall,
+                                height: 1.1,
+                                decoration: TextDecoration.lineThrough,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        SizedBox(
+                          height: 18,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              if(showDiscountedPrice)
+                              Expanded(
+                                child: showDiscountedPrice ?
+                                Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: Text(
+                                    PriceConverter.convertPrice(
+                                      lowestPrice.toDouble(),
+                                      discount: discountModel.discountAmount!.toDouble(),
+                                      discountType: discountModel.discountAmountType,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: robotoMedium.copyWith(
+                                      fontSize: Dimensions.fontSizeSmall,
+                                      height: 1.1,
+                                      color: Get.isDarkMode ? Theme.of(context).primaryColorLight : Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ) :
                                 Directionality(
                                   textDirection: TextDirection.ltr,
                                   child: Text(
                                     PriceConverter.convertPrice(lowestPrice.toDouble()),
-                                    maxLines: 2,
-                                    style: robotoRegular.copyWith(
-                                        fontSize: Dimensions.fontSizeSmall,
-                                        decoration: TextDecoration.lineThrough,
-                                        color: Theme.of(context).colorScheme.error),),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: robotoMedium.copyWith(
+                                      fontSize: Dimensions.fontSizeSmall,
+                                      height: 1.1,
+                                      color: Get.isDarkMode ? Theme.of(context).primaryColorLight : Theme.of(context).primaryColor,
+                                    ),
+                                  ),
                                 ),
-                              showDiscountedPrice ?
-                              Directionality(
-                                textDirection: TextDirection.ltr,
-                                child: Text(
-                                  PriceConverter.convertPrice(
-                                      lowestPrice.toDouble(),
-                                      discount: discountModel.discountAmount!.toDouble(),
-                                      discountType: discountModel.discountAmountType),
-                                  style: robotoMedium.copyWith(
-                                      fontSize: Dimensions.fontSizeDefault,
-                                      color:  Get.isDarkMode? Theme.of(context).primaryColorLight: Theme.of(context).primaryColor),
-                                ),
-                              ):
-                              Directionality(
-                                textDirection: TextDirection.ltr,
-                                child: Text(
-                                  PriceConverter.convertPrice(lowestPrice.toDouble()),
-                                  style: robotoMedium.copyWith(
-                                      fontSize:Dimensions.fontSizeDefault ,
-                                      color: Get.isDarkMode? Theme.of(context).primaryColorLight: Theme.of(context).primaryColor),
-                                ),
+                              ),
+                              FavoriteIconWidget(
+                                value: service.isFavorite,
+                                serviceId: service.id!,
+                                signInShakeKey: signInShakeKey,
+                                iconSize: 16,
+                                iconPadding: EdgeInsets.zero,
                               ),
                             ],
                           ),
-                        ]),
-                  ),
-                ],),
-              ),
-            ),
-            Positioned.fill(child: RippleButton(onTap: () {
-              final slug = service.slug;
-              if (slug == null || slug.isEmpty) {
-                customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
-                return;
-              }
-              if(fromPage=="search_page"){
-                Get.toNamed(RouteHelper.getServiceRoute(slug,fromPage:"search_page"),);
-              }else{
-                Get.toNamed(RouteHelper.getServiceRoute(slug),);
-              }
-            }))
-          ],),
-
-          if(fromType != 'fromCampaign')
-            Align(
-              alignment:Get.find<LocalizationController>().isLtr ? Alignment.bottomRight : Alignment.bottomLeft,
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
-                    child: Icon(Icons.add,
-                      color: Get.isDarkMode? Theme.of(context).primaryColorLight : Theme.of(context).primaryColor,
-                      size: Dimensions.paddingSizeExtraLarge,
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned.fill(child: RippleButton(onTap: () {
-                    ServiceCenterDialog.show(
-                      context,
-                      service: service,
-                      providerData: providerData,
-                      minPurchasePrice: discountModel.minPurchase,
-                    );
-                  }))
                 ],
               ),
-            ),
-
-          Align(
-            alignment: Alignment.topRight,
-            child: FavoriteIconWidget(
-              value: service.isFavorite,
-              serviceId:  service.id!,
-              signInShakeKey: signInShakeKey,
-            ),
-          )
-
-        ],);
+            ],
+          ),
+        );
       }),
     );
+  }
+
+  Widget _buildImageStack(BuildContext context, Service service, Discount discountModel) {
+    return Stack(children: [
+      CustomImage(
+        image: '${service.thumbnailFullPath}',
+        fit: BoxFit.cover,
+        width: double.maxFinite,
+        height: double.infinity,
+      ),
+
+      discountModel.discountAmount! > 0 ? Align(alignment: Alignment.topLeft,
+        child: DiscountTagWidget(
+          discountAmount: discountModel.discountAmount,
+          discountAmountType: discountModel.discountAmountType,
+        ),
+      ) : const SizedBox(),
+
+      Align(
+        alignment: Alignment.bottomRight,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Dimensions.paddingSizeTine,
+            vertical: 2,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(Dimensions.radiusSmall),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  service.avgRating!.toStringAsFixed(2),
+                  style: robotoRegular.copyWith(
+                    fontSize: Dimensions.fontSizeExtraSmall,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Gaps.horizontalGapOf(3),
+              Image(image: AssetImage(Images.starIcon), height: 10, width: 10),
+              Gaps.horizontalGapOf(3),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  "(${service.ratingCount})",
+                  style: robotoBold.copyWith(
+                    color: Colors.white.withValues(alpha: .8),
+                    fontSize: Dimensions.fontSizeExtraSmall,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      Positioned.fill(child: RippleButton(onTap: () => _openService(service))),
+    ]);
+  }
+
+  void _openService(Service service) {
+    final slug = service.slug;
+    if (slug == null || slug.isEmpty) {
+      customSnackBar('no_service_available'.tr, type: ToasterMessageType.info);
+      return;
+    }
+    if(fromPage=="search_page"){
+      Get.toNamed(RouteHelper.getServiceRoute(slug,fromPage:"search_page"),);
+    }else{
+      Get.toNamed(RouteHelper.getServiceRoute(slug),);
+    }
   }
 }

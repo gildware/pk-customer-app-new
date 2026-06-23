@@ -298,7 +298,9 @@ class ProviderBookingController extends GetxController implements GetxService {
 
               if(serviceList.isNotEmpty){
                 categoryItemList.add(CategoryModelItem(
-                  title: subcategory.name!, serviceList: serviceList,
+                  title: subcategory.name!,
+                  serviceList: serviceList,
+                  subCategoryId: subcategory.id,
                 ));
               }
             }

@@ -18,7 +18,7 @@ class _FeatheredCategoryViewState extends State<FeatheredCategoryView> {
       return categoryList == null ? const SizedBox() :
 
        SizedBox(
-        height: categoryList.length * 330,
+        height: categoryList.length * ServiceCardLayout.featheredCategoryRowHeight(context),
         child: ListView.builder(itemBuilder: (context,categoryIndex){
 
           int serviceItemCount;
@@ -51,7 +51,7 @@ class _FeatheredCategoryViewState extends State<FeatheredCategoryView> {
                 ),
 
                 SizedBox(
-                  height: 255,
+                  height: ServiceCardLayout.horizontalListHeight(context),
                   width: Get.width,
                   child: ListView.builder(
                     shrinkWrap: true,
@@ -62,7 +62,7 @@ class _FeatheredCategoryViewState extends State<FeatheredCategoryView> {
                     itemBuilder: (context, index) {
                       return Padding(padding: const EdgeInsets.only(right: Dimensions.paddingSizeSmall + 2),
                         child: SizedBox(
-                           width: ResponsiveHelper.isTab(context) ? 250 : Get.width / 2.30,
+                           width: ServiceCardLayout.horizontalCardWidth(context),
                             child: ServiceWidgetVertical(service: categoryList[categoryIndex].servicesByCategory![index],
                           fromType: '',
                         )

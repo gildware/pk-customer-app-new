@@ -1295,6 +1295,7 @@
   "company_service_hours_notice": "Services are available between @start and @end. Bookings require at least @hours hours notice.",
   "company_service_outside_hours_notice": "Services are only available between @start and @end. Please choose a time within these hours.",
   "company_service_outside_hours_rescheduled_notice": "We cannot provide service at the selected time. Our available hours are @start to @end. Your booking has been automatically scheduled for @time.",
+  "asap_scheduled_for_notice": "Your service will be scheduled for @time.",
   "asap_scheduled_outside_hours_notice": "The earliest available time is outside our service hours. Your booking has been scheduled for @time.",
   "no_provider_available_for_slot": "No provider is available for the selected date, time and location. You can let Panun Kaergar choose for you.",
   "item_added_to_cart": "Item added to cart",

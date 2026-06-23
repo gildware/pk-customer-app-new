@@ -35,8 +35,8 @@ class ServiceViewVertical extends GetView<ServiceController> {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisSpacing: Dimensions.paddingSizeDefault,
               mainAxisSpacing:  Dimensions.paddingSizeDefault,
-              mainAxisExtent: ResponsiveHelper.isDesktop(context) ?  270 : 240 ,
-              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 5 : ResponsiveHelper.isTab(context) ? 3 : 2 ),
+              mainAxisExtent: ServiceCardLayout.gridMainAxisExtent(context),
+              crossAxisCount: ServiceCardLayout.gridCrossAxisCount(context) ),
             physics: isScrollable! ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
             shrinkWrap: isScrollable! ? false : true,
             itemCount: service!.length,
@@ -58,8 +58,8 @@ class ServiceViewVertical extends GetView<ServiceController> {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisSpacing: Dimensions.paddingSizeDefault,
               mainAxisSpacing:  Dimensions.paddingSizeDefault,
-              mainAxisExtent: ResponsiveHelper.isDesktop(context) ?  270 : 240 ,
-              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 5 : ResponsiveHelper.isTab(context) ? 3 : 2,
+              mainAxisExtent: ServiceCardLayout.gridMainAxisExtent(context),
+              crossAxisCount: ServiceCardLayout.gridCrossAxisCount(context),
             ),
             physics: isScrollable! ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
             shrinkWrap: isScrollable! ? false : true,

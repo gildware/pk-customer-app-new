@@ -31,6 +31,12 @@ class ScheduleController extends GetxController implements GetxService{
 
   String? scheduleTime;
 
+  bool _scheduleAdjustedForAvailability = false;
+  bool get scheduleAdjustedForAvailability => _scheduleAdjustedForAvailability;
+
+  String? _scheduleAdjustmentNotice;
+  String? get scheduleAdjustmentNotice => _scheduleAdjustmentNotice;
+
 
   /// Repeat Booking /////
 
@@ -88,8 +94,8 @@ class ScheduleController extends GetxController implements GetxService{
       scheduleTime = schedule;
     }else if(_initialSelectedScheduleType == ScheduleType.asap){
       _selectedScheduleType = ScheduleType.asap;
-     final resolution = CompanyAvailabilityHelper.resolveAsapScheduleResolution();
-     _applyResolvedSchedule(resolution.schedule);
+      final resolution = CompanyAvailabilityHelper.resolveAsapScheduleResolution();
+      _applyResolvedSchedule(resolution.schedule);
    }else{
       _selectedScheduleType = ScheduleType.schedule;
      scheduleTime = "$selectedDate $selectedTime";
@@ -146,23 +152,58 @@ class ScheduleController extends GetxController implements GetxService{
   }
 
   /// Initializes the service booking schedule step with ASAP selected by default.
-  void initBookingScheduleForFlow({bool notifyIfAdjusted = false}) {
-    applyAsapScheduleResolution(notifyIfAdjusted: notifyIfAdjusted);
+  void initBookingScheduleForFlow() {
+    applyAsapScheduleResolution();
   }
 
   /// Rebuilds ASAP schedule from lead time + company availability rules.
-  CompanyScheduleResolution applyAsapScheduleResolution({bool notifyIfAdjusted = false, bool shouldUpdate = true}) {
+  CompanyScheduleResolution applyAsapScheduleResolution({bool shouldUpdate = true}) {
     final resolution = CompanyAvailabilityHelper.resolveAsapScheduleResolution();
     _selectedScheduleType = ScheduleType.asap;
     _initialSelectedScheduleType = ScheduleType.asap;
     _applyResolvedSchedule(resolution.schedule);
+    _scheduleAdjustedForAvailability = false;
+    _scheduleAdjustmentNotice = null;
+    if (shouldUpdate) {
+      update();
+    }
+    return resolution;
+  }
+
+  /// Resolves a custom schedule against company availability rules.
+  CompanyScheduleResolution applyCustomScheduleResolution(
+    DateTime requested, {
+    bool notifyIfAdjusted = false,
+    bool shouldUpdate = true,
+    bool delayNotification = false,
+  }) {
+    final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(requested);
+    _selectedScheduleType = ScheduleType.schedule;
+    _initialSelectedScheduleType = ScheduleType.schedule;
+    _storeScheduleResolution(resolution);
     if (shouldUpdate) {
       update();
     }
     if (notifyIfAdjusted) {
-      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
+      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(
+        resolution,
+        delay: delayNotification,
+      );
     }
     return resolution;
+  }
+
+  void _storeScheduleResolution(CompanyScheduleResolution resolution) {
+    _applyResolvedSchedule(resolution.schedule);
+    _scheduleAdjustedForAvailability = resolution.wasAdjusted;
+    _scheduleAdjustmentNotice = resolution.wasAdjusted
+        ? CompanyAvailabilityHelper.outsideHoursRescheduledMessage(resolution.schedule)
+        : null;
+  }
+
+  void clearScheduleAdjustmentNotice() {
+    _scheduleAdjustedForAvailability = false;
+    _scheduleAdjustmentNotice = null;
   }
 
   void _applyResolvedSchedule(DateTime schedule) {

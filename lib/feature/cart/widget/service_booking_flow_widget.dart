@@ -267,30 +267,87 @@ class _ScheduleStep extends StatelessWidget {
     }
   }
 
-  String _asapHintText(ScheduleController scheduleController) {
-    final parsed = scheduleController.scheduleTime != null
-        ? _parseScheduleTime(scheduleController.scheduleTime!)
-        : null;
-    if (parsed == null) return 'asap_service_hint'.tr;
-
-    final resolution = CompanyAvailabilityHelper.resolveAsapScheduleResolution();
-    if (resolution.wasAdjusted) {
-      return CompanyAvailabilityHelper.outsideHoursRescheduledMessage(resolution.schedule) ??
-          'asap_scheduled_outside_hours_notice'.trParams({
-            'time': DateConverter.dateMonthYearTimeTwentyFourFormat(parsed),
-          });
+  String _scheduleStepSubtitle(bool isAsap) {
+    if (isAsap) {
+      return CompanyAvailabilityHelper.minimumLeadTimeMessage();
     }
-    return 'asap_service_hint'.tr;
+    return CompanyAvailabilityHelper.availabilityHoursNotice() ??
+        CompanyAvailabilityHelper.minimumLeadTimeMessage();
+  }
+
+  String? _asapNoticeUnderBox(ScheduleController scheduleController) {
+    if (scheduleController.scheduleTime == null) return null;
+    final parsed = _parseScheduleTime(scheduleController.scheduleTime!);
+    if (parsed == null) return null;
+    return CompanyAvailabilityHelper.asapScheduleNotice(parsed);
+  }
+
+  Widget _buildScheduleTimeBox(
+    BuildContext context, {
+    required String displayTime,
+    VoidCallback? onTap,
+  }) {
+    final box = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Dimensions.radiusSeven),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+        color: Theme.of(context).hoverColor.withValues(alpha: 0.5),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(displayTime, style: robotoMedium)),
+          if (onTap != null)
+            Image.asset(
+              Images.scheduleIcon,
+              width: 20,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return box;
+    return InkWell(onTap: onTap, child: box);
   }
 
   void _selectAsapSchedule(
     ScheduleController scheduleController,
     CartController cartController,
   ) {
-    scheduleController.applyAsapScheduleResolution(notifyIfAdjusted: true);
+    scheduleController.applyAsapScheduleResolution();
     if (scheduleController.scheduleTime != null) {
       cartController.setPendingBookingSchedule(scheduleController.scheduleTime!);
     }
+  }
+
+  Widget? _scheduleAdjustmentNotice(BuildContext context, ScheduleController scheduleController) {
+    final notice = scheduleController.scheduleAdjustmentNotice;
+    if (!scheduleController.scheduleAdjustedForAvailability || notice == null) {
+      return null;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Text(
+          notice,
+          style: robotoRegular.copyWith(
+            fontSize: Dimensions.fontSizeSmall,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -301,16 +358,15 @@ class _ScheduleStep extends StatelessWidget {
       final isCustom = _isCustomSelected(scheduleController);
 
       String displayTime = 'select_schedule_time'.tr;
-      if (isAsap && scheduleController.scheduleTime != null) {
+      if (scheduleController.scheduleTime != null) {
         final parsed = _parseScheduleTime(scheduleController.scheduleTime!);
-        displayTime = parsed != null
-            ? CartBookingDisplayHelper.formatAsapWithDateTime(parsed)
-            : 'ASAP'.tr;
-      } else if (isCustom && scheduleController.scheduleTime != null) {
-        final parsed = _parseScheduleTime(scheduleController.scheduleTime!);
-        displayTime = parsed != null
-            ? DateConverter.dateMonthYearTimeTwentyFourFormat(parsed)
-            : scheduleController.scheduleTime!;
+        if (parsed != null) {
+          displayTime = DateConverter.dateMonthYearTimeTwentyFourFormat(parsed);
+        } else if (isAsap) {
+          displayTime = 'ASAP'.tr;
+        } else {
+          displayTime = scheduleController.scheduleTime!;
+        }
       }
 
       return GetBuilder<CartController>(builder: (cartController) {
@@ -320,8 +376,7 @@ class _ScheduleStep extends StatelessWidget {
           children: [
             _StepHeader(
               title: 'preferable_time'.tr,
-              subtitle: CompanyAvailabilityHelper.availabilityHoursNotice() ??
-                  CompanyAvailabilityHelper.minimumLeadTimeMessage(),
+              subtitle: _scheduleStepSubtitle(isAsap),
             ),
             Row(
               children: [
@@ -346,55 +401,46 @@ class _ScheduleStep extends StatelessWidget {
                         ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).disabledColor.withValues(alpha: 0.4),
                     onPressed: () {
+                      scheduleController.clearScheduleAdjustmentNotice();
                       scheduleController.updateScheduleType(
                         scheduleType: ScheduleType.schedule,
                         shouldUpdate: false,
                       );
-                      final min = BookingDateTimePicker.minimumScheduleTime();
-                      scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(min);
-                      scheduleController.selectedTime = DateFormat('HH:mm:ss').format(min);
+                      final earliest = BookingDateTimePicker.earliestCustomBookableDateTime();
+                      scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(earliest);
+                      scheduleController.selectedTime = DateFormat('HH:mm:ss').format(earliest);
                       scheduleController.scheduleTime = null;
                       scheduleController.update();
-                      _openDateTimePicker(context);
+                      _openDateTimePicker(context, cartController);
                     },
                   ),
                 ),
               ],
             ),
-            if (isCustom) ...[
-              const SizedBox(height: Dimensions.paddingSizeSmall),
-              InkWell(
-                onTap: () => _openDateTimePicker(context),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(Dimensions.radiusSeven),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-                    color: Theme.of(context).hoverColor.withValues(alpha: 0.5),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(displayTime, style: robotoMedium)),
-                      Image.asset(
-                        Images.scheduleIcon,
-                        width: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
             if (isAsap && scheduleController.scheduleTime != null) ...[
               const SizedBox(height: Dimensions.paddingSizeSmall),
-              Text(
-                _asapHintText(scheduleController),
-                style: robotoRegular.copyWith(
-                  fontSize: Dimensions.fontSizeSmall,
-                  color: Theme.of(context).hintColor,
+              _buildScheduleTimeBox(context, displayTime: displayTime),
+              if (_asapNoticeUnderBox(scheduleController) != null) ...[
+                const SizedBox(height: Dimensions.paddingSizeSmall),
+                Text(
+                  _asapNoticeUnderBox(scheduleController)!,
+                  style: robotoRegular.copyWith(
+                    fontSize: Dimensions.fontSizeSmall,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
+              ],
+            ],
+            if (isCustom) ...[
+              const SizedBox(height: Dimensions.paddingSizeSmall),
+              _buildScheduleTimeBox(
+                context,
+                displayTime: displayTime,
+                onTap: () => _openDateTimePicker(context, cartController),
               ),
+            ],
+            if (isCustom && _scheduleAdjustmentNotice(context, scheduleController) != null) ...[
+              _scheduleAdjustmentNotice(context, scheduleController)!,
             ],
             const SizedBox(height: Dimensions.paddingSizeLarge),
             _BookingNavButtons(
@@ -411,11 +457,8 @@ class _ScheduleStep extends StatelessWidget {
                 var scheduleToUse = schedule;
                 if (scheduleController.selectedScheduleType == ScheduleType.asap ||
                     scheduleController.initialSelectedScheduleType == ScheduleType.asap) {
-                  final resolution = scheduleController.applyAsapScheduleResolution(shouldUpdate: false);
+                  scheduleController.applyAsapScheduleResolution(shouldUpdate: false);
                   scheduleToUse = scheduleController.scheduleTime ?? schedule;
-                  if (resolution.wasAdjusted) {
-                    CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
-                  }
                 } else if (scheduleController.selectedScheduleType != ScheduleType.asap &&
                     scheduleController.initialSelectedScheduleType != ScheduleType.asap) {
                   final selected = _parseScheduleTime(schedule);
@@ -427,11 +470,11 @@ class _ScheduleStep extends StatelessWidget {
                     customSnackBar(CompanyAvailabilityHelper.minimumLeadTimeMessage(), type: ToasterMessageType.info, aboveOverlays: true);
                     return;
                   }
-                  final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(selected);
+                  final resolution = scheduleController.applyCustomScheduleResolution(
+                    selected,
+                    shouldUpdate: false,
+                  );
                   if (resolution.wasAdjusted) {
-                    CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
-                    scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(resolution.schedule);
-                    scheduleController.selectedTime = DateFormat('HH:mm:ss').format(resolution.schedule);
                     scheduleController.buildSchedule(
                       scheduleType: ScheduleType.schedule,
                       schedule:
@@ -451,19 +494,23 @@ class _ScheduleStep extends StatelessWidget {
     });
   }
 
-  void _openDateTimePicker(BuildContext context) {
+  Future<void> _openDateTimePicker(BuildContext context, CartController cartController) async {
     final scheduleController = Get.find<ScheduleController>();
     if (scheduleController.scheduleTime == null) {
-      final min = BookingDateTimePicker.minimumScheduleTime();
-      scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(min);
-      scheduleController.selectedTime = DateFormat('HH:mm:ss').format(min);
+      final earliest = BookingDateTimePicker.earliestCustomBookableDateTime();
+      scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(earliest);
+      scheduleController.selectedTime = DateFormat('HH:mm:ss').format(earliest);
     }
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const BookingDateTimePicker(),
     );
+    if (scheduleController.scheduleTime != null) {
+      cartController.setPendingBookingSchedule(scheduleController.scheduleTime!);
+      scheduleController.update();
+    }
   }
 }
 

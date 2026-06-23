@@ -38,6 +38,127 @@ class CompanyAvailabilityHelper {
   static DateTime minimumScheduleTime() =>
       DateTime.now().add(getMinimumLeadTimeDuration());
 
+  /// Whether [day] has at least one custom booking slot within company hours.
+  static bool isDayBookableForCustom(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    final minimum = minimumScheduleTime();
+
+    if (!isEnabled) {
+      final dayEnd = DateTime(
+        normalizedDay.year,
+        normalizedDay.month,
+        normalizedDay.day,
+        23,
+        59,
+        59,
+      );
+      return !dayEnd.isBefore(minimum);
+    }
+
+    final config = _config();
+    if (config == null) return true;
+
+    if (_isWeekend(normalizedDay, config.weekends)) return false;
+
+    final startTime = config.startTime;
+    final endTime = config.endTime;
+    if (startTime == null ||
+        endTime == null ||
+        startTime.isEmpty ||
+        endTime.isEmpty ||
+        _isInvalidSchedule(startTime, endTime)) {
+      final dayEnd = DateTime(
+        normalizedDay.year,
+        normalizedDay.month,
+        normalizedDay.day,
+        23,
+        59,
+        59,
+      );
+      return !dayEnd.isBefore(minimum);
+    }
+
+    final dayStart = _serviceStartForDay(normalizedDay, startTime);
+    final dayEnd = _applyTimeToDate(normalizedDay, endTime);
+    final earliestOnDay = dayStart.isBefore(minimum) ? minimum : dayStart;
+
+    return !earliestOnDay.isAfter(dayEnd) && isWithinCompanyHours(earliestOnDay);
+  }
+
+  static bool isCustomBookingDaySelectable(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    final today = DateTime.now();
+    final todayDay = DateTime(today.year, today.month, today.day);
+    if (day.isBefore(todayDay)) return false;
+    return isDayBookableForCustom(day);
+  }
+
+  /// First valid custom booking datetime on or after the minimum lead time.
+  static DateTime earliestCustomBookableDateTime() {
+    final minimum = minimumScheduleTime();
+    final startDay = DateTime(minimum.year, minimum.month, minimum.day);
+
+    for (var offset = 0; offset < 14; offset++) {
+      final day = startDay.add(Duration(days: offset));
+      if (!isCustomBookingDaySelectable(day)) continue;
+      return defaultTimeForCustomDay(day);
+    }
+
+    return minimum;
+  }
+
+  /// Default time to offer when the customer picks [day] in the custom calendar.
+  static DateTime defaultTimeForCustomDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    final minimum = minimumScheduleTime();
+
+    if (!isEnabled) {
+      if (_isSameCalendarDay(minimum, normalizedDay)) return minimum;
+      return DateTime(
+        normalizedDay.year,
+        normalizedDay.month,
+        normalizedDay.day,
+        minimum.hour,
+        minimum.minute,
+        minimum.second,
+      );
+    }
+
+    final config = _config();
+    if (config == null) {
+      return _isSameCalendarDay(minimum, normalizedDay)
+          ? minimum
+          : DateTime(
+              normalizedDay.year,
+              normalizedDay.month,
+              normalizedDay.day,
+              minimum.hour,
+              minimum.minute,
+              minimum.second,
+            );
+    }
+
+    final startTime = config.startTime;
+    final endTime = config.endTime;
+    if (startTime == null ||
+        endTime == null ||
+        startTime.isEmpty ||
+        endTime.isEmpty) {
+      return _isSameCalendarDay(minimum, normalizedDay)
+          ? minimum
+          : _serviceStartForDay(normalizedDay, '09:00');
+    }
+
+    final dayStart = _serviceStartForDay(normalizedDay, startTime);
+    final dayEnd = _applyTimeToDate(normalizedDay, endTime);
+    final slot = dayStart.isBefore(minimum) ? minimum : dayStart;
+    return slot.isAfter(dayEnd) ? dayStart : slot;
+  }
+
+  static bool _isSameCalendarDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   static bool isWithinCompanyHours(DateTime dateTime) {
     final config = _config();
     if (config == null || config.enabled != 1) return true;
@@ -110,7 +231,7 @@ class CompanyAvailabilityHelper {
       final day = DateTime(after.year, after.month, after.day).add(Duration(days: dayOffset));
       if (_isWeekend(day, config.weekends)) continue;
 
-      final dayStart = _defaultSlotForDay(day, startTime, endTime);
+      final dayStart = _serviceStartForDay(day, startTime);
       final dayEnd = _applyTimeToDate(day, endTime);
 
       if (dayOffset == 0) {
@@ -176,6 +297,12 @@ class CompanyAvailabilityHelper {
     return 'booking_minimum_lead_time_notice'.trParams({'hours': '$hours'});
   }
 
+  static String asapScheduleNotice(DateTime schedule) {
+    return 'asap_scheduled_for_notice'.trParams({
+      'time': DateConverter.dateMonthYearTimeTwentyFourFormat(schedule),
+    });
+  }
+
   static bool isAsapSchedule(DateTime parsed) {
     final now = DateTime.now();
     if (parsed.difference(now).inMinutes <= 5 &&
@@ -189,15 +316,25 @@ class CompanyAvailabilityHelper {
   static void notifyIfScheduleAdjusted(
     CompanyScheduleResolution resolution, {
     bool aboveOverlays = true,
+    bool delay = false,
   }) {
     if (!resolution.wasAdjusted) return;
-    customSnackBar(
-      outsideHoursRescheduledMessage(resolution.schedule) ??
-          outsideHoursMessage() ??
-          'company_service_outside_hours_notice'.tr,
-      type: ToasterMessageType.info,
-      aboveOverlays: aboveOverlays,
-    );
+
+    void showNotice() {
+      customSnackBar(
+        outsideHoursRescheduledMessage(resolution.schedule) ??
+            outsideHoursMessage() ??
+            'company_service_outside_hours_notice'.tr,
+        type: ToasterMessageType.info,
+        aboveOverlays: aboveOverlays,
+      );
+    }
+
+    if (delay) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => showNotice());
+      return;
+    }
+    showNotice();
   }
 
   static List<String> _normalizedWeekendKeys(List<String>? weekends) {
@@ -262,13 +399,9 @@ class CompanyAvailabilityHelper {
     return DateTime(date.year, date.month, date.day, parsed.hour, parsed.minute, parsed.second);
   }
 
-  /// Default next-day slot: one hour after service start, clamped within service hours.
-  static DateTime _defaultSlotForDay(DateTime day, String startTime, String endTime) {
-    final start = _applyTimeToDate(day, startTime);
-    final end = _applyTimeToDate(day, endTime);
-    final preferred = start.add(const Duration(hours: 1));
-    if (!preferred.isAfter(end)) return preferred;
-    return start;
+  /// Service start time on the given day.
+  static DateTime _serviceStartForDay(DateTime day, String startTime) {
+    return _applyTimeToDate(day, startTime);
   }
 
   static String? _formatDisplayTime(String? raw) {

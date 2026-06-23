@@ -709,7 +709,7 @@ class CartController extends GetxController implements GetxService {
     _bookingStep = step;
     if (step == ServiceBookingStep.schedule) {
       final scheduleController = Get.find<ScheduleController>();
-      scheduleController.initBookingScheduleForFlow(notifyIfAdjusted: true);
+      scheduleController.initBookingScheduleForFlow();
       scheduleController.updateSelectedBookingType(type: ServiceType.regular);
       _pendingBookingSchedule = scheduleController.scheduleTime;
     } else if (step == ServiceBookingStep.address) {
@@ -879,7 +879,6 @@ class CartController extends GetxController implements GetxService {
           : CompanyAvailabilityHelper.resolveCustomSchedule(parsedSchedule);
       if (resolution.wasAdjusted) {
         _pendingBookingSchedule = DateFormat('yyyy-MM-dd HH:mm:ss').format(resolution.schedule);
-        CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
       }
     }
 

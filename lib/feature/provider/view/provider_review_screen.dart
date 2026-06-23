@@ -36,12 +36,14 @@ class ProviderReviewBody extends StatefulWidget {
   final String? providerId;
   final bool embeddedInProfileTab;
   final bool useNestedScroll;
+  final ScrollController? unifiedScrollController;
 
   const ProviderReviewBody({
     super.key,
     this.providerId,
     this.embeddedInProfileTab = false,
     this.useNestedScroll = false,
+    this.unifiedScrollController,
   });
 
   @override
@@ -71,6 +73,10 @@ class _ProviderReviewBodyState extends State<ProviderReviewBody> {
   @override
   Widget build(BuildContext context) {
     return GetBuilder<ProviderBookingController>(builder: (providerBookingController){
+      if (widget.unifiedScrollController != null) {
+        return _buildUnifiedScrollBody(context, providerBookingController);
+      }
+
       if (widget.useNestedScroll) {
         return _buildNestedScrollBody(context, providerBookingController);
       }
@@ -164,11 +170,25 @@ class _ProviderReviewBodyState extends State<ProviderReviewBody> {
     ) :  SizedBox(height: Get.height*.4,child: const Center(child: EmptyReviewWidget()));
   }
 
+  Widget _buildUnifiedScrollBody(BuildContext context, ProviderBookingController providerBookingController) {
+    return SizedBox(
+      width: Dimensions.webMaxWidth,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ..._buildReviewHeader(context, providerBookingController),
+          _buildReviewList(providerBookingController, widget.unifiedScrollController!),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNestedScrollBody(BuildContext context, ProviderBookingController providerBookingController) {
     return Builder(
       builder: (context) {
         return CustomScrollView(
           key: const PageStorageKey<String>('provider_reviews_tab'),
+          physics: const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()),
           slivers: [
             SliverOverlapInjector(
               handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),

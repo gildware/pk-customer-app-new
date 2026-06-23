@@ -1268,6 +1268,7 @@
   "company_service_hours_notice": "সেবা @start থেকে @end পর্যন্ত উপলব্ধ। বুকিংয়ের জন্য কমপক্ষে @hours ঘণ্টা আগে নোটিশ প্রয়োজন।",
   "company_service_outside_hours_notice": "সেবা শুধুমাত্র @start থেকে @end পর্যন্ত উপলব্ধ। অনুগ্রহ করে এই সময়ের মধ্যে একটি সময় বেছে নিন।",
   "company_service_outside_hours_rescheduled_notice": "নির্বাচিত সময়ে আমরা সেবা দিতে পারব না। আমাদের উপলব্ধ সময় @start থেকে @end। আপনার বুকিং স্বয়ংক্রিয়ভাবে @time-এ নির্ধারণ করা হয়েছে।",
+  "asap_scheduled_for_notice": "আপনার সেবা @time-এ নির্ধারণ করা হবে।",
   "asap_scheduled_outside_hours_notice": "সবচেয়ে আগের সময়টি আমাদের সেবার সময়ের বাইরে। আপনার বুকিং @time-এ নির্ধারণ করা হয়েছে।",
   "no_provider_available_for_slot": "নির্বাচিত তারিখ, সময় ও ঠিকানায় কোনো প্রোভাইডার উপলব্ধ নেই। আপনি পানুন কারিগরকে বেছে নিতে দিতে পারেন।",
   "item_added_to_cart": "কার্টে যোগ হয়েছে",

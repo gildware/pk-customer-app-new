@@ -106,7 +106,7 @@ class _WebFeatheredCategoryViewState extends State<WebFeatheredCategoryView> {
                                 left: Get.find<LocalizationController>().isLtr? 0 :  Dimensions.paddingSizeDefault,
                               ),
                               child: SizedBox(
-                                width: Dimensions.webMaxWidth/5.7 ,
+                                width: ServiceCardLayout.horizontalCardWidth(context) ,
                                 child: ServiceWidgetVertical(
                                   service: serviceController.categoryList![categoryIndex].servicesByCategory![index],
                                   fromType: '', signInShakeKey: widget.signInShakeKey,

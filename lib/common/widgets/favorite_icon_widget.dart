@@ -9,7 +9,9 @@ class FavoriteIconWidget extends StatefulWidget {
   final int? index;
   final GlobalKey<CustomShakingWidgetState>?  signInShakeKey;
   final bool isTap;
-  const FavoriteIconWidget({super.key,  this.value, this.serviceId, this.providerId, this.signInShakeKey, this.showDialog, this.index,  this.isTap = true}) ;
+  final EdgeInsets? iconPadding;
+  final double? iconSize;
+  const FavoriteIconWidget({super.key,  this.value, this.serviceId, this.providerId, this.signInShakeKey, this.showDialog, this.index,  this.isTap = true, this.iconPadding, this.iconSize}) ;
 
   @override
   State<FavoriteIconWidget> createState() => _FavoriteIconWidgetState();
@@ -98,10 +100,10 @@ class _FavoriteIconWidgetState extends State<FavoriteIconWidget> with SingleTick
         }
       } : null,
       child: Padding(
-        padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+        padding: widget.iconPadding ?? const EdgeInsets.all(Dimensions.paddingSizeDefault),
         child: ScaleTransition(
           scale: Tween(begin: 0.5, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut)),
-          child: Image.asset(widget.value == 1 && Get.find<AuthController>().isLoggedIn() ? Images.favorite : Images.unFavorite, width: 23,),
+          child: Image.asset(widget.value == 1 && Get.find<AuthController>().isLoggedIn() ? Images.favorite : Images.unFavorite, width: widget.iconSize ?? 23,),
         ),
       ),
     );

@@ -31,19 +31,6 @@ class HorizontalScrollServiceView extends GetView<ServiceController> {
                 height: 200,
                 color: Theme.of(context).primaryColor,
               ),
-            ): fromPage == 'popular_services' ?
-            Container(height: isLtr ? 320 : 335,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.07),
-                image: DecorationImage(
-                  image: AssetImage(
-                   Images.popularServicesBackgroundImage
-                  ),
-                  fit: BoxFit.cover,
-                  opacity: 0.5
-                ),
-              ),
             ): const SizedBox(),
 
             Column(
@@ -64,7 +51,7 @@ class HorizontalScrollServiceView extends GetView<ServiceController> {
                   ),
                 ),
                 SizedBox(
-                  height: Get.find<LocalizationController>().isLtr ? ResponsiveHelper.isMobile(context) ? 260 : 270 :  270,
+                  height: ServiceCardLayout.horizontalListHeight(context),
                   child:ListView.builder(
                     controller: scrollController,
                     physics: const ClampingScrollPhysics(),
@@ -74,7 +61,7 @@ class HorizontalScrollServiceView extends GetView<ServiceController> {
                     itemBuilder: (context, index){
                       return Padding(padding: const EdgeInsets.only(right: Dimensions.paddingSizeSmall + 2),
                         child: SizedBox(
-                          width: ResponsiveHelper.isTab(context)? 250 : Get.width / 2.3,
+                          width: ServiceCardLayout.horizontalCardWidth(context),
                           child: ServiceWidgetVertical(service: serviceList![index], fromType: '',fromPage: fromPage??""),
                         ),
                       );

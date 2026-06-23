@@ -137,7 +137,7 @@ class CustomDateTimePicker extends StatelessWidget {
 
   void _confirmScheduleSelection(ScheduleController scheduleController, {ScheduleType? scheduleType}) {
     if (scheduleController.initialSelectedScheduleType == ScheduleType.asap) {
-      scheduleController.applyAsapScheduleResolution(notifyIfAdjusted: true);
+      scheduleController.applyAsapScheduleResolution();
       Get.back();
       return;
     }
@@ -150,9 +150,11 @@ class CustomDateTimePicker extends StatelessWidget {
       return;
     }
 
-    final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(selected);
+    final resolution = scheduleController.applyCustomScheduleResolution(
+      selected,
+      notifyIfAdjusted: true,
+    );
     if (resolution.wasAdjusted) {
-      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
       scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(resolution.schedule);
       scheduleController.selectedTime = DateFormat('HH:mm:ss').format(resolution.schedule);
     }

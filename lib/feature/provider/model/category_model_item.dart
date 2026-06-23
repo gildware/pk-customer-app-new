@@ -6,11 +6,13 @@ class CategoryModelItem {
   String title;
   List<Service> serviceList;
   bool isShowcaseTab;
+  String? subCategoryId;
 
   CategoryModelItem({
     required this.title,
     required this.serviceList,
     this.isShowcaseTab = false,
+    this.subCategoryId,
   });
 }
 

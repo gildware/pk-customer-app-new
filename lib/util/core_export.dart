@@ -187,6 +187,7 @@ export 'package:demandium/feature/booking/model/booking_details_model.dart';
 export 'package:demandium/feature/booking/widget/booking_info.dart';
 export 'package:demandium/feature/booking/widget/customer_info_card.dart';
 export 'package:demandium/helper/help_me.dart';
+export 'package:demandium/helper/service_card_layout.dart';
 export 'package:demandium/feature/service/model/service_review_model.dart';
 export 'package:demandium/common/models/customer.dart';
 export 'package:demandium/feature/service/widget/empty_review_widget.dart';

@@ -1268,6 +1268,7 @@
   "company_service_hours_notice": "الخدمات متاحة بين @start و @end. يتطلب الحجز إشعاراً قبل @hours ساعات على الأقل.",
   "company_service_outside_hours_notice": "الخدمات متاحة فقط بين @start و @end. يرجى اختيار وقت ضمن هذه الساعات.",
   "company_service_outside_hours_rescheduled_notice": "لا يمكننا تقديم الخدمة في الوقت المحدد. ساعات العمل المتاحة من @start إلى @end. تم جدولة حجزك تلقائياً في @time.",
+  "asap_scheduled_for_notice": "سيتم جدولة خدمتك في @time.",
   "asap_scheduled_outside_hours_notice": "أقرب وقت متاح خارج ساعات الخدمة. تم جدولة حجزك في @time.",
   "no_provider_available_for_slot": "لا يوجد مزود متاح للتاريخ والوقت والموقع المحددين. يمكنك ترك الاختيار لبانون كاريغار.",
   "item_added_to_cart": "تمت الإضافة إلى السلة",
