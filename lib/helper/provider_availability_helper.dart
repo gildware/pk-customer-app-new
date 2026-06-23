@@ -30,8 +30,8 @@ class ProviderAvailabilityHelper {
   }
 
   static bool isWithinWorkingHours(ProviderData provider, DateTime dateTime) {
-    final weekends = provider.weekends ?? [];
-    final dayOfWeek = DateConverter.dateToWeek(dateTime).toLowerCase();
+    final weekends = _normalizedWeekendKeys(provider.weekends);
+    final dayOfWeek = DateFormat('EEEE', 'en_US').format(dateTime).toLowerCase();
     if (weekends.contains(dayOfWeek)) {
       return false;
     }
@@ -42,33 +42,66 @@ class ProviderAvailabilityHelper {
       return true;
     }
 
-    final scheduleTime = DateConverter.convertStringTimeToDate(dateTime);
-    return _isUnderTime(scheduleTime, startTime, endTime);
+    return _isTimeWithinRange(dateTime, startTime, endTime);
+  }
+
+  static List<String> _normalizedWeekendKeys(List<String>? weekends) {
+    if (weekends == null || weekends.isEmpty) {
+      return const [];
+    }
+    return weekends.map((d) => d.trim().toLowerCase()).where((d) => d.isNotEmpty).toList();
   }
 
   static bool _isInvalidSchedule(String start, String end) {
-    try {
-      final startTime = DateFormat('HH:mm:ss').parse(_normalizeTime(start));
-      final endTime = DateFormat('HH:mm:ss').parse(_normalizeTime(end));
-      return !startTime.isBefore(endTime);
-    } catch (_) {
+    final startTime = _parseClockTime(start);
+    final endTime = _parseClockTime(end);
+    if (startTime == null || endTime == null) {
       return true;
     }
+    return !startTime.isBefore(endTime);
   }
 
-  static String _normalizeTime(String time) {
-    return time.length == 5 ? '$time:00' : time;
+  /// Compare clock times on a shared base date (DateFormat.parse uses 1970-01-01).
+  static DateTime _clockBase(int hour, int minute, [int second = 0]) {
+    return DateTime(1970, 1, 1, hour, minute, second);
   }
 
-  static bool _isUnderTime(String current, String start, String end) {
-    try {
-      final currentTime = DateFormat('HH:mm:ss').parse(_normalizeTime(current));
-      final startTime = DateFormat('HH:mm:ss').parse(_normalizeTime(start));
-      final endTime = DateFormat('HH:mm:ss').parse(_normalizeTime(end));
-      return !currentTime.isBefore(startTime) && !currentTime.isAfter(endTime);
-    } catch (_) {
-      return false;
+  static DateTime? _parseClockTime(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
     }
+
+    const patterns = <String>[
+      'HH:mm:ss',
+      'HH:mm',
+      'h:mm:ss a',
+      'hh:mm:ss a',
+      'h:mm a',
+      'hh:mm a',
+    ];
+
+    for (final pattern in patterns) {
+      try {
+        final parsed = DateFormat(pattern).parse(trimmed);
+        return _clockBase(parsed.hour, parsed.minute, parsed.second);
+      } catch (_) {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  static bool _isTimeWithinRange(DateTime dateTime, String start, String end) {
+    final startTime = _parseClockTime(start);
+    final endTime = _parseClockTime(end);
+    if (startTime == null || endTime == null) {
+      return true;
+    }
+
+    final currentTime = _clockBase(dateTime.hour, dateTime.minute, dateTime.second);
+    return !currentTime.isBefore(startTime) && !currentTime.isAfter(endTime);
   }
 
   static List<ProviderData> filterBySchedule(List<ProviderData> providers, DateTime scheduleDateTime) {

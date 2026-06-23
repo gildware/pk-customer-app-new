@@ -416,85 +416,102 @@ class ServiceController extends GetxController implements GetxService {
     int status;
     if(response.statusCode == 200 && (response.body['response_code'] == "service_favorite_store_200" || response.body['response_code'] == "service_remove_favorite_200")){
       if(response.body['content']['status'] !=null){
-        status  = response.body['content']['status'];
+        status = int.tryParse(response.body['content']['status'].toString()) ?? 0;
 
         customSnackBar(response.body['message'],type: status == 1 ? ToasterMessageType.success : ToasterMessageType.error);
-        updateIsFavoriteValue(status, serviceId);
+        updateIsFavoriteValue(status, serviceId, shouldUpdate: true);
       }
-    }
-    if(_apiHitCount == 0){
+    } else if (_apiHitCount == 0) {
       update();
     }
 
   }
 
+  void _setServiceFavoriteInList(List<Service>? list, String serviceId, int status) {
+    if (list == null) {
+      return;
+    }
+    final index = list.indexWhere((element) => element.id == serviceId);
+    if (index > -1) {
+      list[index].isFavorite = status;
+    }
+  }
+
+  Service? findServiceById(String serviceId) {
+    final lists = <List<Service>?>[
+      _allService,
+      _popularServiceList,
+      _trendingServiceList,
+      _recentlyViewServiceList,
+      _recommendedServiceList,
+      _offerBasedServiceList,
+      _subCategoryBasedServiceList,
+      _campaignBasedServiceList,
+      ..._curatedServicesBySection.values,
+    ];
+    for (final list in lists) {
+      if (list == null) {
+        continue;
+      }
+      for (final service in list) {
+        if (service.id == serviceId) {
+          return service;
+        }
+      }
+    }
+    for (final categories in _curatedFeatheredBySection.values) {
+      for (final category in categories ?? const <CategoryData>[]) {
+        for (final service in category.servicesByCategory ?? const <Service>[]) {
+          if (service.id == serviceId) {
+            return service;
+          }
+        }
+      }
+    }
+    for (final category in _categoryList ?? const <CategoryData>[]) {
+      for (final service in category.servicesByCategory ?? const <Service>[]) {
+        if (service.id == serviceId) {
+          return service;
+        }
+      }
+    }
+    return null;
+  }
+
   void updateIsFavoriteValue(int status, String serviceId, {bool shouldUpdate = false}){
-    if(_allService !=null){
-      int? index = _allService?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _allService![index].isFavorite = status;
+    _setServiceFavoriteInList(_allService, serviceId, status);
+    _setServiceFavoriteInList(_popularServiceList, serviceId, status);
+    _setServiceFavoriteInList(_trendingServiceList, serviceId, status);
+    _setServiceFavoriteInList(_recentlyViewServiceList, serviceId, status);
+    _setServiceFavoriteInList(_recommendedServiceList, serviceId, status);
+    _setServiceFavoriteInList(_offerBasedServiceList, serviceId, status);
+    _setServiceFavoriteInList(_subCategoryBasedServiceList, serviceId, status);
+    _setServiceFavoriteInList(_campaignBasedServiceList, serviceId, status);
+
+    for (final list in _curatedServicesBySection.values) {
+      _setServiceFavoriteInList(list, serviceId, status);
+    }
+
+    for (final categories in _curatedFeatheredBySection.values) {
+      for (final category in categories ?? const <CategoryData>[]) {
+        _setServiceFavoriteInList(category.servicesByCategory, serviceId, status);
       }
     }
 
-    if(_popularServiceList !=null){
-      int? index = _popularServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _popularServiceList![index].isFavorite = status;
-      }
-    }
-
-    if(_trendingServiceList !=null) {
-      int? index = _trendingServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _trendingServiceList![index].isFavorite = status;
-      }
-    }
-
-    if(_recentlyViewServiceList !=null){
-      int? index = _recentlyViewServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _recentlyViewServiceList![index].isFavorite = status;
-      }
-    }
-
-    if(_recommendedServiceList !=null){
-      int? index = _recommendedServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _recommendedServiceList![index].isFavorite = status ;
-      }
-    }
-
-    if(_offerBasedServiceList !=null){
-      int? index = _offerBasedServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _offerBasedServiceList![index].isFavorite = status ;
-      }
-    }
-
-    if(_subCategoryBasedServiceList !=null){
-      int? index = _subCategoryBasedServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _subCategoryBasedServiceList![index].isFavorite = status ;
-      }
-    }
-
-    if(_campaignBasedServiceList !=null){
-      int? index = _subCategoryBasedServiceList?.indexWhere((element) => element.id == serviceId);
-      if(index !=null && index>-1){
-        _subCategoryBasedServiceList![index].isFavorite = status ;
-      }
-    }
-
-    for(int categoryIndex = 0; categoryIndex < (_categoryList?.length ?? 0) ; categoryIndex ++){
-      int? serviceIndex = _categoryList![categoryIndex].servicesByCategory?.indexWhere((element) => element.id ==serviceId);
-
-      if(serviceIndex !=null && serviceIndex>-1){
-        _categoryList![categoryIndex].servicesByCategory?[serviceIndex].isFavorite = status;
-      }
+    for (final category in _categoryList ?? const <CategoryData>[]) {
+      _setServiceFavoriteInList(category.servicesByCategory, serviceId, status);
     }
 
     Get.find<AllSearchController>().updateIsFavoriteValue(status, serviceId, shouldUpdate: shouldUpdate);
     Get.find<ProviderBookingController>().updateServiceIsFavoriteValue(status, serviceId, shouldUpdate: shouldUpdate);
+
+    if (Get.isRegistered<MyFavoriteController>()) {
+      Get.find<MyFavoriteController>().syncServiceFavorite(
+        status,
+        serviceId,
+        service: findServiceById(serviceId),
+      );
+    }
 
     if(shouldUpdate){
       update();

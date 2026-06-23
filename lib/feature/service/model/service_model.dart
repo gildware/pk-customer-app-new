@@ -141,7 +141,7 @@ class Service {
     tax = double.tryParse(json['tax'].toString());
     orderCount = json['order_count'];
     isActive = json['is_active'];
-    isFavorite = json['is_favorite'];
+    isFavorite = int.tryParse(json['is_favorite']?.toString() ?? '');
     ratingCount = json['rating_count'];
     avgRating = json['avg_rating'].toDouble();
     createdAt = json['created_at'];

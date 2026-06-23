@@ -126,7 +126,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                       if(cartController.hasCartServiceInfo) {
                         final cartValidation = CartBookingDisplayHelper.validateCartItemsForCheckout(cartController.cartList);
                         if (cartValidation != null) {
-                          customSnackBar(cartValidation.tr, type: ToasterMessageType.info);
+                          customSnackBar(cartValidation, type: ToasterMessageType.info);
                         } else if (cartController.hasPastScheduleCartItems) {
                           customSnackBar('cart_items_need_attention'.tr, type: ToasterMessageType.info);
                         } else {

@@ -354,7 +354,7 @@ class AiChatBookingPanel extends StatelessWidget {
     ).then((_) {
       final parsed = BookingDateTimePicker.parseSelectedSchedule(scheduleController);
       if (parsed == null || !BookingDateTimePicker.isValidBookingDateTime(parsed)) {
-        customSnackBar('booking_minimum_two_hours_notice'.tr, type: ToasterMessageType.info);
+        customSnackBar(CompanyAvailabilityHelper.minimumLeadTimeMessage(), type: ToasterMessageType.info);
         return;
       }
       scheduleController.buildSchedule(scheduleType: ScheduleType.schedule, schedule: scheduleController.scheduleTime);

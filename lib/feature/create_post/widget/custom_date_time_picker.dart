@@ -2,6 +2,7 @@ import 'package:demandium/util/core_export.dart';
 import 'package:demandium/feature/create_post/widget/custom_date_picker.dart';
 import 'package:demandium/feature/create_post/widget/custom_time_picker.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 
 
@@ -124,15 +125,41 @@ class CustomDateTimePicker extends StatelessWidget {
             if(scheduleController.checkValidityOfTimeRestriction(config.content!.advanceBooking!) !=null){
               customSnackBar(scheduleController.checkValidityOfTimeRestriction(config.content!.advanceBooking!), showDefaultSnackBar: false);
             }else{
-              scheduleController.buildSchedule(scheduleType: ScheduleType.schedule);
-              Get.back();
+              _confirmScheduleSelection(scheduleController);
             }
           }else{
-            scheduleController.buildSchedule(scheduleType: scheduleController.selectedScheduleType);
-            Get.back();
+            _confirmScheduleSelection(scheduleController, scheduleType: scheduleController.selectedScheduleType);
           }},
 
       ),
     ]);
+  }
+
+  void _confirmScheduleSelection(ScheduleController scheduleController, {ScheduleType? scheduleType}) {
+    if (scheduleController.initialSelectedScheduleType == ScheduleType.asap) {
+      scheduleController.applyAsapScheduleResolution(notifyIfAdjusted: true);
+      Get.back();
+      return;
+    }
+
+    final selected = DateConverter.tryParseScheduleDateTime(
+      '${scheduleController.selectedDate} ${scheduleController.selectedTime}',
+    );
+    if (selected == null) {
+      customSnackBar('select_your_preferable_booking_time'.tr, showDefaultSnackBar: false);
+      return;
+    }
+
+    final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(selected);
+    if (resolution.wasAdjusted) {
+      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
+      scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(resolution.schedule);
+      scheduleController.selectedTime = DateFormat('HH:mm:ss').format(resolution.schedule);
+    }
+
+    scheduleController.buildSchedule(
+      scheduleType: scheduleType ?? ScheduleType.schedule,
+    );
+    Get.back();
   }
 }

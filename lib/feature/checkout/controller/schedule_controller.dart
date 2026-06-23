@@ -5,8 +5,6 @@ import 'package:intl/intl.dart';
 
 enum ScheduleType {asap, schedule}
 
-const Duration _kMinimumAsapLeadTime = Duration(hours: 2);
-
 class ScheduleController extends GetxController implements GetxService{
 
   final ScheduleRepo scheduleRepo;
@@ -90,7 +88,8 @@ class ScheduleController extends GetxController implements GetxService{
       scheduleTime = schedule;
     }else if(_initialSelectedScheduleType == ScheduleType.asap){
       _selectedScheduleType = ScheduleType.asap;
-     scheduleTime = _formatAsapScheduleTime();
+     final resolution = CompanyAvailabilityHelper.resolveAsapScheduleResolution();
+     _applyResolvedSchedule(resolution.schedule);
    }else{
       _selectedScheduleType = ScheduleType.schedule;
      scheduleTime = "$selectedDate $selectedTime";
@@ -147,14 +146,29 @@ class ScheduleController extends GetxController implements GetxService{
   }
 
   /// Initializes the service booking schedule step with ASAP selected by default.
-  void initBookingScheduleForFlow() {
+  void initBookingScheduleForFlow({bool notifyIfAdjusted = false}) {
+    applyAsapScheduleResolution(notifyIfAdjusted: notifyIfAdjusted);
+  }
+
+  /// Rebuilds ASAP schedule from lead time + company availability rules.
+  CompanyScheduleResolution applyAsapScheduleResolution({bool notifyIfAdjusted = false, bool shouldUpdate = true}) {
+    final resolution = CompanyAvailabilityHelper.resolveAsapScheduleResolution();
     _selectedScheduleType = ScheduleType.asap;
     _initialSelectedScheduleType = ScheduleType.asap;
-    scheduleTime = _formatAsapScheduleTime();
-    final minTime = _asapScheduleDateTime();
-    selectedDate = DateFormat('yyyy-MM-dd').format(minTime);
-    selectedTime = DateFormat('HH:mm:ss').format(minTime);
-    update();
+    _applyResolvedSchedule(resolution.schedule);
+    if (shouldUpdate) {
+      update();
+    }
+    if (notifyIfAdjusted) {
+      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
+    }
+    return resolution;
+  }
+
+  void _applyResolvedSchedule(DateTime schedule) {
+    scheduleTime = '${DateFormat('yyyy-MM-dd').format(schedule)} ${DateFormat('HH:mm:ss').format(schedule)}';
+    selectedDate = DateFormat('yyyy-MM-dd').format(schedule);
+    selectedTime = DateFormat('HH:mm:ss').format(schedule);
   }
 
 
@@ -310,7 +324,7 @@ class ScheduleController extends GetxController implements GetxService{
     }
   }
 
-  static DateTime _asapScheduleDateTime() => DateTime.now().add(_kMinimumAsapLeadTime);
+  static DateTime _asapScheduleDateTime() => CompanyAvailabilityHelper.resolveAsapSchedule();
 
   static String _formatAsapScheduleTime() {
     final asap = _asapScheduleDateTime();

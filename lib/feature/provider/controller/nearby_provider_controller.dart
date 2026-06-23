@@ -210,7 +210,7 @@ class NearbyProviderController extends GetxController implements GetxService {
     int status;
     if(response.statusCode == 200 && (response.body['response_code'] == "provider_favorite_store_200" || response.body['response_code'] == "provider_remove_favorite_200")){
       if(response.body['content']['status'] !=null){
-        status  = response.body['content']['status'];
+        status = int.tryParse(response.body['content']['status'].toString()) ?? 0;
         updateIsFavoriteValue(status,providerId);
         customSnackBar(response.body['message'], type : status == 1 ? ToasterMessageType.success : ToasterMessageType.error);
       }
@@ -221,11 +221,21 @@ class NearbyProviderController extends GetxController implements GetxService {
     }
   }
 
+  void _setProviderFavoriteInList(List<ProviderData>? list, String providerId, int status) {
+    if (list == null) {
+      return;
+    }
+    final index = list.indexWhere((element) => element.id == providerId);
+    if (index > -1) {
+      list[index].isFavorite = status;
+    }
+  }
+
   void updateIsFavoriteValue(int status, String providerId, {bool shouldUpdate = false, bool fromExploreProviderScreen = true}){
 
-    int? index = _providerList?.indexWhere((element) => element.id == providerId);
-    if(index !=null && index > -1){
-      _providerList?[index].isFavorite = status;
+    _setProviderFavoriteInList(_providerList, providerId, status);
+    for (final list in _curatedProvidersBySection.values) {
+      _setProviderFavoriteInList(list, providerId, status);
     }
 
     if(fromExploreProviderScreen){

@@ -709,11 +709,23 @@ class CartController extends GetxController implements GetxService {
     _bookingStep = step;
     if (step == ServiceBookingStep.schedule) {
       final scheduleController = Get.find<ScheduleController>();
-      scheduleController.initBookingScheduleForFlow();
+      scheduleController.initBookingScheduleForFlow(notifyIfAdjusted: true);
       scheduleController.updateSelectedBookingType(type: ServiceType.regular);
       _pendingBookingSchedule = scheduleController.scheduleTime;
+    } else if (step == ServiceBookingStep.address) {
+      tryAutoSelectSingleBookingAddress(shouldUpdate: false);
     }
     update();
+  }
+
+  void tryAutoSelectSingleBookingAddress({bool shouldUpdate = true}) {
+    if (_pendingBookingAddress != null) return;
+
+    final addresses = Get.find<LocationController>().addressList;
+    if (addresses != null && addresses.length == 1) {
+      _pendingBookingAddress = addresses.first;
+      if (shouldUpdate) update();
+    }
   }
 
   void setPendingBookingAddress(AddressModel address) {
@@ -855,6 +867,20 @@ class CartController extends GetxController implements GetxService {
     if (_pendingBookingSchedule == null || _pendingBookingSchedule!.isEmpty) {
       customSnackBar('select_your_preferable_booking_time'.tr, type: ToasterMessageType.info, aboveOverlays: true);
       return;
+    }
+
+    final parsedSchedule = DateConverter.tryParseScheduleDateTime(_pendingBookingSchedule!);
+    if (parsedSchedule != null) {
+      final scheduleController = Get.find<ScheduleController>();
+      final isAsap = scheduleController.selectedScheduleType == ScheduleType.asap ||
+          scheduleController.initialSelectedScheduleType == ScheduleType.asap;
+      final CompanyScheduleResolution resolution = isAsap
+          ? scheduleController.applyAsapScheduleResolution(shouldUpdate: false)
+          : CompanyAvailabilityHelper.resolveCustomSchedule(parsedSchedule);
+      if (resolution.wasAdjusted) {
+        _pendingBookingSchedule = DateFormat('yyyy-MM-dd HH:mm:ss').format(resolution.schedule);
+        CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
+      }
     }
 
     final zoneId = _resolveZoneIdForBooking(address);
@@ -1217,11 +1243,20 @@ class CartController extends GetxController implements GetxService {
     ProviderData? provider,
     String? zoneId,
   }) async {
-    if (selectedDateTime.isBefore(DateTime.now().add(const Duration(hours: 2)))) {
-      customSnackBar('booking_minimum_two_hours_notice'.tr, type: ToasterMessageType.info, aboveOverlays: true);
+    if (selectedDateTime.isBefore(CompanyAvailabilityHelper.minimumScheduleTime())) {
+      customSnackBar(CompanyAvailabilityHelper.minimumLeadTimeMessage(), type: ToasterMessageType.info, aboveOverlays: true);
       return false;
     }
-    if (!isProviderAvailableForCartSchedule(provider, selectedDateTime)) {
+
+    final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(selectedDateTime);
+    final resolvedDateTime = resolution.schedule;
+    var resolvedScheduleTime = scheduleTime;
+    if (resolution.wasAdjusted) {
+      resolvedScheduleTime =
+          '${DateFormat('yyyy-MM-dd').format(resolvedDateTime)} ${DateFormat('HH:mm:ss').format(resolvedDateTime)}';
+      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
+    }
+    if (!isProviderAvailableForCartSchedule(provider, resolvedDateTime)) {
       customSnackBar(
         'your_selected_provider_is_unavailable_right_now'.tr,
         type: ToasterMessageType.info,
@@ -1245,7 +1280,7 @@ class CartController extends GetxController implements GetxService {
         );
       }
 
-      final formattedSchedule = cartRepo.formatScheduleForApi(scheduleTime);
+      final formattedSchedule = cartRepo.formatScheduleForApi(resolvedScheduleTime);
       final response = await cartRepo.updateCartItemSchedule(cartId, formattedSchedule);
 
       if (response.statusCode == 200 && response.body is Map) {

@@ -334,32 +334,71 @@ class ProviderBookingController extends GetxController implements GetxService {
     int status;
     if(response.statusCode == 200 && (response.body['response_code'] == "provider_favorite_store_200" || response.body['response_code'] == "provider_remove_favorite_200")){
       if(response.body['content']['status'] !=null){
-        status  = response.body['content']['status'];
-        updateProviderIsFavoriteValue(status,providerId);
+        status = int.tryParse(response.body['content']['status'].toString()) ?? 0;
+        updateProviderIsFavoriteValue(status, providerId, shouldUpdate: true);
         customSnackBar(response.body['message'], type: status == 1 ? ToasterMessageType.success : ToasterMessageType.error);
       }
-    }
-
-    if(_providerDetailsContent != null && _providerDetailsContent?.provider?.id == providerId){
-      int? status = _providerDetailsContent?.provider?.isFavorite;
-      _providerDetailsContent?.provider?.isFavorite = status == 1 ? 0 : 1;
-    }
-    if(_apiHitCount ==0){
+    } else if (_apiHitCount == 0) {
       update();
     }
   }
 
+  void _setProviderFavoriteInList(List<ProviderData>? list, String providerId, int status) {
+    if (list == null) {
+      return;
+    }
+    final index = list.indexWhere((element) => element.id == providerId);
+    if (index > -1) {
+      list[index].isFavorite = status;
+    }
+  }
+
+  ProviderData? findProviderById(String providerId) {
+    final lists = <List<ProviderData>?>[
+      _providerList,
+      ..._curatedProvidersBySection.values,
+    ];
+    for (final list in lists) {
+      if (list == null) {
+        continue;
+      }
+      for (final provider in list) {
+        if (provider.id == providerId) {
+          return provider;
+        }
+      }
+    }
+    if (_providerDetailsContent?.provider?.id == providerId) {
+      return _providerDetailsContent?.provider;
+    }
+    return null;
+  }
+
   void updateProviderIsFavoriteValue(int status, String providerId, {bool shouldUpdate = false, bool fromProviderBooking = true}){
 
-    int? index = _providerList?.indexWhere((element) => element.id == providerId);
-    if(index !=null && index > -1){
-      _providerList?[index].isFavorite = status;
+    _setProviderFavoriteInList(_providerList, providerId, status);
+    for (final list in _curatedProvidersBySection.values) {
+      _setProviderFavoriteInList(list, providerId, status);
     }
+
+    if (_providerDetailsContent?.provider?.id == providerId) {
+      _providerDetailsContent?.provider?.isFavorite = status;
+    }
+
     Get.find<AdvertisementController>().updateIsFavoriteValue(status, providerId, shouldUpdate: true);
     if(fromProviderBooking){
       Get.find<NearbyProviderController>().updateIsFavoriteValue(status, providerId, shouldUpdate: true, fromExploreProviderScreen: false);
 
     }
+
+    if (Get.isRegistered<MyFavoriteController>()) {
+      Get.find<MyFavoriteController>().syncProviderFavorite(
+        status,
+        providerId,
+        provider: findProviderById(providerId),
+      );
+    }
+
     if(shouldUpdate){
       update();
     }

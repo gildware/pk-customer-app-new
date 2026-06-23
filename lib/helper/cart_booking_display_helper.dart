@@ -60,15 +60,7 @@ class CartBookingDisplayHelper {
   }
 
   static bool isAsapSchedule(DateTime parsed) {
-    final now = DateTime.now();
-    // Legacy ASAP bookings stored ~2 minutes ahead.
-    if (parsed.difference(now).inMinutes <= 5 &&
-        parsed.isAfter(now.subtract(const Duration(minutes: 1)))) {
-      return true;
-    }
-    // ASAP bookings use the minimum 2-hour lead time.
-    final minimumLeadTime = now.add(const Duration(hours: 2));
-    return parsed.difference(minimumLeadTime).inMinutes.abs() <= 2;
+    return CompanyAvailabilityHelper.isAsapSchedule(parsed);
   }
 
   static bool isCartItemScheduleInPast(CartModel cart) {
@@ -114,8 +106,16 @@ class CartBookingDisplayHelper {
       final parsed = DateConverter.tryParseScheduleDateTime(raw);
       if (parsed != null &&
           !isAsapSchedule(parsed) &&
-          parsed.isBefore(DateTime.now().add(const Duration(hours: 2)))) {
-        return 'booking_minimum_two_hours_notice';
+          parsed.isBefore(CompanyAvailabilityHelper.minimumScheduleTime())) {
+        return CompanyAvailabilityHelper.minimumLeadTimeMessage();
+      }
+      if (parsed != null &&
+          !isAsapSchedule(parsed) &&
+          !CompanyAvailabilityHelper.isWithinCompanyHours(parsed)) {
+        final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(parsed);
+        return CompanyAvailabilityHelper.outsideHoursRescheduledMessage(resolution.schedule) ??
+            CompanyAvailabilityHelper.outsideHoursMessage() ??
+            'company_service_outside_hours_notice'.tr;
       }
       final address = resolveAddressForCartItem(cart);
       if (address == null || (address.address?.trim().isEmpty ?? true)) {

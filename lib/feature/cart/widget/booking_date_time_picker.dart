@@ -16,8 +16,7 @@ class BookingDateTimePicker extends StatefulWidget {
     this.providerToValidate,
   });
 
-  static DateTime minimumScheduleTime() =>
-      DateTime.now().add(const Duration(hours: 2));
+  static DateTime minimumScheduleTime() => CompanyAvailabilityHelper.minimumScheduleTime();
 
   static DateTime? parseSelectedSchedule(ScheduleController scheduleController) {
     try {
@@ -118,7 +117,8 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
               ),
               const SizedBox(height: Dimensions.paddingSizeSmall),
               Text(
-                'booking_minimum_two_hours_notice'.tr,
+                CompanyAvailabilityHelper.availabilityHoursNotice() ??
+                    CompanyAvailabilityHelper.minimumLeadTimeMessage(),
                 style: robotoRegular.copyWith(
                   fontSize: Dimensions.fontSizeSmall,
                   color: Theme.of(context).hintColor,
@@ -169,17 +169,23 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
     }
     if (!BookingDateTimePicker.isValidBookingDateTime(selected)) {
       customSnackBar(
-        'booking_minimum_two_hours_notice'.tr,
+        CompanyAvailabilityHelper.minimumLeadTimeMessage(),
         type: ToasterMessageType.info,
         aboveOverlays: true,
       );
       return;
     }
 
+    final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(selected);
+    final resolved = resolution.schedule;
+    if (resolution.wasAdjusted) {
+      CompanyAvailabilityHelper.notifyIfScheduleAdjusted(resolution);
+    }
+
     final provider = widget.providerToValidate;
     if (provider != null &&
         ValidationHelper.isValidUuid(provider.id) &&
-        !ProviderAvailabilityHelper.isProviderAvailableAtSchedule(provider, selected)) {
+        !ProviderAvailabilityHelper.isProviderAvailableAtSchedule(provider, resolved)) {
       customSnackBar(
         'your_selected_provider_is_unavailable_right_now'.tr,
         type: ToasterMessageType.info,
@@ -188,8 +194,8 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
       return;
     }
 
-    scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(selected);
-    scheduleController.selectedTime = DateFormat('HH:mm:ss').format(selected);
+    scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(resolved);
+    scheduleController.selectedTime = DateFormat('HH:mm:ss').format(resolved);
     scheduleController.updateScheduleType(
       scheduleType: ScheduleType.schedule,
       shouldUpdate: false,
@@ -207,7 +213,7 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
     }
 
     if (widget.onScheduleConfirmed != null) {
-      final saved = await widget.onScheduleConfirmed!(scheduleTime, selected);
+      final saved = await widget.onScheduleConfirmed!(scheduleTime, resolved);
       if (!saved) return;
       Get.back();
       return;

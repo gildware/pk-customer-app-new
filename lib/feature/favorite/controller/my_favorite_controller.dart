@@ -89,6 +89,44 @@ class MyFavoriteController extends GetxController implements GetxService{
     update();
   }
 
+  void syncServiceFavorite(int status, String serviceId, {Service? service}) {
+    if (_favoriteServiceList == null) {
+      return;
+    }
+    if (status == 1) {
+      final existingIndex = _favoriteServiceList!.indexWhere((element) => element.id == serviceId);
+      if (existingIndex > -1) {
+        _favoriteServiceList![existingIndex].isFavorite = 1;
+      } else if (service != null) {
+        final favoriteService = Service.fromJson(service.toJson());
+        favoriteService.isFavorite = 1;
+        _favoriteServiceList!.insert(0, favoriteService);
+      }
+    } else {
+      _favoriteServiceList!.removeWhere((element) => element.id == serviceId);
+    }
+    update();
+  }
+
+  void syncProviderFavorite(int status, String providerId, {ProviderData? provider}) {
+    if (_providerList == null) {
+      return;
+    }
+    if (status == 1) {
+      final existingIndex = _providerList!.indexWhere((element) => element.id == providerId);
+      if (existingIndex > -1) {
+        _providerList![existingIndex].isFavorite = 1;
+      } else if (provider != null) {
+        final favoriteProvider = ProviderData.fromJson(provider.toJson());
+        favoriteProvider.isFavorite = 1;
+        _providerList!.insert(0, favoriteProvider);
+      }
+    } else {
+      _providerList!.removeWhere((element) => element.id == providerId);
+    }
+    update();
+  }
+
 
 }
 

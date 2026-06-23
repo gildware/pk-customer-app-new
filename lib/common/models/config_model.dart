@@ -87,6 +87,7 @@ class ConfigContent {
   int? scheduleBooking;
   int? scheduleBookingTimeRestriction;
   AdvanceBooking? advanceBooking;
+  CompanyServiceAvailability? companyServiceAvailability;
   List<Language>? languageList;
   List<ErrorLog>? errorLogs;
   MaintenanceMode? maintenanceMode;
@@ -164,6 +165,7 @@ class ConfigContent {
         this.scheduleBooking,
         this.scheduleBookingTimeRestriction,
         this.advanceBooking,
+        this.companyServiceAvailability,
         this.languageList,
         this.maintenanceMode,
         this.customerLogin,
@@ -260,6 +262,9 @@ class ConfigContent {
       confirmationOtpStatus= json['confirm_otp_for_complete_service'] == 1 ? true : false;
     }
     advanceBooking= json['advanced_booking'] != null ? AdvanceBooking.fromJson(json['advanced_booking']) : null;
+    companyServiceAvailability = json['company_service_availability'] != null
+        ? CompanyServiceAvailability.fromJson(json['company_service_availability'])
+        : null;
     instantBooking = int.tryParse(json['instant_booking'].toString());
     scheduleBooking = int.tryParse(json['schedule_booking'].toString());
     scheduleBookingTimeRestriction = int.tryParse(json['schedule_booking_time_restriction'].toString());
@@ -755,6 +760,41 @@ class AdvanceBooking {
         advancedBookingRestrictionValue;
     data['advanced_booking_restriction_type'] =
         advancedBookingRestrictionType;
+    return data;
+  }
+}
+
+class CompanyServiceAvailability {
+  int? enabled;
+  String? startTime;
+  String? endTime;
+  List<String>? weekends;
+
+  CompanyServiceAvailability({
+    this.enabled,
+    this.startTime,
+    this.endTime,
+    this.weekends,
+  });
+
+  CompanyServiceAvailability.fromJson(Map<String, dynamic> json) {
+    enabled = int.tryParse(json['enabled']?.toString() ?? '');
+    startTime = json['start_time']?.toString();
+    endTime = json['end_time']?.toString();
+    if (json['weekends'] != null) {
+      weekends = <String>[];
+      json['weekends'].forEach((v) {
+        weekends!.add(v.toString());
+      });
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['enabled'] = enabled;
+    data['start_time'] = startTime;
+    data['end_time'] = endTime;
+    data['weekends'] = weekends;
     return data;
   }
 }
