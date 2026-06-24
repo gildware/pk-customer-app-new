@@ -368,6 +368,10 @@ class BookingDetailsContent {
         )) {
           return;
         }
+        final methodLabel = (entry.paymentMethodLabel ?? '').toLowerCase();
+        if (methodLabel.contains('wallet')) {
+          return;
+        }
         if (entry.transactionId == null || entry.transactionId!.isEmpty) {
           entry.transactionId = transactionId;
         }
@@ -481,7 +485,7 @@ class BookingDetailsContent {
         transactionId: isCompanyPayment
             ? ((partial.transactionId != null && partial.transactionId!.isNotEmpty)
                 ? partial.transactionId
-                : transactionId)
+                : (partial.paidWith == 'wallet' ? null : transactionId))
             : null,
         dueAfterPayment: (cap - runningPaid).clamp(0, double.infinity).toDouble(),
       ));
