@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/validation_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:get/get.dart';
@@ -40,9 +42,16 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
 
         return GetBuilder<CheckOutController>(builder: (checkoutController){
           final bool onPaymentStep = widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment;
-          final double displayAmount = (onPaymentStep && showPaymentAmountOptions)
+          double displayAmount = (onPaymentStep && showPaymentAmountOptions)
               ? checkoutController.payableCheckoutAmount(totalAmount)
               : totalAmount;
+          if (onPaymentStep && cartController.walletPaymentStatus) {
+            final walletPaid = CheckoutHelper.calculatePaidAmount(
+              walletBalance: cartController.walletBalance,
+              bookingAmount: displayAmount,
+            );
+            displayAmount = (displayAmount - walletPaid).clamp(0, double.infinity);
+          }
           final String priceLabel = (onPaymentStep && showPaymentAmountOptions && requiresUpfront)
               ? 'pay_now'.tr
               : 'total_price'.tr;
@@ -72,7 +81,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                 isLoading: checkoutController.isLoading || checkoutController.isPaymentInProgress,
                 fontSize: Dimensions.fontSizeDefault + 1,
                 buttonText: cartController.cartList.isEmpty ? "empty_cart_go_back".tr : (widget.pageState == "orderDetails" && checkoutController.currentPageState == PageState.orderDetails) ? "make_payment".tr : 'confirm_booking'.tr,
-                onPressed : checkoutController.isPaymentInProgress ? null : ((widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment) && checkoutController.othersPaymentList.isEmpty && checkoutController.digitalPaymentList.isEmpty
+                onPressed : checkoutController.isPaymentInProgress ? null : ((widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment) && checkoutController.onlineDigitalPaymentGateways.isEmpty && !checkoutController.othersPaymentList.any((m) => m.paymentMethodName == PaymentMethodName.walletMoney)
                     ? () => customSnackBar("no_payment_method_available".tr, type: ToasterMessageType.info)
                     : () {
                   final bool onPaymentStep = widget.pageState == "payment" || checkoutController.currentPageState == PageState.payment;
@@ -127,8 +136,8 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                         final cartValidation = CartBookingDisplayHelper.validateCartItemsForCheckout(cartController.cartList);
                         if (cartValidation != null) {
                           customSnackBar(cartValidation, type: ToasterMessageType.info);
-                        } else if (cartController.hasPastScheduleCartItems) {
-                          customSnackBar('cart_items_need_attention'.tr, type: ToasterMessageType.info);
+                        } else if (cartController.hasInvalidScheduleCartItems) {
+                          customSnackBar('cart_schedule_needs_update'.tr, type: ToasterMessageType.info);
                         } else {
                           checkoutController.updateState(PageState.payment);
                         }
@@ -235,56 +244,26 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                           address: addressModel,
                         );
                       }
-                      else if(cartController.walletPaymentStatus && isPartialPayment && checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
-                        customSnackBar("select_another_payment_method_to_pay_remaining_bill".tr, type: ToasterMessageType.info);
-                      }
-                      else if(checkoutController.selectedPaymentMethod == PaymentMethodName.none){
-                        customSnackBar("select_payment_method".tr, type: ToasterMessageType.info);
-                      }
-                      else if(checkoutController.selectedPaymentMethod == PaymentMethodName.cos && !requiresUpfront){
-                        checkoutController.placeBookingRequest(
-                          paymentMethod: "cash_after_service",
-                          schedule: schedule,
-                          isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
-                          address: addressModel,
-                          paymentAmountType: paymentAmountType,
-                        );
-                      }
-                      else if(checkoutController.selectedPaymentMethod == PaymentMethodName.offline){
-                        if (checkoutController.selectedOfflineMethod != null) {
-                          final selectedOfflinePaymentIndex = checkoutController.offlinePaymentModelList
-                              .indexOf(checkoutController.selectedOfflineMethod!);
+                      else {
+                        final bool walletOn = cartController.walletPaymentStatus;
+                        checkoutController.ensureDefaultDigitalPaymentSelected(shouldUpdate: false);
+                        final digitalMethod = checkoutController.selectedDigitalPaymentMethod;
+                        final bool digitalReady = digitalMethod != null && digitalMethod.gateway?.toLowerCase() != 'offline';
+
+                        if (walletOn && !isPartialPayment) {
                           checkoutController.placeBookingRequest(
-                            paymentMethod: "offline_payment",
-                            schedule: schedule,
-                            isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
-                            address: addressModel,
-                            paymentAmountType: paymentAmountType,
-                            offlinePaymentId: checkoutController.selectedOfflineMethod?.id,
-                            bookingAmount: payableAmount,
-                            selectedOfflinePaymentIndex: selectedOfflinePaymentIndex >= 0 ? selectedOfflinePaymentIndex : 0,
-                          );
-                        } else {
-                          customSnackBar("provide_offline_payment_info".tr, type: ToasterMessageType.info);
-                        }
-                      }
-                      else if(checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
-                        checkoutController.placeBookingRequest(
                             paymentMethod: "wallet_payment",
                             schedule: schedule,
-                            isPartial:  isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
+                            isPartial: 0,
                             address: addressModel,
                             paymentAmountType: paymentAmountType,
-                        );
-                      }
-                      else if( checkoutController.selectedPaymentMethod == PaymentMethodName.digitalPayment){
-
-                        if(checkoutController.selectedDigitalPaymentMethod != null && checkoutController.selectedDigitalPaymentMethod?.gateway != "offline"){
+                          );
+                        } else if (digitalReady) {
                           checkoutController.setPaymentInProgress(true);
                           _makeDigitalPayment(
                             addressModel,
-                            checkoutController.selectedDigitalPaymentMethod,
-                            isPartialPayment,
+                            digitalMethod,
+                            walletOn && isPartialPayment,
                             checkoutController,
                             paymentAmountType,
                           ).whenComplete(() {
@@ -292,13 +271,30 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
                           }).catchError((_) {
                             customSnackBar('connection_to_api_server_failed'.tr, type: ToasterMessageType.error);
                           });
-                        }else{
-                          customSnackBar("select_any_payment_method".tr, type: ToasterMessageType.info);
+                        } else if (!walletOn && checkoutController.selectedPaymentMethod == PaymentMethodName.cos && !requiresUpfront) {
+                          checkoutController.placeBookingRequest(
+                            paymentMethod: "cash_after_service",
+                            schedule: schedule,
+                            isPartial: 0,
+                            address: addressModel,
+                            paymentAmountType: paymentAmountType,
+                          );
+                        } else if (!walletOn && checkoutController.selectedPaymentMethod == PaymentMethodName.offline && checkoutController.selectedOfflineMethod != null) {
+                          final selectedOfflinePaymentIndex = checkoutController.offlinePaymentModelList
+                              .indexOf(checkoutController.selectedOfflineMethod!);
+                          checkoutController.placeBookingRequest(
+                            paymentMethod: "offline_payment",
+                            schedule: schedule,
+                            isPartial: 0,
+                            address: addressModel,
+                            paymentAmountType: paymentAmountType,
+                            offlinePaymentId: checkoutController.selectedOfflineMethod?.id,
+                            bookingAmount: payableAmount,
+                            selectedOfflinePaymentIndex: selectedOfflinePaymentIndex >= 0 ? selectedOfflinePaymentIndex : 0,
+                          );
+                        } else {
+                          customSnackBar("no_payment_method_available".tr, type: ToasterMessageType.info);
                         }
-
-                      }
-                      else {
-                        customSnackBar("select_payment_method".tr, type: ToasterMessageType.info);
                       }
                     }
                     else {
@@ -339,26 +335,36 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
 
     String? schedule = Get.find<ScheduleController>().scheduleTime;
     String userId = Get.find<UserController>().userInfoModel?.id?? Get.find<SplashController>().getGuestId();
-    String encodedAddress = base64Encode(utf8.encode(jsonEncode(address?.toJson())));
+    String encodedAddress = base64Encode(utf8.encode(jsonEncode(address.toJson())));
     String encodedNewUserInfo = base64Encode(utf8.encode(jsonEncode(newUserInfo?.toJson())));
     String serviceLocation = Get.find<LocationController>().selectedServiceLocationType.name;
 
-    String addressId = (address?.id == "null" || address?.id == null) ? "" : address?.id ?? "";
-    String  zoneId = Get.find<LocationController>().getUserAddress()?.zoneId??"";
+    String addressId = (address.id == "null" || address.id == null) ? "" : address.id ?? "";
+    String zoneId = address.zoneId?.trim() ?? '';
+    if (!ValidationHelper.isValidUuid(zoneId)) {
+      final resolved = await AddressSessionHelper.resolveZoneIdFromCoordinates(address);
+      zoneId = resolved ?? Get.find<LocationController>().getUserAddress()?.zoneId ?? '';
+    }
     String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
     int isPartial = Get.find<CartController>().walletPaymentStatus && isPartialPayment ? 1 : 0;
     String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
+    final String scheduleValue = schedule ?? '';
 
-  // Keep payment_amount_type near the start — long base64 address params can truncate trailing query keys.
-    final String amountTypeQuery = (paymentAmountType != null && paymentAmountType.isNotEmpty)
-        ? '&payment_amount_type=$paymentAmountType'
-        : '';
-    url = '${AppConstants.baseUrl}/payment?payment_method=${paymentMethod?.gateway}$amountTypeQuery'
-        '&access_token=$accessToken&zone_id=$zoneId'
-        '&service_schedule=$schedule&service_address_id=$addressId&callback=$callbackUrl'
-        '&service_address=$encodedAddress&new_user_info=$encodedNewUserInfo&is_partial=$isPartial'
-        '&payment_platform=$platform&service_location=$serviceLocation';
+    url = CheckoutHelper.buildCheckoutDigitalPaymentUrl(
+      gateway: paymentMethod?.gateway ?? '',
+      accessToken: accessToken,
+      zoneId: zoneId,
+      schedule: scheduleValue,
+      addressId: addressId,
+      callbackUrl: callbackUrl,
+      encodedAddress: encodedAddress,
+      encodedNewUserInfo: encodedNewUserInfo,
+      isPartial: isPartial,
+      platform: platform,
+      serviceLocation: serviceLocation,
+      paymentAmountType: paymentAmountType,
+    );
 
     if (GetPlatform.isWeb) {
       printLog("url_with_digital_payment:$url");

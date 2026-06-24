@@ -69,7 +69,7 @@ class ConfirmationDialog extends StatelessWidget {
             const SizedBox(width: Dimensions.paddingSizeLarge),
 
             Expanded(child: TextButton(
-              onPressed: () =>  onNoPressed != null ? onNoPressed!() : Get.back(),
+              onPressed: isLoading ? null : () =>  onNoPressed != null ? onNoPressed!() : Get.back(),
               style: TextButton.styleFrom(
                 backgroundColor: noButtonColor ??  Theme.of(context).hintColor.withValues(alpha: 0.3),
                 minimumSize: const Size(Dimensions.webMaxWidth, 45),
@@ -91,7 +91,8 @@ class ConfirmationDialog extends StatelessWidget {
                 backgroundColor : yesButtonColor,
                 textColor: yesTextColor,
                 buttonText: yesButtonText?.tr ?? 'yes'.tr,
-                onPressed: () =>  onYesPressed != null ? onYesPressed!() : Get.back(),
+                onPressed: isLoading ? null : () =>  onYesPressed != null ? onYesPressed!() : Get.back(),
+                isLoading: isLoading,
                 radius: Dimensions.radiusSmall, height: 45,
                 fontSize: buttonFontSize ?? Dimensions.fontSizeDefault,
 

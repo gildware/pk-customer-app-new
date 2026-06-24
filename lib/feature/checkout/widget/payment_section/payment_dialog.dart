@@ -125,51 +125,46 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
     double walletBalance = cartController.walletBalance;
     bool isPartialPayment = CheckoutHelper.checkPartialPayment(walletBalance: walletBalance, bookingAmount: bookingAmount);
+    final bool walletOn = cartController.walletPaymentStatus;
 
+    checkoutController.ensureDefaultDigitalPaymentSelected(shouldUpdate: false);
+    final digitalMethod = checkoutController.selectedDigitalPaymentMethod;
+    final bool digitalReady = digitalMethod != null && digitalMethod.gateway?.toLowerCase() != 'offline';
 
-    if(cartController.walletPaymentStatus && isPartialPayment && checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
-      customSnackBar("select_another_payment_method_to_pay_remaining_bill".tr, type: ToasterMessageType.info, showDefaultSnackBar: false);
-    }
-    else if(checkoutController.selectedPaymentMethod == PaymentMethodName.none){
-      customSnackBar("select_payment_method".tr, type: ToasterMessageType.info, showDefaultSnackBar: false);
-    }
-    else if(checkoutController.selectedPaymentMethod == PaymentMethodName.cos){
-      checkoutController.switchPaymentMethod(
-        bookingId: widget.booking?.id ?? "",
-        paymentMethod: "cash_after_service",
-        isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
-      );
-    }
-    else if(checkoutController.selectedPaymentMethod == PaymentMethodName.walletMoney){
+    if (walletOn && !isPartialPayment) {
       checkoutController.switchPaymentMethod(
         bookingId: widget.booking?.id ?? "",
         paymentMethod: "wallet_payment",
-        isPartial: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
+        isPartial: 0,
       );
-    }
-    else if(checkoutController.selectedPaymentMethod == PaymentMethodName.offline){
-
-      if(checkoutController.selectedOfflineMethod != null ){
+    } else if (digitalReady) {
+      _makeDigitalPayment(
+        paymentMethod: digitalMethod,
+        isPartialPayment: walletOn && isPartialPayment,
+        bookingId: bookingId,
+      );
+    } else if (!walletOn && checkoutController.selectedPaymentMethod == PaymentMethodName.cos) {
+      checkoutController.switchPaymentMethod(
+        bookingId: widget.booking?.id ?? "",
+        paymentMethod: "cash_after_service",
+        isPartial: 0,
+      );
+    } else if (!walletOn && checkoutController.selectedPaymentMethod == PaymentMethodName.offline) {
+      if (checkoutController.selectedOfflineMethod != null) {
         int selectedOfflinePaymentIndex = checkoutController.offlinePaymentModelList.indexOf(checkoutController.selectedOfflineMethod!);
         Get.back();
         Get.toNamed(RouteHelper.getOfflinePaymentRoute(
           totalAmount: bookingAmount,
-          index: selectedOfflinePaymentIndex != -1 ? selectedOfflinePaymentIndex : 0 ,
+          index: selectedOfflinePaymentIndex != -1 ? selectedOfflinePaymentIndex : 0,
           bookingId: bookingId,
-          isPartialPayment: isPartialPayment && cartController.walletPaymentStatus ? 1 : 0,
+          isPartialPayment: 0,
           fromPage: "others",
         ));
-      } else{
+      } else {
         customSnackBar("provide_offline_payment_info".tr, type: ToasterMessageType.info, showDefaultSnackBar: false);
       }
-    }
-    else if( checkoutController.selectedPaymentMethod == PaymentMethodName.digitalPayment){
-
-      if(checkoutController.selectedDigitalPaymentMethod != null && checkoutController.selectedDigitalPaymentMethod?.gateway != "offline"){
-        _makeDigitalPayment(paymentMethod : checkoutController.selectedDigitalPaymentMethod, isPartialPayment: isPartialPayment, bookingId: bookingId);
-      }else{
-        customSnackBar("select_any_payment_method".tr, type: ToasterMessageType.info, showDefaultSnackBar: false);
-      }
+    } else {
+      customSnackBar("no_payment_method_available".tr, type: ToasterMessageType.info, showDefaultSnackBar: false);
     }
 
     if(isPartialPayment){

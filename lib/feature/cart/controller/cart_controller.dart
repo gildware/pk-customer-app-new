@@ -13,7 +13,9 @@ import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:intl/intl.dart';
 
+enum BookingProviderSelectionMode { auto, manual }
 
+enum BookingProviderSortBy { distance, rating }
 
 class CartController extends GetxController implements GetxService {
   final CartRepo cartRepo;
@@ -87,6 +89,20 @@ class CartController extends GetxController implements GetxService {
 
   List<ProviderData>? _filteredBookingProviders;
   List<ProviderData>? get filteredBookingProviders => _filteredBookingProviders;
+
+  BookingProviderSelectionMode _bookingProviderSelectionMode = BookingProviderSelectionMode.auto;
+  BookingProviderSelectionMode get bookingProviderSelectionMode => _bookingProviderSelectionMode;
+
+  BookingProviderSortBy _bookingProviderSortBy = BookingProviderSortBy.distance;
+  BookingProviderSortBy get bookingProviderSortBy => _bookingProviderSortBy;
+
+  String _bookingProviderSearchQuery = '';
+  List<ProviderData> _displayedBookingProviders = [];
+  List<ProviderData> get displayedBookingProviders => _displayedBookingProviders;
+
+  bool get isBookingProviderSheetExpanded =>
+      _bookingStep == ServiceBookingStep.provider &&
+      _bookingProviderSelectionMode == BookingProviderSelectionMode.manual;
 
   bool _isLoadingBookingProviders = false;
   bool get isLoadingBookingProviders => _isLoadingBookingProviders;
@@ -524,17 +540,16 @@ class CartController extends GetxController implements GetxService {
     return addedCount == items.length;
   }
 
+  Future<String?> resolveZoneIdForBookingAddress(AddressModel address) async {
+    return AddressSessionHelper.resolveZoneIdFromCoordinates(address);
+  }
+
   String? _resolveZoneIdForBooking(AddressModel address) {
     if (ValidationHelper.isValidUuid(address.zoneId)) {
-      return address.zoneId;
-    }
-    final saved = Get.find<LocationController>().getUserAddress();
-    if (ValidationHelper.isValidUuid(saved?.zoneId)) {
-      return saved!.zoneId;
-    }
-    final headerZone = Get.find<LocationController>().zoneID;
-    if (ValidationHelper.isValidUuid(headerZone)) {
-      return headerZone;
+      final sessionZone = AddressSessionHelper.sessionZoneId();
+      if (sessionZone == null || AddressSessionHelper.zoneIdsMatch(address.zoneId, sessionZone)) {
+        return address.zoneId;
+      }
     }
     return null;
   }
@@ -643,6 +658,67 @@ class CartController extends GetxController implements GetxService {
     });
   }
 
+  void _sortProvidersByRating(List<ProviderData> providers) {
+    providers.sort((a, b) {
+      final ratingCompare = (b.avgRating ?? 0).compareTo(a.avgRating ?? 0);
+      if (ratingCompare != 0) return ratingCompare;
+      return (b.ratingCount ?? 0).compareTo(a.ratingCount ?? 0);
+    });
+  }
+
+  void _refreshDisplayedBookingProviders({bool preserveSelection = true}) {
+    final base = _filteredBookingProviders ?? [];
+    var list = List<ProviderData>.from(base);
+    final query = _bookingProviderSearchQuery.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      list = list.where((provider) {
+        final name = (provider.companyName ?? '').toLowerCase();
+        final address = (provider.companyAddress ?? '').toLowerCase();
+        return name.contains(query) || address.contains(query);
+      }).toList();
+    }
+    if (_bookingProviderSortBy == BookingProviderSortBy.rating) {
+      _sortProvidersByRating(list);
+    } else {
+      _sortProvidersByDistance(list);
+    }
+    _displayedBookingProviders = list;
+    if (!preserveSelection) return;
+    if (selectedProviderIndex >= 0 && _pendingBookingProvider != null) {
+      final selectedId = _pendingBookingProvider!.id;
+      final newIndex = list.indexWhere((provider) => provider.id == selectedId);
+      if (newIndex >= 0) {
+        selectedProviderIndex = newIndex;
+      } else {
+        selectedProviderIndex = -1;
+        _pendingBookingProvider = null;
+      }
+    }
+  }
+
+  void setBookingProviderSelectionMode(BookingProviderSelectionMode mode) {
+    _bookingProviderSelectionMode = mode;
+    if (mode == BookingProviderSelectionMode.auto) {
+      selectedProviderIndex = -1;
+      _pendingBookingProvider = null;
+      _bookingProviderSearchQuery = '';
+    }
+    _refreshDisplayedBookingProviders(preserveSelection: mode == BookingProviderSelectionMode.manual);
+    update();
+  }
+
+  void setBookingProviderSearchQuery(String query) {
+    _bookingProviderSearchQuery = query;
+    _refreshDisplayedBookingProviders();
+    update();
+  }
+
+  void setBookingProviderSortBy(BookingProviderSortBy sortBy) {
+    _bookingProviderSortBy = sortBy;
+    _refreshDisplayedBookingProviders();
+    update();
+  }
+
   Future<void> getProviderBasedOnSubcategory(String subcategoryId,bool reload) async {
 
     if(reload || _providerList == null){
@@ -686,8 +762,11 @@ class CartController extends GetxController implements GetxService {
 
   void updateProviderSelectedIndex(int index){
     selectedProviderIndex = index;
-    if (index >= 0 && _filteredBookingProviders != null && index < _filteredBookingProviders!.length) {
-      _pendingBookingProvider = _filteredBookingProviders![index];
+    final providerList = _bookingProviderSelectionMode == BookingProviderSelectionMode.manual
+        ? _displayedBookingProviders
+        : (_filteredBookingProviders ?? []);
+    if (index >= 0 && index < providerList.length) {
+      _pendingBookingProvider = providerList[index];
     } else if (index == -1) {
       _pendingBookingProvider = null;
     }
@@ -700,12 +779,20 @@ class CartController extends GetxController implements GetxService {
     _pendingBookingSchedule = null;
     _pendingBookingProvider = null;
     _filteredBookingProviders = null;
+    _displayedBookingProviders = [];
+    _bookingProviderSelectionMode = BookingProviderSelectionMode.auto;
+    _bookingProviderSortBy = BookingProviderSortBy.distance;
+    _bookingProviderSearchQuery = '';
     _isLoadingBookingProviders = false;
     selectedProviderIndex = -1;
     if (shouldUpdate) update();
   }
 
   void setBookingStep(ServiceBookingStep step) {
+    if (step == ServiceBookingStep.provider && _bookingStep == ServiceBookingStep.schedule) {
+      _bookingProviderSelectionMode = BookingProviderSelectionMode.auto;
+      _bookingProviderSearchQuery = '';
+    }
     _bookingStep = step;
     if (step == ServiceBookingStep.schedule) {
       final scheduleController = Get.find<ScheduleController>();
@@ -721,8 +808,10 @@ class CartController extends GetxController implements GetxService {
   void tryAutoSelectSingleBookingAddress({bool shouldUpdate = true}) {
     if (_pendingBookingAddress != null) return;
 
-    final addresses = Get.find<LocationController>().addressList;
-    if (addresses != null && addresses.length == 1) {
+    final addresses = AddressSessionHelper.filterAddressesForSessionZone(
+      Get.find<LocationController>().addressList ?? [],
+    );
+    if (addresses.length == 1) {
       _pendingBookingAddress = addresses.first;
       if (shouldUpdate) update();
     }
@@ -731,6 +820,23 @@ class CartController extends GetxController implements GetxService {
   void setPendingBookingAddress(AddressModel address) {
     _pendingBookingAddress = address;
     update();
+  }
+
+  void clearPendingBookingAddress() {
+    _pendingBookingAddress = null;
+    update();
+  }
+
+  Future<bool> selectBookingAddress(AddressModel address) async {
+    final valid = await AddressSessionHelper.validateAddressForUse(
+      address,
+      requireSessionZone: true,
+    );
+    if (!valid) {
+      return false;
+    }
+    setPendingBookingAddress(address);
+    return true;
   }
 
   void setPendingBookingSchedule(String schedule) {
@@ -745,8 +851,19 @@ class CartController extends GetxController implements GetxService {
   Future<void> loadProvidersForBooking(String subcategoryId) async {
     await Get.find<LocationController>().refreshSavedAddressZone();
     _syncPendingBookingAddress();
+    final pendingAddress = _pendingBookingAddress;
+    if (pendingAddress != null) {
+      final resolvedZone = await resolveZoneIdForBookingAddress(pendingAddress);
+      if (!ValidationHelper.isValidUuid(resolvedZone)) {
+        _filteredBookingProviders = [];
+        _isLoadingBookingProviders = false;
+        update();
+        return;
+      }
+      pendingAddress.zoneId = resolvedZone;
+    }
     final zoneId = _pendingBookingAddress?.zoneId ??
-        Get.find<LocationController>().getUserAddress()?.zoneId ??
+        AddressSessionHelper.sessionZoneId() ??
         '';
     final origin = _providerListOriginCoordinates();
     _isLoadingBookingProviders = true;
@@ -781,6 +898,7 @@ class CartController extends GetxController implements GetxService {
       if (_filteredBookingProviders != null && _filteredBookingProviders!.isNotEmpty) {
         _sortProvidersByDistance(_filteredBookingProviders!);
       }
+      _refreshDisplayedBookingProviders(preserveSelection: false);
     } finally {
       _isLoadingBookingProviders = false;
       update();
@@ -791,19 +909,27 @@ class CartController extends GetxController implements GetxService {
     if (_pendingBookingAddress != null) return;
 
     final locationController = Get.find<LocationController>();
-    if (locationController.selectedAddress != null) {
+    final sessionZone = AddressSessionHelper.sessionZoneId();
+    final addresses = AddressSessionHelper.filterAddressesForSessionZone(
+      locationController.addressList ?? [],
+    );
+
+    if (locationController.selectedAddress != null &&
+        AddressSessionHelper.zoneIdsMatch(
+          locationController.selectedAddress?.zoneId,
+          sessionZone,
+        )) {
       _pendingBookingAddress = locationController.selectedAddress;
       return;
     }
 
-    final addresses = locationController.addressList;
-    if (addresses != null && addresses.isNotEmpty) {
+    if (addresses.isNotEmpty) {
       _pendingBookingAddress = addresses.first;
       return;
     }
 
     final saved = locationController.getUserAddress();
-    if (saved != null) {
+    if (saved != null && AddressSessionHelper.zoneIdsMatch(saved.zoneId, sessionZone)) {
       _pendingBookingAddress = saved;
     }
   }
@@ -882,7 +1008,7 @@ class CartController extends GetxController implements GetxService {
       }
     }
 
-    final zoneId = _resolveZoneIdForBooking(address);
+    final zoneId = await resolveZoneIdForBookingAddress(address);
     if (!ValidationHelper.isValidUuid(zoneId)) {
       customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.info, aboveOverlays: true);
       return;
@@ -1090,13 +1216,14 @@ class CartController extends GetxController implements GetxService {
   Future<void> openWalletPaymentConfirmDialog() async {
     bool initialCheck;
     bool checkAfterUsingCoupon;
+    final spendableWallet = CheckoutHelper.effectiveWalletSpendLimit(walletBalance);
 
-    if(_bookingAmountWithoutCoupon > walletBalance){
+    if(_bookingAmountWithoutCoupon > spendableWallet){
       initialCheck = true;
     }else{
       initialCheck = false;
     }
-    if(_bookingAmountWithoutCoupon > (walletBalance + _couponAmount)){
+    if(_bookingAmountWithoutCoupon > (spendableWallet + _couponAmount)){
       checkAfterUsingCoupon =  true;
     }else{
       checkAfterUsingCoupon = false;
@@ -1206,7 +1333,10 @@ class CartController extends GetxController implements GetxService {
   }
 
   bool get hasPastScheduleCartItems =>
-      CartBookingDisplayHelper.hasPastScheduleCartItems(_cartList);
+      CartBookingDisplayHelper.hasInvalidScheduleCartItems(_cartList);
+
+  bool get hasInvalidScheduleCartItems =>
+      CartBookingDisplayHelper.hasInvalidScheduleCartItems(_cartList);
 
   String? _resolveCartZoneId() {
     if (ValidationHelper.isValidUuid(_cartServiceInfo?.zoneId)) {
@@ -1242,8 +1372,13 @@ class CartController extends GetxController implements GetxService {
     ProviderData? provider,
     String? zoneId,
   }) async {
-    if (selectedDateTime.isBefore(CompanyAvailabilityHelper.minimumScheduleTime())) {
-      customSnackBar(CompanyAvailabilityHelper.minimumLeadTimeMessage(), type: ToasterMessageType.info, aboveOverlays: true);
+    if (!CompanyAvailabilityHelper.isSelectableBookingTime(selectedDateTime)) {
+      customSnackBar(
+        CompanyAvailabilityHelper.outsideHoursMessage() ??
+            CompanyAvailabilityHelper.minimumLeadTimeMessage(),
+        type: ToasterMessageType.info,
+        aboveOverlays: true,
+      );
       return false;
     }
 

@@ -22,14 +22,18 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final surfaceColor = Theme.of(context).scaffoldBackgroundColor;
     return CustomPopWidget(
       isExit: true,
       child: Scaffold(
+        backgroundColor: surfaceColor,
         drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
 
         endDrawer: ResponsiveHelper.isDesktop(context) ? const MenuDrawer() : null,
         appBar:widget.fromPage != "fromOthers" ? CustomAppBar(title: "language".tr) : null,
-        body: GetBuilder<LocalizationController>(
+        body: ColoredBox(
+          color: surfaceColor,
+          child: GetBuilder<LocalizationController>(
           builder: (localizationController){
             return FooterBaseView(
               isScrollView: (ResponsiveHelper.isMobile(context) || ResponsiveHelper.isTab(context)) ? false: true,
@@ -49,9 +53,11 @@ class _LanguageScreenState extends State<LanguageScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if(widget.fromPage != "fromSettingsPage")
+                          if (widget.fromPage == 'fromSettingsPage') ...[
                             MobileAppIconHelper.appLogo(width: Dimensions.logoSize),
-                          const SizedBox(height: Dimensions.paddingSizeExtraMoreLarge),
+                            const SizedBox(height: Dimensions.paddingSizeExtraMoreLarge),
+                          ] else
+                            const SizedBox(height: Dimensions.paddingSizeExtraMoreLarge),
                           Align(
                             alignment:Get.find<LocalizationController>().isLtr ?  Alignment.centerLeft : Alignment.centerRight,
                             child: Text('select_language'.tr,style: robotoMedium)),
@@ -94,10 +100,8 @@ class _LanguageScreenState extends State<LanguageScreen> {
                             if(Get.find<SplashController>().isShowOnboardingScreen() && !kIsWeb){
                               Get.offNamed(RouteHelper.onBoardScreen);
                             }else{
-                              Get.find<SplashController>().getConfigData();
-
-                              HomeScreen.loadData(true);
                               Get.offAllNamed(RouteHelper.getMainRoute("home"));
+                              unawaited(HomeScreen.loadData(true));
                             }
                           },
                           buttonText: 'save'.tr,
@@ -109,6 +113,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
               ),
             );
           },
+        ),
         ),
       ),
     );

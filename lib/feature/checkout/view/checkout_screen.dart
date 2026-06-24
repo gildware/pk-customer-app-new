@@ -45,10 +45,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if(widget.pageState == 'complete') {
       Get.find<CheckOutController>().updateState(PageState.complete,shouldUpdate: false);
     }
-    Get.find<CheckOutController>().changePaymentMethod(shouldUpdate: false);
+    Get.find<CheckOutController>().ensureDefaultDigitalPaymentSelected(shouldUpdate: false);
 
     if (widget.pageState == 'payment' || widget.pageState == 'orderDetails') {
-      Get.find<SplashController>().getConfigData();
+      if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
+        unawaited(Get.find<CompanyAvailabilityConfigWatcher>().refreshNow());
+      } else {
+        Get.find<SplashController>().refreshConfigFromServer();
+      }
     }
 
     if(widget.pageState == 'orderDetails'){
@@ -85,7 +89,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           appBar: CustomAppBar( title: 'checkout'.tr,
             onBackPressed: () {
               if(widget.pageState == 'payment' || checkoutController.currentPageState == PageState.payment) {
-                checkoutController.changePaymentMethod();
+                checkoutController.ensureDefaultDigitalPaymentSelected();
                 checkoutController.updateState(PageState.orderDetails);
                 if(ResponsiveHelper.isWeb()) {
                   Get.toNamed(RouteHelper.getCheckoutRoute('cart','orderDetails','null'));
@@ -133,10 +137,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<bool> _exitApp() async {
     if(widget.pageState == 'payment' || Get.find<CheckOutController>().currentPageState == PageState.payment) {
-      Get.find<CheckOutController>().changePaymentMethod();
+      Get.find<CheckOutController>().ensureDefaultDigitalPaymentSelected();
       Get.find<CheckOutController>().updateState(PageState.orderDetails);
       Get.find<CheckOutController>().getPaymentMethodList(shouldUpdate: true);
-      Get.find<CheckOutController>().changePaymentMethod(shouldUpdate: true);
+      Get.find<CheckOutController>().ensureDefaultDigitalPaymentSelected(shouldUpdate: true);
       if(ResponsiveHelper.isWeb()) {
         Get.toNamed(RouteHelper.getCheckoutRoute('cart','orderDetails','null',reload: false));
       }

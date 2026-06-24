@@ -152,6 +152,19 @@ class AddressSessionHelper {
     return lat != null && lat.isNotEmpty && lng != null && lng.isNotEmpty;
   }
 
+  /// Saved session address with a serviceable zone (required before showing home).
+  static bool hasUsableSessionAddress() {
+    if (!hasValidActiveAddress()) return false;
+    return isServiceableAddress(Get.find<LocationController>().getUserAddress());
+  }
+
+  static void redirectToAddressSetup({String page = 'home'}) {
+    if (Get.currentRoute.contains(RouteHelper.accessLocation)) {
+      return;
+    }
+    Get.offAllNamed(RouteHelper.getAccessLocationRoute(page));
+  }
+
   static bool isServiceableAddress(AddressModel? address) {
     if (address == null) return false;
     final zoneId = address.zoneId?.trim();
@@ -159,15 +172,130 @@ class AddressSessionHelper {
     return (address.availableServiceCountInZone ?? 0) > 0;
   }
 
-  /// Re-validates zone for the saved address. Clears local address when zone lookup fails.
+  /// Quick check from cached address fields (zone may still need live validation).
+  static bool isAddressLikelyServiceable(AddressModel address) {
+    final lat = address.latitude?.trim();
+    final lng = address.longitude?.trim();
+    if (lat == null || lat.isEmpty || lng == null || lng.isEmpty) {
+      return false;
+    }
+    final zoneId = address.zoneId?.trim();
+    if (zoneId == null || zoneId.isEmpty) {
+      return true;
+    }
+    return isServiceableAddress(address);
+  }
+
+  static Future<bool> evaluateAddressServiceability(AddressModel address) {
+    return validateAddressForUse(address, showError: false);
+  }
+
+  static final Map<String, bool> addressServiceabilityCache = {};
+
+  static void clearAddressServiceabilityCache() {
+    addressServiceabilityCache.clear();
+  }
+
+  static String? sessionZoneId() {
+    final id = Get.find<LocationController>().getUserAddress()?.zoneId?.trim();
+    return (id != null && id.isNotEmpty) ? id : null;
+  }
+
+  static bool zoneIdsMatch(String? a, String? b) {
+    final aa = a?.trim() ?? '';
+    final bb = b?.trim() ?? '';
+    return aa.isNotEmpty && aa == bb;
+  }
+
+  static Future<ZoneResponseModel> resolveAddressZone(
+    AddressModel address, {
+    bool updateAddressFields = true,
+  }) async {
+    final locationController = Get.find<LocationController>();
+    final lat = address.latitude?.trim() ?? '';
+    final lng = address.longitude?.trim() ?? '';
+    final response = await locationController.getZone(lat, lng, false);
+    if (updateAddressFields) {
+      address.availableServiceCountInZone = response.totalServiceCount;
+      if (response.isSuccess && response.zoneIds.isNotEmpty) {
+        address.zoneId = response.zoneIds;
+      }
+    }
+    return response;
+  }
+
+  static Future<bool> validateAddressForUse(
+    AddressModel address, {
+    bool requireSessionZone = false,
+    bool showError = true,
+  }) async {
+    final latText = address.latitude?.trim();
+    final lngText = address.longitude?.trim();
+    if (latText == null || latText.isEmpty || lngText == null || lngText.isEmpty) {
+      if (showError) {
+        customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);
+      }
+      return false;
+    }
+
+    final latValue = double.tryParse(latText);
+    final lngValue = double.tryParse(lngText);
+    if (latValue == null || lngValue == null || !await isPointInsideServiceZones(LatLng(latValue, lngValue))) {
+      if (showError) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      }
+      return false;
+    }
+
+    final response = await resolveAddressZone(address);
+    final locationController = Get.find<LocationController>();
+
+    if (!locationController.isZoneServiceable(response)) {
+      if (showError) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      }
+      return false;
+    }
+
+    if (requireSessionZone) {
+      final sessionZone = sessionZoneId();
+      if (sessionZone != null && !zoneIdsMatch(response.zoneIds, sessionZone)) {
+        if (showError) {
+          customSnackBar('this_service_not_available'.tr, type: ToasterMessageType.error);
+        }
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  static List<AddressModel> filterAddressesForSessionZone(List<AddressModel> addresses) {
+    final sessionZone = sessionZoneId();
+    if (sessionZone == null) return addresses;
+    return addresses.where((address) => zoneIdsMatch(address.zoneId, sessionZone)).toList();
+  }
+
+  static Future<String?> resolveZoneIdFromCoordinates(AddressModel address) async {
+    final response = await resolveAddressZone(address);
+    final locationController = Get.find<LocationController>();
+    if (!locationController.isZoneServiceable(response)) {
+      return null;
+    }
+    final sessionZone = sessionZoneId();
+    if (sessionZone != null && !zoneIdsMatch(response.zoneIds, sessionZone)) {
+      return null;
+    }
+    return response.zoneIds;
+  }
+
+  /// Re-validates zone for the saved address.
   static Future<bool> validateAndRefreshActiveAddress() async {
     if (!hasValidActiveAddress()) return false;
 
     final locationController = Get.find<LocationController>();
     final synced = await locationController.refreshSavedAddressZone();
     if (!synced) {
-      Get.find<AuthController>().authRepo.clearSharedAddress();
-      locationController.clearSessionData();
       return false;
     }
 
@@ -241,6 +369,24 @@ class AddressSessionHelper {
     );
   }
 
+  static Future<bool> isPointInsideServiceZones(LatLng point) async {
+    if (!Get.isRegistered<ServiceAreaController>()) {
+      return false;
+    }
+
+    final serviceAreaController = Get.find<ServiceAreaController>();
+    if (serviceAreaController.zoneList == null || serviceAreaController.zoneList!.isEmpty) {
+      await serviceAreaController.getZoneList(reload: false);
+    }
+
+    final zones = serviceAreaController.zoneList;
+    if (zones == null || zones.isEmpty) {
+      return false;
+    }
+
+    return MapHelper.isPointInsideOperationalZones(point, zones);
+  }
+
   static Future<bool> applySelectedAddress(
     AddressModel address, {
     String? redirectRoute,
@@ -253,6 +399,17 @@ class AddressSessionHelper {
         address.longitude == null ||
         address.latitude!.isEmpty ||
         address.longitude!.isEmpty) {
+      return false;
+    }
+
+    final lat = double.tryParse(address.latitude!);
+    final lng = double.tryParse(address.longitude!);
+    if (lat == null || lng == null) {
+      return false;
+    }
+
+    if (!await isPointInsideServiceZones(LatLng(lat, lng))) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
       return false;
     }
 
@@ -312,15 +469,17 @@ class AddressSessionHelper {
     return true;
   }
 
-  /// Returns false when navigation was redirected (e.g. non-serviceable screen).
+  /// Returns false when navigation was redirected (address setup / non-serviceable).
   static Future<bool> ensureAddressBeforeContinue() async {
     if (!hasValidActiveAddress()) {
-      return true;
+      redirectToAddressSetup();
+      return false;
     }
 
     final valid = await validateAndRefreshActiveAddress();
     if (!valid) {
-      return true;
+      redirectToAddressSetup();
+      return false;
     }
 
     if (!isServiceableAddress(Get.find<LocationController>().getUserAddress())) {

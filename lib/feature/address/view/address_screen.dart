@@ -2,6 +2,7 @@ import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/common/widgets/staggered_list_animation.dart';
 import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
 
@@ -35,13 +36,8 @@ class _AddressScreenState extends State<AddressScreen> {
         body: GetBuilder<LocationController>(
             builder: (locationController) {
               List<AddressModel>? addressList = locationController.addressList;
-              List<AddressModel>? zoneBasedAddress = [];
-              if(addressList != null && addressList.isNotEmpty ){
-                zoneBasedAddress =  addressList.where((element) =>
-                element.zoneId == Get.find<LocationController>().getUserAddress()?.zoneId).toList();
-              }
               if(widget.fromPage == "checkout"){
-                addressList = zoneBasedAddress;
+                addressList = AddressSessionHelper.filterAddressesForSessionZone(addressList ?? []);
               }
 
               AddressModel? addressModel;

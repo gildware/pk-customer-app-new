@@ -176,52 +176,71 @@ class AdvertisementVideoPromotionWidget extends StatefulWidget {
 }
 
 class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPromotionWidget> {
-
-
-  late VideoPlayerController videoPlayerController;
+  VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
+  bool _disposed = false;
 
   @override
   void initState() {
     super.initState();
-    initializePlayer();
-    videoPlayerController.addListener(() {
+    _initializePlayer();
+  }
 
-      if(videoPlayerController.value.duration == videoPlayerController.value.position ){
-        Get.find<AdvertisementController>().updateAutoPlayStatus(status:  true, shouldUpdate: true);
+  void _onVideoTick() {
+    final controller = _videoPlayerController;
+    if (_disposed || !mounted || controller == null || !controller.value.isInitialized) {
+      return;
+    }
+    if (controller.value.duration == controller.value.position) {
+      Get.find<AdvertisementController>().updateAutoPlayStatus(status: true, shouldUpdate: true);
+    }
+  }
+
+  Future<void> _initializePlayer() async {
+    final url = widget.advertisement.promotionalVideoFullPath?.trim() ?? '';
+    if (url.isEmpty) {
+      return;
+    }
+
+    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    _videoPlayerController = controller;
+    controller.addListener(_onVideoTick);
+
+    try {
+      await controller.initialize();
+    } catch (_) {
+      if (!_disposed) {
+        await controller.dispose();
+        if (mounted) {
+          setState(() => _videoPlayerController = null);
+        }
       }
-    });
-  }
+      return;
+    }
 
-  Future<void> initializePlayer() async {
-    videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(
-        widget.advertisement.promotionalVideoFullPath ?? ""
-    ));
-
-    await Future.wait([
-      videoPlayerController.initialize(),
-
-    ]);
-    _createChewieController();
-    setState(() {});
-  }
-
-  void _createChewieController() {
+    if (_disposed || !mounted) {
+      await controller.dispose();
+      return;
+    }
 
     _chewieController = ChewieController(
-      videoPlayerController: videoPlayerController,
+      videoPlayerController: controller,
       autoPlay: true,
-      aspectRatio: videoPlayerController.value.aspectRatio,
-    );
-    _chewieController?.setVolume(0);
+      aspectRatio: controller.value.aspectRatio,
+    )..setVolume(0);
+    setState(() {});
   }
 
   @override
   void dispose() {
-    videoPlayerController.dispose();
+    _disposed = true;
     _chewieController?.dispose();
+    final controller = _videoPlayerController;
+    if (controller != null) {
+      controller.removeListener(_onVideoTick);
+      controller.dispose();
+    }
     super.dispose();
-
   }
 
   @override
@@ -267,12 +286,10 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
                       ),
 
                     )),
-                    _chewieController !=null &&  _chewieController!.videoPlayerController.value.isInitialized ?
-                    Stack(
-                      children: [
-                        Chewie(controller: _chewieController!),
-                      ],
-                    ) : const CircularProgressIndicator(),
+                    _chewieController != null &&
+                            _chewieController!.videoPlayerController.value.isInitialized
+                        ? Chewie(controller: _chewieController!)
+                        : const CircularProgressIndicator(),
 
                   ],
                 ),

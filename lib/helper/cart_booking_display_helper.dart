@@ -74,9 +74,47 @@ class CartBookingDisplayHelper {
     return parsed.isBefore(DateTime.now());
   }
 
+  static bool isCartItemScheduleBelowRestriction(CartModel cart) {
+    final raw = resolveRawScheduleForCartItem(cart);
+    if (raw == null || raw.isEmpty) return false;
+
+    final parsed = DateConverter.tryParseScheduleDateTime(raw);
+    if (parsed == null) return false;
+    if (isAsapSchedule(parsed)) return false;
+
+    return !CompanyAvailabilityHelper.isSelectableBookingTimeForCartCheckout(parsed);
+  }
+
+  static bool isCartItemScheduleInvalid(CartModel cart) {
+    return isCartItemScheduleInPast(cart) || isCartItemScheduleBelowRestriction(cart);
+  }
+
+  static String invalidScheduleMessageForCartItem(CartModel cart) {
+    final raw = resolveRawScheduleForCartItem(cart);
+    final parsed = raw != null ? DateConverter.tryParseScheduleDateTime(raw) : null;
+    if (parsed != null && !isAsapSchedule(parsed)) {
+      if (parsed.isBefore(DateTime.now())) {
+        return 'cart_schedule_past_message'.tr;
+      }
+      if (!CompanyAvailabilityHelper.isSelectableBookingTimeForCartCheckout(parsed)) {
+        if (!CompanyAvailabilityHelper.isWithinCompanyHours(parsed)) {
+          return CompanyAvailabilityHelper.outsideHoursMessage() ??
+              'company_service_outside_hours_notice'.tr;
+        }
+        final day = DateTime(parsed.year, parsed.month, parsed.day);
+        return CompanyAvailabilityHelper.allowedTimeRangeMessageForCartCheckoutDay(day);
+      }
+    }
+    return CompanyAvailabilityHelper.minimumCartCheckoutLeadTimeMessage();
+  }
+
   static bool hasPastScheduleCartItems(Iterable<CartModel> cartItems) {
+    return hasInvalidScheduleCartItems(cartItems);
+  }
+
+  static bool hasInvalidScheduleCartItems(Iterable<CartModel> cartItems) {
     for (final cart in cartItems) {
-      if (isCartItemScheduleInPast(cart)) return true;
+      if (isCartItemScheduleInvalid(cart)) return true;
     }
     return false;
   }
@@ -101,28 +139,32 @@ class CartBookingDisplayHelper {
     for (final cart in cartItems) {
       final raw = resolveRawScheduleForCartItem(cart);
       if (raw == null || raw.isEmpty) {
-        return 'select_your_preferable_booking_time';
+        return 'select_your_preferable_booking_time'.tr;
       }
       final parsed = DateConverter.tryParseScheduleDateTime(raw);
       if (parsed != null &&
           !isAsapSchedule(parsed) &&
-          parsed.isBefore(CompanyAvailabilityHelper.minimumScheduleTime())) {
-        return CompanyAvailabilityHelper.minimumLeadTimeMessage();
+          !CompanyAvailabilityHelper.isSelectableBookingTimeForCartCheckout(parsed)) {
+        if (!CompanyAvailabilityHelper.isWithinCompanyHours(parsed)) {
+          final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(parsed);
+          return CompanyAvailabilityHelper.outsideHoursRescheduledMessage(resolution.schedule) ??
+              CompanyAvailabilityHelper.outsideHoursMessage() ??
+              'company_service_outside_hours_notice'.tr;
+        }
+        final day = DateTime(parsed.year, parsed.month, parsed.day);
+        return CompanyAvailabilityHelper.allowedTimeRangeMessageForCartCheckoutDay(day);
       }
       if (parsed != null &&
           !isAsapSchedule(parsed) &&
-          !CompanyAvailabilityHelper.isWithinCompanyHours(parsed)) {
-        final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(parsed);
-        return CompanyAvailabilityHelper.outsideHoursRescheduledMessage(resolution.schedule) ??
-            CompanyAvailabilityHelper.outsideHoursMessage() ??
-            'company_service_outside_hours_notice'.tr;
+          parsed.isBefore(DateTime.now())) {
+        return 'cart_schedule_past_message'.tr;
       }
       final address = resolveAddressForCartItem(cart);
       if (address == null || (address.address?.trim().isEmpty ?? true)) {
-        return 'add_address_first';
+        return 'add_address_first'.tr;
       }
       if (!AddressHelper.hasValidContactPerson(address)) {
-        return 'please_input_contact_person_name_and_phone_number';
+        return 'please_input_contact_person_name_and_phone_number'.tr;
       }
     }
     return null;

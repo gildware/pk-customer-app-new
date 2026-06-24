@@ -1,4 +1,4 @@
-import 'package:demandium/common/widgets/time_picker_snipper.dart';
+import 'package:demandium/common/widgets/time_picker_widget.dart';
 import 'package:demandium/helper/provider_availability_helper.dart';
 import 'package:demandium/helper/validation_helper.dart';
 import 'package:demandium/util/core_export.dart';
@@ -42,7 +42,7 @@ class BookingDateTimePicker extends StatefulWidget {
   }
 
   static bool isValidBookingDateTime(DateTime selected) {
-    return !selected.isBefore(minimumScheduleTime());
+    return CompanyAvailabilityHelper.isSelectableBookingTime(selected);
   }
 
   @override
@@ -104,7 +104,9 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
   }
 
   Widget _buildBody(BuildContext context) {
-    return Container(
+    return GetBuilder<SplashController>(
+      id: CompanyAvailabilityConfigWatcher.bookingConfigUpdateId,
+      builder: (_) => Container(
       width: ResponsiveHelper.isDesktop(context)
           ? Dimensions.webMaxWidth / 2
           : Dimensions.webMaxWidth,
@@ -116,6 +118,14 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
         ),
       ),
       child: GetBuilder<ScheduleController>(builder: (scheduleController) {
+        final selected = BookingDateTimePicker.parseSelectedSchedule(scheduleController);
+        final selectedDay = _parsePickerDay(scheduleController.selectedDate) ?? DateTime.now();
+        final isTimeValid = selected != null &&
+            BookingDateTimePicker.isValidBookingDateTime(selected);
+        final invalidTimeMessage = !isTimeValid
+            ? CompanyAvailabilityHelper.allowedTimeRangeMessageForDay(selectedDay)
+            : null;
+
         return SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -139,12 +149,30 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
                 dateRangePickerController: _dateController,
                 initialSelectableDate: BookingDateTimePicker.earliestCustomBookableDateTime(),
               ),
-              GetBuilder<ScheduleController>(
-                builder: (scheduleController) => _BookingTimePicker(
-                  key: ValueKey(scheduleController.selectedDate),
-                  selectedDay: _parsePickerDay(scheduleController.selectedDate),
-                ),
+              _BookingTimePicker(
+                key: ValueKey(scheduleController.selectedDate),
+                selectedTime: selected != null
+                    ? TimeOfDay(hour: selected.hour, minute: selected.minute)
+                    : TimeOfDay.fromDateTime(
+                        CompanyAvailabilityHelper.defaultTimeForCustomDay(selectedDay),
+                      ),
+                onTimeChanged: (time) {
+                  scheduleController.selectedTime =
+                      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
+                  scheduleController.update();
+                },
               ),
+              if (invalidTimeMessage != null) ...[
+                const SizedBox(height: Dimensions.paddingSizeSmall),
+                Text(
+                  invalidTimeMessage,
+                  style: robotoRegular.copyWith(
+                    fontSize: Dimensions.fontSizeSmall,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               const SizedBox(height: Dimensions.paddingSizeDefault),
               Row(
                 children: [
@@ -159,7 +187,7 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
                   Expanded(
                     child: CustomButton(
                       buttonText: 'ok'.tr,
-                      onPressed: () => _onConfirm(scheduleController),
+                      onPressed: isTimeValid ? () => _onConfirm(scheduleController) : null,
                     ),
                   ),
                 ],
@@ -168,6 +196,7 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
           ),
         );
       }),
+    ),
     );
   }
 
@@ -190,6 +219,15 @@ class _BookingDateTimePickerState extends State<BookingDateTimePicker> {
       return;
     }
     if (!CompanyAvailabilityHelper.isCustomBookingDaySelectable(selected)) {
+      customSnackBar(
+        CompanyAvailabilityHelper.outsideHoursMessage() ??
+            'company_service_outside_hours_notice'.tr,
+        type: ToasterMessageType.info,
+        aboveOverlays: true,
+      );
+      return;
+    }
+    if (!CompanyAvailabilityHelper.isSelectableBookingTime(selected)) {
       customSnackBar(
         CompanyAvailabilityHelper.outsideHoursMessage() ??
             'company_service_outside_hours_notice'.tr,
@@ -289,7 +327,9 @@ class _BookingDatePicker extends StatelessWidget {
     final today = DateTime.now();
     final calendarMinDate = DateTime(today.year, today.month, today.day);
 
-    return SizedBox(
+    return GetBuilder<SplashController>(
+      id: CompanyAvailabilityConfigWatcher.bookingConfigUpdateId,
+      builder: (_) => SizedBox(
       height: 300,
       child: GetBuilder<ScheduleController>(builder: (scheduleController) {
         return SfDateRangePicker(
@@ -303,9 +343,14 @@ class _BookingDatePicker extends StatelessWidget {
               final selectedDay = args.value as DateTime;
               scheduleController.selectedDate =
                   DateFormat('yyyy-MM-dd').format(selectedDay);
-              final defaultTime =
-                  CompanyAvailabilityHelper.defaultTimeForCustomDay(selectedDay);
-              scheduleController.selectedTime = DateFormat('HH:mm:ss').format(defaultTime);
+              final currentSelection =
+                  BookingDateTimePicker.parseSelectedSchedule(scheduleController);
+              final resolvedTime = CompanyAvailabilityHelper.timeForSelectedDay(
+                selectedDay,
+                currentSelection,
+              );
+              scheduleController.selectedTime =
+                  DateFormat('HH:mm:ss').format(resolvedTime);
               scheduleController.updateScheduleType(
                 scheduleType: ScheduleType.schedule,
                 shouldUpdate: false,
@@ -327,32 +372,24 @@ class _BookingDatePicker extends StatelessWidget {
           ),
         );
       }),
+    ),
     );
   }
 }
 
-class _BookingTimePicker extends StatefulWidget {
-  final DateTime? selectedDay;
-  const _BookingTimePicker({super.key, required this.selectedDay});
+class _BookingTimePicker extends StatelessWidget {
+  final TimeOfDay selectedTime;
+  final ValueChanged<TimeOfDay> onTimeChanged;
 
-  @override
-  State<_BookingTimePicker> createState() => _BookingTimePickerState();
-}
-
-class _BookingTimePickerState extends State<_BookingTimePicker> {
-  DateTime _resolvePickerTime(ScheduleController scheduleController) {
-    final parsed = BookingDateTimePicker.parseSelectedSchedule(scheduleController);
-    if (parsed != null) return parsed;
-
-    final day = widget.selectedDay ?? DateTime.now();
-    return CompanyAvailabilityHelper.defaultTimeForCustomDay(day);
-  }
+  const _BookingTimePicker({
+    super.key,
+    required this.selectedTime,
+    required this.onTimeChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ScheduleController>(builder: (scheduleController) {
-      final pickerTime = _resolvePickerTime(scheduleController);
-      return Padding(
+    return Padding(
       padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
       child: Row(
         children: [
@@ -367,33 +404,14 @@ class _BookingTimePickerState extends State<_BookingTimePicker> {
           ),
           const SizedBox(width: Dimensions.paddingSizeLarge),
           Expanded(
-            child: TimePickerSpinner(
-              time: pickerTime,
-              is24HourMode: Get.find<SplashController>().configModel.content?.timeFormat == '24',
-              normalTextStyle: robotoRegular.copyWith(
-                color: Theme.of(context).hintColor,
-                fontSize: Dimensions.fontSizeSmall,
-              ),
-              highlightedTextStyle: robotoMedium.copyWith(
-                fontSize: Dimensions.fontSizeLarge,
-                color: Get.isDarkMode
-                    ? Theme.of(context).textTheme.bodyMedium?.color
-                    : Theme.of(context).colorScheme.primary,
-              ),
-              spacing: Dimensions.paddingSizeDefault,
-              itemHeight: Dimensions.fontSizeLarge + 2,
-              itemWidth: 50,
-              alignment: Alignment.topCenter,
-              isForce2Digits: true,
-              onTimeChange: (time) {
-                Get.find<ScheduleController>().selectedTime =
-                    DateFormat('HH:mm:ss').format(time);
-              },
+            child: AppTimePickerWidget(
+              time: selectedTime,
+              placeholder: 'pick_time'.tr,
+              onTimeChanged: onTimeChanged,
             ),
           ),
         ],
       ),
     );
-    });
   }
 }

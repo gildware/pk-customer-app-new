@@ -4,19 +4,134 @@ import 'package:get/get.dart';
 class ProviderCartItemView extends StatelessWidget {
   final ProviderData providerData;
   final int index;
-  const ProviderCartItemView({super.key, required this.providerData, required this.index});
+  final bool compact;
+  const ProviderCartItemView({
+    super.key,
+    required this.providerData,
+    required this.index,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<CartController>(builder: (cartController) {
-      final isLtr = Get.find<LocalizationController>().isLtr;
-      final isSelected = cartController.selectedProviderIndex == index;
-      final hasDistance = providerData.distance != null;
-      final ratingCount = providerData.ratingCount ?? 0;
+      if (compact) {
+        return _buildCompactItem(context, cartController);
+      }
+      return _buildDefaultItem(context, cartController);
+    });
+  }
 
-      return GestureDetector(
-        onTap: () => cartController.updateProviderSelectedIndex(index),
-        child: Stack(
+  Widget _buildCompactItem(BuildContext context, CartController cartController) {
+    final isSelected = cartController.selectedProviderIndex == index;
+    final ratingCount = providerData.ratingCount ?? 0;
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return GestureDetector(
+      onTap: () => cartController.updateProviderSelectedIndex(index),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeExtraSmall),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Dimensions.paddingSizeSmall,
+          vertical: Dimensions.paddingSizeExtraSmall,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+          border: Border.all(
+            color: isSelected ? primary : Theme.of(context).hintColor.withValues(alpha: 0.25),
+            width: isSelected ? 1.2 : 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+              child: CustomImage(
+                image: "${providerData.logoFullPath}",
+                height: 40,
+                width: 40,
+              ),
+            ),
+            const SizedBox(width: Dimensions.paddingSizeSmall),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          providerData.companyName ?? "",
+                          style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      RatingBar(
+                        rating: providerData.avgRating,
+                        color: Theme.of(context).colorScheme.secondary,
+                        size: 11,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        ratingCount > 0
+                            ? '($ratingCount)'
+                            : providerData.avgRating?.toStringAsFixed(1) ?? '0',
+                        style: robotoRegular.copyWith(
+                          fontSize: Dimensions.fontSizeExtraSmall,
+                          color: Theme.of(context).hintColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          providerData.companyAddress ?? '',
+                          style: robotoRegular.copyWith(
+                            fontSize: Dimensions.fontSizeExtraSmall,
+                            color: Theme.of(context).hintColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (providerData.distance != null) ...[
+                        Image.asset(Images.distance, height: 10),
+                        const SizedBox(width: 2),
+                        Text(
+                          "${providerData.distance!.toStringAsFixed(1)} ${'km'.tr}",
+                          style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeExtraSmall),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Padding(
+                padding: const EdgeInsets.only(left: Dimensions.paddingSizeExtraSmall),
+                child: Icon(Icons.check_circle, color: primary, size: 18),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultItem(BuildContext context, CartController cartController) {
+    final isLtr = Get.find<LocalizationController>().isLtr;
+    final isSelected = cartController.selectedProviderIndex == index;
+    final hasDistance = providerData.distance != null;
+    final ratingCount = providerData.ratingCount ?? 0;
+
+    return GestureDetector(
+      onTap: () => cartController.updateProviderSelectedIndex(index),
+      child: Stack(
           clipBehavior: Clip.none,
           children: [
             Container(
@@ -136,6 +251,5 @@ class ProviderCartItemView extends StatelessWidget {
           ],
         ),
       );
-    });
   }
 }

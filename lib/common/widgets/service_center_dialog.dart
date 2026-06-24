@@ -104,17 +104,25 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
       child: PointerInterceptor(
         child: Container(
           width:ResponsiveHelper.isDesktop(context)? Dimensions.webMaxWidth/2:Dimensions.webMaxWidth,
-          padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(Dimensions.radiusExtraLarge)),
           ),
           child:  GetBuilder<CartController>(builder: (cartControllerInit) {
-              return GetBuilder<ServiceController>(builder: (serviceController) {
+              final sheetPadding = cartControllerInit.isBookingProviderSheetExpanded
+                  ? Dimensions.paddingSizeDefault
+                  : Dimensions.paddingSizeLarge;
+              return Padding(
+                padding: EdgeInsets.all(sheetPadding),
+                child: GetBuilder<ServiceController>(builder: (serviceController) {
                 if(widget.service!.hasBookableVariations) {
                   final isBookingFlow = cartControllerInit.bookingStep != ServiceBookingStep.variations;
-                  return Column(mainAxisSize: MainAxisSize.min,
+                  final isExpandedProviderStep = cartControllerInit.isBookingProviderSheetExpanded;
+                  return SizedBox(
+                    height: isExpandedProviderStep ? Get.height * 0.93 : null,
+                    child: Column(mainAxisSize: isExpandedProviderStep ? MainAxisSize.max : MainAxisSize.min,
                     children: [
+                      if (!isExpandedProviderStep)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,6 +156,27 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
                             )
                         ],
                       ),
+                      if (isExpandedProviderStep)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            height: 32,
+                            width: 32,
+                            margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeExtraSmall),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white70.withValues(alpha: 0.6),
+                              boxShadow: Get.isDarkMode ? null : [
+                                BoxShadow(color: Colors.grey[300]!, blurRadius: 2, spreadRadius: 1),
+                              ],
+                            ),
+                            child: InkWell(
+                              onTap: () => Get.back(),
+                              child: const Icon(Icons.close, color: Colors.black54, size: 18),
+                            ),
+                          ),
+                        ),
                       if (!isBookingFlow) ...[
                       const SizedBox(height: Dimensions.paddingSizeEight,),
                       Text(
@@ -174,10 +203,17 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
                       ],
 
                       if (isBookingFlow)
-                        ServiceBookingFlowWidget(
-                          service: widget.service!,
-                          onComplete: () {},
-                        )
+                        isExpandedProviderStep
+                            ? Expanded(
+                                child: ServiceBookingFlowWidget(
+                                  service: widget.service!,
+                                  onComplete: () {},
+                                ),
+                              )
+                            : ServiceBookingFlowWidget(
+                                service: widget.service!,
+                                onComplete: () {},
+                              )
                       else
                       Column(
                           mainAxisAlignment: MainAxisAlignment.start,
@@ -324,6 +360,7 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
                         ]);
                       }),
                     ],
+                  ),
                   );
                 }
                 return Stack(
@@ -350,11 +387,11 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
                         child: Center(child: Text('no_variation_is_available'.tr,style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeLarge),)))
                   ],
                 );
-              });
-            }
+              }),
+              );
+            }),
           ),
         ),
-      ),
     );
   }
 

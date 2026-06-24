@@ -17,7 +17,41 @@ class CheckoutRepo extends GetxService {
   }
 
   Future<Response> getDigitalPaymentResponse({String? transactionId}) async {
-    return await apiClient.getData('${AppConstants.digitalPaymentResponse}?transaction_id=$transactionId');
+    String url = '${AppConstants.digitalPaymentResponse}?transaction_id=$transactionId';
+
+    Future<String?> resolveAccessToken() async {
+      final authController = Get.find<AuthController>();
+      final splashController = Get.find<SplashController>();
+      final subjectId = authController.isLoggedIn()
+          ? Get.find<UserController>().userInfoModel?.id
+          : splashController.getGuestId();
+
+      if (subjectId == null || subjectId.isEmpty) {
+        return null;
+      }
+
+      return PaymentAccessTokenHelper.forSubject(subjectId);
+    }
+
+    try {
+      final accessToken = await resolveAccessToken();
+      if (accessToken != null && accessToken.isNotEmpty) {
+        url += '&access_token=${Uri.encodeComponent(accessToken)}';
+      }
+    } catch (e, stack) {
+      ErrorLogger.record(e, stack, reason: 'CheckoutRepo.getDigitalPaymentResponse.token');
+      if (!Get.find<AuthController>().isLoggedIn()) {
+        await BookingAuthHelper.ensureGuestSessionIfNeeded();
+        try {
+          final accessToken = await resolveAccessToken();
+          if (accessToken != null && accessToken.isNotEmpty) {
+            url += '&access_token=${Uri.encodeComponent(accessToken)}';
+          }
+        } catch (_) {}
+      }
+    }
+
+    return await apiClient.getData(url);
   }
 
   Future<Response?> checkExistingUser({required String phone}) async {

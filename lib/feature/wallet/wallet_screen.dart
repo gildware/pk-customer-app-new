@@ -24,8 +24,9 @@ class _WalletScreenState extends State<WalletScreen> {
     Get.find<WalletController>().insertFilterList();
 
 
-    Future.delayed(const Duration(seconds: 1)).then((value){
-      if(widget.status != null && widget.status!.contains("success") && Get.find<WalletController>().getWalletAccessToken() != widget.token){
+    Future.delayed(const Duration(seconds: 1)).then((value) async {
+      final storedToken = await Get.find<WalletController>().getWalletAccessToken();
+      if(widget.status != null && widget.status!.contains("success") && storedToken != widget.token){
         customSnackBar("message", customWidget: Row(children: [
           const SizedBox(width: Dimensions.paddingSizeDefault,),
           const Icon(Icons.check_circle, color: Colors.white70,),
@@ -34,8 +35,7 @@ class _WalletScreenState extends State<WalletScreen> {
         ]), borderRadius: Dimensions.radiusExtraMoreLarge
         );
       }
-    }).then((value) {
-      Get.find<WalletController>().setWalletAccessToken(widget.token ?? "");
+      await Get.find<WalletController>().setWalletAccessToken(widget.token ?? "");
     });
 
   }

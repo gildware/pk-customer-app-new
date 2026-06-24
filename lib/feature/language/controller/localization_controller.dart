@@ -95,6 +95,7 @@ class LocalizationController extends GetxController implements GetxService {
         _isLtr = _locale.languageCode != 'ar';
         Future.delayed(const Duration(milliseconds: 10), (){
           setLanguage(_locale, isInitial: true);
+          Get.find<SplashController>().disableShowInitialLanguageScreen();
           if(Get.find<SplashController>().isShowOnboardingScreen()){
             Get.offAllNamed(RouteHelper.onBoardScreen);
           }else{
@@ -164,7 +165,7 @@ class LocalizationController extends GetxController implements GetxService {
       _isLtr = _locale.languageCode != 'ar';
 
 
-      if(fromPage != "menuDrawer"){
+      if(fromPage != "menuDrawer" && !isChooseLanguage){
         Future.delayed(const Duration(milliseconds: 1000), (){
           setLanguage(_locale, isInitial: true);
         });

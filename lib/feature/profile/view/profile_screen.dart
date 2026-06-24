@@ -1,4 +1,5 @@
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
+import 'package:demandium/feature/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:get/get.dart';
 import 'package:demandium/feature/profile/model/profile_cart_item_model.dart';
 import 'package:demandium/util/core_export.dart';
@@ -106,18 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if(profileCartModelList[index].routeName == 'sign_out'){
                               if(
                               Get.find<AuthController>().isLoggedIn()) {
-                                Get.dialog(ConfirmationDialog(
-                                    icon: Images.logoutIcon,
-                                    title: 'are_you_sure_to_logout'.tr,
-                                    description: "if_you_logged_out_your_cart_will_be_removed".tr,
-                                    yesButtonColor: Theme.of(Get.context!).colorScheme.primary,
-                                    onYesPressed: () async {
-                                  await Get.find<AuthController>().logOut();
-                                  await Get.find<AuthController>().clearSharedData();
-                                  await Get.find<AuthController>().googleLogout();
-                                  await Get.find<AuthController>().signOutWithFacebook();
-                                  Get.offAllNamed(RouteHelper.getInitialRoute());
-                                }), useSafeArea: false);
+                                LogoutConfirmationDialog.show();
                               }else {
                                 Get.toNamed(RouteHelper.getSignInRoute());
                               }

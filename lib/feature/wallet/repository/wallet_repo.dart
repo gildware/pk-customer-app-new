@@ -3,8 +3,7 @@ import 'package:get/get.dart';
 
 class WalletRepo{
   final ApiClient apiClient;
-  final SharedPreferences sharedPreferences;
-  WalletRepo({required this.apiClient, required this.sharedPreferences,});
+  WalletRepo({required this.apiClient});
 
   Future<Response> getWalletTransactionData(int offset, String type) async {
     return await apiClient.getData("${AppConstants.walletTransactionData}?limit=10&offset=$offset&type=$type");
@@ -15,11 +14,14 @@ class WalletRepo{
   }
 
   Future<void> setWalletAccessToken(String token){
-    return  sharedPreferences.setString(AppConstants.walletAccessToken, token);
+    return SecureTokenStorage.writeWalletPaymentToken(token);
   }
 
-  String getWalletAccessToken(){
-    return  sharedPreferences.getString(AppConstants.walletAccessToken) ?? "";
+  Future<String> getWalletAccessToken(){
+    return SecureTokenStorage.readWalletPaymentToken();
   }
 
+  String getWalletAccessTokenSync(){
+    return SecureTokenStorage.cachedWalletPaymentToken();
+  }
 }

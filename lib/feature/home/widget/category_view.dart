@@ -111,6 +111,10 @@ class CategoryShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (fromHomeScreen ?? true) {
+      return _HomeCategoryShimmer();
+    }
+
     return Center(
       child: SizedBox(
         width: Dimensions.webMaxWidth,
@@ -190,6 +194,94 @@ class CategoryShimmer extends StatelessWidget {
 
             SizedBox(height: ResponsiveHelper.isDesktop(context) ? 0 : Dimensions.paddingSizeLarge,)
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeCategoryShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final bool isDesktop = ResponsiveHelper.isDesktop(context);
+    final double containerSize = isDesktop ? 80 : 65;
+    final double itemWidth = isDesktop ? 80 : 65;
+    final double listHeight = isDesktop ? 150 : 110;
+
+    return Center(
+      child: SizedBox(
+        width: Dimensions.webMaxWidth,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeDefault),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Shimmer(
+                duration: const Duration(seconds: 2),
+                enabled: true,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      height: 25,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).shadowColor,
+                        borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                      ),
+                    ),
+                    Container(
+                      height: 25,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).shadowColor,
+                        borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Dimensions.paddingSizeDefault),
+              SizedBox(
+                height: listHeight,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: isDesktop ? 7 : 5,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsetsDirectional.only(end: Dimensions.paddingSizeSmall),
+                      child: Shimmer(
+                        duration: const Duration(seconds: 2),
+                        enabled: true,
+                        child: Column(
+                          children: [
+                            Container(
+                              height: containerSize,
+                              width: containerSize,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).shadowColor,
+                                borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                              ),
+                            ),
+                            const SizedBox(height: Dimensions.paddingSizeSmall),
+                            Container(
+                              height: 12,
+                              width: itemWidth,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).shadowColor,
+                                borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

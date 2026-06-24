@@ -290,6 +290,24 @@ class _SignInScreenState extends State<SignInScreen> {
                         ) : const SizedBox.shrink(),
                         const SizedBox(height: Dimensions.paddingSizeExtraSmall,),
 
+                        TextButton(
+                          onPressed: authController.isLoading ? null : () {
+                            authController.continueAsGuest(redirectRoute: widget.redirectRoute);
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(50, 30),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text('${'continue_as'.tr}${'guest'.tr}',
+                            style: robotoRegular.copyWith(
+                              decoration: TextDecoration.underline,
+                              color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.7),
+                              fontSize: Dimensions.fontSizeSmall,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: Dimensions.paddingSizeExtraSmall,),
 
                       ]),
                     ),

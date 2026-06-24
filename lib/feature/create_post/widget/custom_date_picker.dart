@@ -9,6 +9,9 @@ class CustomDatePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final calendarMinDate = DateTime(today.year, today.month, today.day);
+
     return SizedBox(
       height: 300, width: 500,
       child: GetBuilder<ScheduleController>(builder: (scheduleController){
@@ -16,10 +19,23 @@ class CustomDatePicker extends StatelessWidget {
           backgroundColor: Theme.of(context).cardColor,
           controller: dateRangePickerController,
          showNavigationArrow: true,
+          minDate: calendarMinDate,
+          selectableDayPredicate: CompanyAvailabilityHelper.isCustomBookingDaySelectable,
           onSelectionChanged: (DateRangePickerSelectionChangedArgs args){
             if(args.value !=null){
-              scheduleController.selectedDate =  DateFormat('yyyy-MM-dd').format(args.value);
+              final selectedDay = args.value as DateTime;
+              scheduleController.selectedDate =  DateFormat('yyyy-MM-dd').format(selectedDay);
+              final currentSelection = DateConverter.tryParseScheduleDateTime(
+                '${scheduleController.selectedDate} ${scheduleController.selectedTime}',
+              );
+              final resolvedTime = CompanyAvailabilityHelper.timeForSelectedDay(
+                selectedDay,
+                currentSelection,
+              );
+              scheduleController.selectedTime =
+                  DateFormat('HH:mm:ss').format(resolvedTime);
               scheduleController.updateScheduleType(scheduleType: ScheduleType.schedule);
+              scheduleController.update();
             }
           },
           initialSelectedDate: scheduleController.getSelectedDateTime(),

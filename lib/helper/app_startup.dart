@@ -76,6 +76,10 @@ class AppStartup {
 
     await Future.wait(tasks);
 
+    if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
+      Get.find<CompanyAvailabilityConfigWatcher>().start();
+    }
+
     try {
       if (!kIsWeb) {
         initialDeepLinkPath = await _resolveInitialDeepLink();

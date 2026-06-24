@@ -15,6 +15,7 @@ class SplashScreenState extends State<SplashScreen> {
   final GlobalKey<ScaffoldState> _globalKey = GlobalKey();
   StreamSubscription<List<ConnectivityResult>>? _onConnectivityChanged;
   bool _configFailed = false;
+  bool _routeInFlight = false;
 
   @override
   void initState() {
@@ -22,18 +23,10 @@ class SplashScreenState extends State<SplashScreen> {
 
     bool firstTime = true;
     _onConnectivityChanged = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
-      if(!firstTime) {
-        bool isNotConnected = result.every((status) => status == ConnectivityResult.none);
-        isNotConnected ? const SizedBox() : ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
-        ScaffoldMessenger.of(Get.context!).showSnackBar(SnackBar(
-          backgroundColor: isNotConnected ? Colors.red : Colors.green,
-          duration: Duration(seconds: isNotConnected ? 6000 : 3),
-          content: Text(
-            isNotConnected ? 'no_connection'.tr : 'connected'.tr,
-            textAlign: TextAlign.center,
-          ),
-        ));
-        if(!isNotConnected) {
+      if (!firstTime && Get.currentRoute.contains(RouteHelper.splash)) {
+        final isNotConnected = result.every((status) => status == ConnectivityResult.none);
+        if (!isNotConnected) {
+          ScaffoldMessenger.of(Get.context!).hideCurrentSnackBar();
           _route();
         }
       }
@@ -68,11 +61,16 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   void _route() {
+    if (_routeInFlight) {
+      return;
+    }
+    _routeInFlight = true;
     if (mounted) {
       setState(() => _configFailed = false);
     }
     Get.find<SplashController>().getConfigData().then((isSuccess) async {
       if (!isSuccess) {
+        _routeInFlight = false;
         if (mounted) setState(() => _configFailed = true);
         return;
       }
@@ -86,7 +84,10 @@ class SplashScreenState extends State<SplashScreen> {
       await BookingAuthHelper.ensureGuestSessionIfNeeded();
 
       await AppStartup.ensureDeferredReady();
-      if (!mounted) return;
+      if (!mounted) {
+        _routeInFlight = false;
+        return;
+      }
 
       if (!ResponsiveHelper.isWeb()) {
         unawaited(DigitalPaymentLauncher.tryResumePendingVerification());
@@ -102,19 +103,25 @@ class SplashScreenState extends State<SplashScreen> {
         } else if (notificationBody != null) {
           _notificationRoute(notificationBody);
         } else if (Get.find<SplashController>().isShowInitialLanguageScreen()) {
-          Get.offNamed(RouteHelper.getLanguageScreen('fromOthers'));
+          Get.offAllNamed(RouteHelper.getLanguageScreen('fromOthers'));
         } else if (Get.find<SplashController>().isShowOnboardingScreen()) {
           Get.offAllNamed(RouteHelper.onBoardScreen);
         } else {
           final canContinue = await AddressSessionHelper.ensureAddressBeforeContinue();
-          if (!mounted || !canContinue) return;
-          Get.offNamed(RouteHelper.getInitialRoute());
+          if (!mounted || !canContinue) {
+            _routeInFlight = false;
+            return;
+          }
+          Get.offAllNamed(RouteHelper.getInitialRoute());
         }
       } catch (e, stack) {
         ErrorLogger.record(e, stack, reason: 'splash navigation');
         if (mounted) setState(() => _configFailed = true);
+      } finally {
+        _routeInFlight = false;
       }
     }).catchError((e, stack) {
+      _routeInFlight = false;
       ErrorLogger.record(e, stack, reason: 'splash getConfigData');
       if (mounted) setState(() => _configFailed = true);
     });

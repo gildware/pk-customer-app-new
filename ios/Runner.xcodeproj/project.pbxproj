@@ -15,6 +15,11 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		PKNSND0002000000000001 /* notification.wav in Resources */ = {isa = PBXBuildFile; fileRef = PKNSND0001000000000001 /* notification.wav */; };
+		PKNSND0004000000000001 /* booking.wav in Resources */ = {isa = PBXBuildFile; fileRef = PKNSND0003000000000001 /* booking.wav */; };
+		PKNSND0006000000000001 /* chat.wav in Resources */ = {isa = PBXBuildFile; fileRef = PKNSND0005000000000001 /* chat.wav */; };
+		PKNSND0008000000000001 /* wallet.wav in Resources */ = {isa = PBXBuildFile; fileRef = PKNSND0007000000000001 /* wallet.wav */; };
+		PKNSND0010000000000001 /* bidding.wav in Resources */ = {isa = PBXBuildFile; fileRef = PKNSND0009000000000001 /* bidding.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -52,6 +57,11 @@
 		B16AD84951DF855CB92A44CB /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B93BFB7F28B9FD2F008C72BE /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		B9F3684827D5D292007398DC /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		PKNSND0001000000000001 /* notification.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = notification.wav; sourceTree = "<group>"; };
+		PKNSND0003000000000001 /* booking.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = booking.wav; sourceTree = "<group>"; };
+		PKNSND0005000000000001 /* chat.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = chat.wav; sourceTree = "<group>"; };
+		PKNSND0007000000000001 /* wallet.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = wallet.wav; sourceTree = "<group>"; };
+		PKNSND0009000000000001 /* bidding.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bidding.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,7 +134,12 @@
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
-				97C147021CF9000F007C117D /* Info.plist */,
+					PKNSND0001000000000001 /* notification.wav */,
+				PKNSND0003000000000001 /* booking.wav */,
+				PKNSND0005000000000001 /* chat.wav */,
+				PKNSND0007000000000001 /* wallet.wav */,
+				PKNSND0009000000000001 /* bidding.wav */,
+			97C147021CF9000F007C117D /* Info.plist */,
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
@@ -202,6 +217,11 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				86E732E5260B03840071477F /* GoogleService-Info.plist in Resources */,
+				PKNSND0002000000000001 /* notification.wav in Resources */,
+				PKNSND0004000000000001 /* booking.wav in Resources */,
+				PKNSND0006000000000001 /* chat.wav in Resources */,
+				PKNSND0008000000000001 /* wallet.wav in Resources */,
+				PKNSND0010000000000001 /* bidding.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

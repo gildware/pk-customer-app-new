@@ -3,6 +3,7 @@ import 'package:demandium/feature/home/helper/mobile_app_home_helper.dart';
 import 'package:demandium/feature/home/widget/customer_home_sections.dart';
 import 'package:demandium/feature/home/widget/home_search_widget.dart';
 import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/auth_session_helper.dart';
 import 'package:demandium/helper/silent_api_context.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
@@ -211,7 +212,21 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   int get _displayServiceCount {
     final fromAddress = _serviceCountFromAddress();
     if (fromAddress > 0) return fromAddress;
+    // Keep sections visible while the zone count is still syncing on first load.
+    if (!_homeDataLoaded) return 1;
+    if (AddressSessionHelper.hasUsableSessionAddress()) return 1;
     return _availableServiceCount;
+  }
+
+  bool _hasVisibleHomeContent() {
+    if (!Get.isRegistered<SplashController>()) return false;
+    final sections = MobileAppHomeHelper.orderedEnabledSections(excludeSearch: true);
+    for (final section in sections) {
+      if (CustomerHomeSections.sectionHasVisibleContent(section.key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<void> _loadHomeContent({bool reload = false}) async {
@@ -230,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       ErrorLogger.record(error, stack, reason: 'HomeScreen._loadHomeContent');
     } finally {
       _homeDataLoaded = true;
+      _availableServiceCount = _serviceCountFromAddress();
       if (mounted) {
         setState(() {});
         if (Get.isRegistered<SplashController>()) {
@@ -273,10 +289,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     HomeScreen.reloadHomeContent = ({required bool reload}) => _loadHomeContent(reload: reload);
 
     Get.find<LocalizationController>().filterLanguage(shouldUpdate: false);
-    AuthSessionHelper.syncFromStorage().then((_) {
+    AuthSessionHelper.syncFromStorage().then((_) async {
       if (!mounted) return;
       if (Get.find<AuthController>().isLoggedIn()) {
-        Get.find<UserController>().getUserInfo();
+        await Get.find<UserController>().getUserInfo();
         Get.find<LocationController>().getAddressList();
       }
     });
@@ -296,10 +312,17 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         return;
       }
 
-      if (!AddressSessionHelper.hasValidActiveAddress()) {
+      if (!AddressSessionHelper.hasUsableSessionAddress()) {
+        if (!AddressSessionHelper.hasValidActiveAddress()) {
+          AddressSessionHelper.redirectToAddressSetup();
+          return;
+        }
+
         await AddressSessionHelper.openAddressPicker(mandatory: true);
-        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) {
-          AddressSessionHelper.markHomeRefreshPending();
+        if (!mounted) return;
+
+        if (!AddressSessionHelper.hasUsableSessionAddress()) {
+          AddressSessionHelper.redirectToAddressSetup();
           return;
         }
       }
@@ -307,12 +330,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       final valid = await AddressSessionHelper.validateAndRefreshActiveAddress();
       if (!mounted) return;
 
-      if (!valid) {
-        await AddressSessionHelper.openAddressPicker(mandatory: true);
-        if (!mounted || !AddressSessionHelper.hasValidActiveAddress()) {
-          AddressSessionHelper.markHomeRefreshPending();
-          return;
-        }
+      if (!valid || !AddressSessionHelper.hasUsableSessionAddress()) {
+        AddressSessionHelper.redirectToAddressSetup();
+        return;
       }
 
       final address = locationController.getUserAddress();
@@ -356,6 +376,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       body: ResponsiveHelper.isDesktop(context) ? WebHomeScreen(scrollController: scrollController, availableServiceCount: availableServiceCount, signInShakeKey : signInShakeKey,) : SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            await AuthSessionHelper.syncFromStorage();
             await _refreshZoneCountInBackground();
             await _loadHomeContent(reload: true);
           },
@@ -381,12 +402,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       providerController: providerController,
                     );
 
-                    if (!_homeDataLoaded) {
+                    if (_homeDataLoaded && availableServiceCount > 0 && !_hasVisibleHomeContent()) {
                       final searchIndex = slivers.indexWhere((s) => s is HomeSearchWidget);
                       final insertIndex = searchIndex >= 0 ? searchIndex + 1 : 1;
                       slivers.insert(
                         insertIndex,
-                        const SliverToBoxAdapter(child: _HomeInitialLoadingView()),
+                        SliverToBoxAdapter(
+                          child: _HomeEmptyContentView(
+                            onRetry: () => _loadHomeContent(reload: true),
+                          ),
+                        ),
                       );
                     }
 
@@ -409,18 +434,22 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   }
 }
 
-class _HomeInitialLoadingView extends StatelessWidget {
-  const _HomeInitialLoadingView();
+class _HomeEmptyContentView extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _HomeEmptyContentView({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Dimensions.paddingSizeLarge,
+        vertical: Dimensions.paddingSizeExtraLarge,
+      ),
       child: Column(
         children: [
-          PopularServiceShimmer(enabled: true),
-          SizedBox(height: Dimensions.paddingSizeLarge),
-          PopularServiceShimmer(enabled: true),
+          NoDataScreen(text: 'no_service_available'.tr, type: NoDataType.service),
+          const SizedBox(height: Dimensions.paddingSizeLarge),
+          CustomButton(buttonText: 'retry'.tr, onPressed: onRetry),
         ],
       ),
     );

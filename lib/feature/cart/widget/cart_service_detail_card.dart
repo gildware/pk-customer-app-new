@@ -118,11 +118,16 @@ class _CartServiceDetailCardState extends State<CartServiceDetailCard> {
     final lines = <Widget>[];
 
     if (scheduleLabel != null && scheduleLabel.isNotEmpty) {
+      final hasInvalidSchedule = CartBookingDisplayHelper.isCartItemScheduleInvalid(cart);
       lines.add(const SizedBox(height: Dimensions.paddingSizeSmall));
       lines.add(_MetaLine(
         icon: Icons.schedule_rounded,
         label: 'preferable_time'.tr,
         value: scheduleLabel,
+        subtitle: hasInvalidSchedule
+            ? CartBookingDisplayHelper.invalidScheduleMessageForCartItem(cart)
+            : null,
+        valueColor: hasInvalidSchedule ? Theme.of(context).colorScheme.error : null,
         trailing: InkWell(
           onTap: () => _openScheduleEditor(context),
           borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
@@ -136,6 +141,19 @@ class _CartServiceDetailCardState extends State<CartServiceDetailCard> {
           ),
         ),
       ));
+      if (hasInvalidSchedule) {
+        lines.add(const SizedBox(height: Dimensions.paddingSizeSmall));
+        lines.add(
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _openScheduleEditor(context),
+              icon: const Icon(Icons.update_rounded, size: 18),
+              label: Text('update_schedule_time'.tr),
+            ),
+          ),
+        );
+      }
     }
 
     return lines;
@@ -221,9 +239,16 @@ class _CartServiceDetailCardState extends State<CartServiceDetailCard> {
 
   @override
   Widget build(BuildContext context) {
+    return GetBuilder<SplashController>(
+      id: CompanyAvailabilityConfigWatcher.bookingConfigUpdateId,
+      builder: (_) => _buildCard(context),
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final hasPastSchedule = CartBookingDisplayHelper.isCartItemScheduleInPast(cart);
-    final borderColor = hasPastSchedule
+    final hasInvalidSchedule = CartBookingDisplayHelper.isCartItemScheduleInvalid(cart);
+    final borderColor = hasInvalidSchedule
         ? Theme.of(context).colorScheme.error
         : Theme.of(context).dividerColor.withValues(alpha: 0.25);
 
@@ -238,7 +263,7 @@ class _CartServiceDetailCardState extends State<CartServiceDetailCard> {
             borderRadius: BorderRadius.circular(Dimensions.radiusLarge),
             border: Border.all(
               color: borderColor,
-              width: hasPastSchedule ? 1.5 : 1,
+              width: hasInvalidSchedule ? 1.5 : 1,
             ),
             boxShadow: [
               BoxShadow(
@@ -507,6 +532,7 @@ class _MetaLine extends StatelessWidget {
   final String label;
   final String value;
   final String? subtitle;
+  final Color? valueColor;
   final Widget? trailing;
 
   const _MetaLine({
@@ -514,6 +540,7 @@ class _MetaLine extends StatelessWidget {
     required this.label,
     required this.value,
     this.subtitle,
+    this.valueColor,
     this.trailing,
   });
 
@@ -538,7 +565,10 @@ class _MetaLine extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
+                style: robotoMedium.copyWith(
+                  fontSize: Dimensions.fontSizeSmall,
+                  color: valueColor,
+                ),
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),

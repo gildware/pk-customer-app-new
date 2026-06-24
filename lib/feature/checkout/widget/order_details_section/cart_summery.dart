@@ -20,8 +20,9 @@ class CartSummery extends StatelessWidget {
               int applicableCouponCount = CheckoutHelper.getNumberOfDaysForApplicableCoupon(pickedScheduleDays:scheduleDaysCount) ?? 1;
               final additionalChargeLines = cartController.additionalChargeLines;
               final additionalChargeTotal = cartController.additionalChargeTotal;
-              bool isPartialPayment = CheckoutHelper.checkPartialPayment(walletBalance: cartController.walletBalance, bookingAmount: cartController.totalPrice);
-              double paidAmount = CheckoutHelper.calculatePaidAmount(walletBalance: cartController.walletBalance, bookingAmount: cartController.totalPrice);
+              final double payableBookingAmount = checkoutController.payableCheckoutAmount(cartController.totalPrice);
+              bool isPartialPayment = CheckoutHelper.checkPartialPayment(walletBalance: cartController.walletBalance, bookingAmount: payableBookingAmount);
+              double paidAmount = CheckoutHelper.calculatePaidAmount(walletBalance: cartController.walletBalance, bookingAmount: payableBookingAmount);
               double subTotalPrice =  CheckoutHelper.calculateSubTotal(cartList: cartList, daysCount: scheduleDaysCount);
               double disCount = CheckoutHelper.calculateDiscount(cartList: cartList, discountType: DiscountType.general, daysCount: scheduleDaysCount);
               double campaignDisCount = CheckoutHelper.calculateDiscount(cartList: cartList, discountType: DiscountType.campaign, daysCount: scheduleDaysCount);
@@ -29,7 +30,7 @@ class CartSummery extends StatelessWidget {
               double referDisCount = cartController.referralAmount;
               double vat =  CheckoutHelper.calculateVat(cartList: cartList, daysCount: scheduleDaysCount);
               double grandTotal = cartController.totalPrice;
-              double dueAmount = CheckoutHelper.calculateDueAmount(cartList: cartList, walletPaymentStatus: walletPaymentStatus, walletBalance:cartController.walletBalance, bookingAmount: grandTotal, referralDiscount: referDisCount, daysCount: scheduleDaysCount);
+              double dueAmount = CheckoutHelper.calculateDueAmount(cartList: cartList, walletPaymentStatus: walletPaymentStatus, walletBalance:cartController.walletBalance, bookingAmount: payableBookingAmount, referralDiscount: referDisCount, daysCount: scheduleDaysCount);
 
               return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 

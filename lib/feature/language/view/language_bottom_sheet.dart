@@ -86,10 +86,8 @@ class ChooseLanguageBottomSheet extends StatelessWidget {
                                   localizationController.languages[localizationController.selectedIndex].countryCode,
                             ));
                             Get.back();
-                            Get.find<SplashController>().getConfigData();
-
-                            HomeScreen.loadData(true);
                             Get.offAllNamed(RouteHelper.getMainRoute('home'));
+                            unawaited(HomeScreen.loadData(true));
                           }else {
                             customSnackBar('select_a_language'.tr, type: ToasterMessageType.info);
                           }

@@ -5,12 +5,14 @@ class LocationSearchDialog extends StatefulWidget {
   final GoogleMapController? Function() getMapController;
   final String? pickedLocation;
   final Widget? child;
+  final bool formCheckout;
   
   const LocationSearchDialog({
     super.key, 
     required this.getMapController,
     this.pickedLocation,
     this.child,
+    this.formCheckout = false,
   });
 
   @override
@@ -127,6 +129,7 @@ class _LocationSearchDialogState extends State<LocationSearchDialog> {
                     suggestion.placeId ?? suggestion.placePrediction!.placeId!,
                     suggestion.description ?? suggestion.placePrediction?.text?.text ?? "",
                     widget.getMapController(),
+                    formCheckout: widget.formCheckout,
                   );
 
                   controller.closeView(location);

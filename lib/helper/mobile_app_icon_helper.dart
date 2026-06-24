@@ -42,6 +42,9 @@ class MobileAppIconHelper {
     if (trimmed.startsWith('/storage/')) {
       return '$_apiBase$trimmed';
     }
+    if (trimmed.startsWith('/assets/')) {
+      return '$_apiBase$trimmed';
+    }
     if (trimmed.startsWith('storage/')) {
       return '$_apiBase/$trimmed';
     }
@@ -166,7 +169,6 @@ class _BrandedLogo extends StatelessWidget {
                 width: width,
                 height: h,
                 fit: fit,
-                placeholder: fallbackAsset,
               )
             : Image.asset(fallbackAsset, width: width, height: h, fit: fit);
 
@@ -262,16 +264,23 @@ class _NetworkOrAssetImage extends StatelessWidget {
         fit: fit,
         color: color,
       ),
-      loadingBuilder: (_, child, progress) {
+      loadingBuilder: (context, child, progress) {
         if (progress == null) {
           return child;
         }
-        return Image.asset(
-          fallbackAsset,
+        return SizedBox(
           width: width,
           height: height,
-          fit: fit,
-          color: color,
+          child: Center(
+            child: SizedBox(
+              width: width * 0.35,
+              height: width * 0.35,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
         );
       },
     );

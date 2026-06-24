@@ -7,7 +7,8 @@ class AddressMapSection extends StatelessWidget {
   final Function(CameraPosition) onCameraMove;
   final Function() onCameraIdle;
   final Function(GoogleMapController) onMapCreated;
-  final bool fromCheckout;
+  final bool restrictToSessionZone;
+  final Set<Polygon> zonePolygons;
   final bool isDesktop;
   final bool isUpdate;
   final TextEditingController serviceAddressController ;
@@ -19,7 +20,8 @@ class AddressMapSection extends StatelessWidget {
     required this.onCameraMove,
     required this.onCameraIdle,
     required this.onMapCreated,
-    required this.fromCheckout,
+    required this.restrictToSessionZone,
+    this.zonePolygons = const {},
     this.isDesktop = false,
     this.isUpdate = false,
     required this.serviceAddressController
@@ -57,6 +59,7 @@ class AddressMapSection extends StatelessWidget {
               ),
               zoom: isDesktop ? 14.4746 : 16,
             ),
+            polygons: zonePolygons,
             zoomControlsEnabled: ResponsiveHelper.isDesktop(context) ? true : false,
             onCameraIdle: onCameraIdle,
             onCameraMove: onCameraMove,
@@ -101,6 +104,7 @@ class AddressMapSection extends StatelessWidget {
                       child: LocationSearchDialog(
                         getMapController: () => Get.find<LocationController>().mapController,
                         pickedLocation: addressText.isEmpty ? 'search_location'.tr : addressText,
+                        formCheckout: restrictToSessionZone,
                         child: Container(
                           height: 35,
                           padding: const EdgeInsets.symmetric(
@@ -150,13 +154,16 @@ class AddressMapSection extends StatelessWidget {
                         ? -8
                         : null,
                     child: InkWell(
-                      onTap: () => _checkPermission(() {
-                        locationController.getCurrentLocation(
+                      onTap: () => _checkPermission(() async {
+                        await locationController.getCurrentLocation(
                           true,
                           deviceCurrentLocation: true,
-                          isFromCheckout: fromCheckout,
+                          isFromCheckout: restrictToSessionZone,
                           mapController: locationController.mapController,
                         );
+                        if (locationController.buttonDisabled) {
+                          customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+                        }
                       }),
                       child: Container(
                         width: 38,

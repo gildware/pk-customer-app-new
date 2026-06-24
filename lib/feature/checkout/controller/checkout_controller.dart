@@ -106,6 +106,17 @@ class CheckOutController extends GetxController implements GetxService{
 
  void changePaymentAmountType(String type, {bool shouldUpdate = true}) {
    _paymentAmountType = type;
+   if (Get.isRegistered<CartController>() && Get.find<CartController>().walletPaymentStatus) {
+     final cartController = Get.find<CartController>();
+     final payableAmount = payableCheckoutAmount(cartController.totalPrice);
+     applyWalletPayment(
+       isPartialPayment: CheckoutHelper.checkPartialPayment(
+         walletBalance: cartController.walletBalance,
+         bookingAmount: payableAmount,
+       ),
+       shouldUpdate: false,
+     );
+   }
    if (shouldUpdate) {
      update();
    }
@@ -130,9 +141,9 @@ class CheckOutController extends GetxController implements GetxService{
      _selectedOfflineMethod = null;
      selectedPaymentMethod = PaymentMethodName.digitalPayment;
    }else if(walletPayment){
-      _selectedDigitalPaymentMethod = null;
       _selectedOfflineMethod = null;
       selectedPaymentMethod = PaymentMethodName.walletMoney;
+      _selectedDigitalPaymentMethod = null;
    } else if(cashAfterService){
       _selectedDigitalPaymentMethod = null;
       _selectedOfflineMethod = null;
@@ -147,16 +158,57 @@ class CheckOutController extends GetxController implements GetxService{
    }
  }
 
+ List<DigitalPaymentMethod> get onlineDigitalPaymentGateways {
+   return _digitalPaymentList
+       .where((m) => (m.gateway ?? '').toLowerCase() != 'offline')
+       .toList();
+ }
+
+ void ensureDefaultDigitalPaymentSelected({bool shouldUpdate = true}) {
+   final onlineGateways = onlineDigitalPaymentGateways;
+   if (onlineGateways.isNotEmpty) {
+     _selectedDigitalPaymentMethod = onlineGateways.first;
+     _selectedOfflineMethod = null;
+     selectedPaymentMethod = PaymentMethodName.digitalPayment;
+   } else if (_othersPaymentList.any((m) => m.paymentMethodName == PaymentMethodName.cos)) {
+     _selectedDigitalPaymentMethod = null;
+     _selectedOfflineMethod = null;
+     selectedPaymentMethod = PaymentMethodName.cos;
+   } else {
+     selectedPaymentMethod = PaymentMethodName.none;
+     _selectedDigitalPaymentMethod = null;
+     _selectedOfflineMethod = null;
+   }
+   if (shouldUpdate) {
+     update();
+   }
+ }
+
+ /// Wallet toggle: full cover uses wallet only; partial keeps Razorpay for the remainder.
+ void applyWalletPayment({required bool isPartialPayment, bool shouldUpdate = true}) {
+   _selectedOfflineMethod = null;
+   if (isPartialPayment) {
+     ensureDefaultDigitalPaymentSelected(shouldUpdate: false);
+   } else {
+     _selectedDigitalPaymentMethod = null;
+     selectedPaymentMethod = PaymentMethodName.walletMoney;
+   }
+   if (shouldUpdate) {
+     update();
+   }
+ }
+
  void _autoSelectPaymentMethod(){
+   final onlineGateways = onlineDigitalPaymentGateways;
+   if (onlineGateways.isNotEmpty) {
+     selectedPaymentMethod = PaymentMethodName.digitalPayment;
+     _selectedDigitalPaymentMethod = onlineGateways.first;
+     _selectedOfflineMethod = null;
+     return;
+   }
 
     if(_othersPaymentList.isNotEmpty && _othersPaymentList.length == 1 && _digitalPaymentList.isEmpty){
       selectedPaymentMethod = _othersPaymentList[0].paymentMethodName == PaymentMethodName.cos ? PaymentMethodName.cos : PaymentMethodName.walletMoney;
-    }else if(_othersPaymentList.isEmpty && _digitalPaymentList.isNotEmpty && _digitalPaymentList.length == 1){
-      final gateway = _digitalPaymentList[0].gateway?.toLowerCase() ?? '';
-      if (gateway != 'offline') {
-        selectedPaymentMethod = PaymentMethodName.digitalPayment;
-        _selectedDigitalPaymentMethod = _digitalPaymentList[0];
-      }
     }else{
       selectedPaymentMethod = PaymentMethodName.none;
       _selectedDigitalPaymentMethod = null;

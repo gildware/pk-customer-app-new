@@ -1,4 +1,5 @@
 import 'package:demandium/feature/auth/controller/facebook_login_controller.dart';
+import 'package:demandium/feature/bottomNav/controller/bottom_nav_controller.dart';
 import 'package:demandium/helper/address_session_helper.dart';
 import 'package:demandium/helper/auth_session_helper.dart';
 import 'package:demandium/helper/db_helper.dart';
@@ -11,6 +12,7 @@ class AuthController extends GetxController implements GetxService {
 
 
   bool _isLoading = false;
+  bool _isLogoutLoading = false;
   bool _isResendLoading = false;
   bool _acceptTerms = false;
   bool _forgetPasswordUrlSessionExpired = false;
@@ -18,6 +20,7 @@ class AuthController extends GetxController implements GetxService {
 
   AuthController({required this.authRepo});
   bool get isLoading => _isLoading;
+  bool get isLogoutLoading => _isLogoutLoading;
   bool get isResendLoading => _isResendLoading;
   bool get forgetPasswordUrlSessionExpired => _forgetPasswordUrlSessionExpired;
   bool get acceptTerms => _acceptTerms;
@@ -158,6 +161,53 @@ class AuthController extends GetxController implements GetxService {
         print("Logout Failed");
       }
     }
+  }
+
+  Future<void> performLogout({bool showSuccessMessage = true}) async {
+    if (_isLogoutLoading) {
+      return;
+    }
+
+    _isLogoutLoading = true;
+    update();
+
+    try {
+      await logOut();
+      await clearSharedData();
+      await googleLogout();
+      await signOutWithFacebook();
+      if (Get.isRegistered<LocationController>()) {
+        Get.find<LocationController>().updateSelectedAddress(null);
+      }
+
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      await Get.offAllNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
+
+      if (showSuccessMessage) {
+        customSnackBar('logged_out_successfully'.tr, type: ToasterMessageType.success);
+      }
+    } finally {
+      _isLogoutLoading = false;
+      update();
+    }
+  }
+
+  Future<void> continueAsGuest({String? redirectRoute}) async {
+    await BookingAuthHelper.ensureGuestSessionIfNeeded();
+
+    if (redirectRoute != null) {
+      final routeData = RouteHelper.parseRedirectRouteToNavigate(redirectRoute);
+      await Get.offAllNamed(
+        routeData.path,
+        parameters: (routeData.parameters?.isEmpty ?? true) ? null : routeData.parameters,
+      );
+      return;
+    }
+
+    await Get.offAllNamed(RouteHelper.getMainRoute('home'));
   }
 
   Future<void> _saveTokenAndNavigate({
@@ -827,6 +877,9 @@ class AuthController extends GetxController implements GetxService {
       } catch (_) {}
     }
     authRepo.clearSharedData(response: response);
+    if (Get.isRegistered<BottomNavController>()) {
+      Get.find<BottomNavController>().changePage(BnbItem.homePage);
+    }
     await AddressSessionHelper.regenerateGuestId();
     await resetCustomerSession(clearAddress: false);
     await AddressSessionHelper.resetHomeData();

@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:demandium/helper/notification_sound_util.dart';
 import 'package:demandium/util/core_export.dart';
 
 class PushNotificationDialog extends StatefulWidget {
@@ -24,7 +25,7 @@ class _NewRequestDialogState extends State<PushNotificationDialog> {
   }
   void _startAlarm() async {
     final player = AudioPlayer();
-    player.play(AssetSource('notification.wav'));
+    player.play(AssetSource(NotificationSoundUtil.assetSoundForType(widget.notificationBody?.notificationType)));
   }
 
 

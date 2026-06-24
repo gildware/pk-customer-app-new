@@ -1,3 +1,4 @@
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
@@ -13,14 +14,39 @@ class SelectAddressDialog extends StatefulWidget {
 class _SelectAddressDialogState extends State<SelectAddressDialog> {
 
   List<AddressModel> addressList = [];
+  bool _loading = true;
+
   @override
   void initState() {
     super.initState();
-    for (var element in widget.addressList) {
-     if( element.zoneId == Get.find<LocationController>().getUserAddress()?.zoneId){
-       addressList.add(element);
-     }
+    _loadAddresses();
+  }
+
+  Future<void> _loadAddresses() async {
+    final sessionZone = AddressSessionHelper.sessionZoneId();
+    final filtered = <AddressModel>[];
+
+    for (final element in widget.addressList) {
+      if (AddressSessionHelper.zoneIdsMatch(element.zoneId, sessionZone)) {
+        filtered.add(element);
+        continue;
+      }
+
+      final valid = await AddressSessionHelper.validateAddressForUse(
+        element,
+        requireSessionZone: true,
+        showError: false,
+      );
+      if (valid) {
+        filtered.add(element);
+      }
     }
+
+    if (!mounted) return;
+    setState(() {
+      addressList = filtered;
+      _loading = false;
+    });
   }
 
   @override
@@ -46,7 +72,12 @@ class _SelectAddressDialogState extends State<SelectAddressDialog> {
               Text("where_you_want_to_take_the_service".tr, style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeDefault),textAlign: TextAlign.center,),
               const SizedBox(height: Dimensions.paddingSizeLarge,),
 
-              addressList.isNotEmpty ?
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(Dimensions.paddingSizeLarge),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (addressList.isNotEmpty)
               Column(children: [
                 GestureDetector(
                   onTap: (){
@@ -88,7 +119,12 @@ class _SelectAddressDialogState extends State<SelectAddressDialog> {
                             );
 
                           },
-                          onTap: (){
+                          onTap: () async {
+                            final valid = await AddressSessionHelper.validateAddressForUse(
+                              addressList[index],
+                              requireSessionZone: true,
+                            );
+                            if (!valid) return;
                             locationController.updateSelectedAddress(addressList[index]);
                             Get.back();
                           },
@@ -109,7 +145,7 @@ class _SelectAddressDialogState extends State<SelectAddressDialog> {
                     Get.toNamed(RouteHelper.getAddAddressRoute(true));
                   },
                 ),
-              ],) : Column(children: [
+              ]) else Column(children: [
                 Center(child: Image.asset(Images.emptyAddress, width: 160,)),
 
                 Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraLarge,vertical: Dimensions.paddingSizeDefault),

@@ -8,8 +8,14 @@ import 'package:demandium/feature/address/widget/address_details_section.dart';
 import 'package:demandium/feature/address/widget/address_map_section.dart';
 class AddAddressScreen extends StatefulWidget {
   final bool fromCheckout;
+  final bool fromBooking;
   final AddressModel? address;
-  const AddAddressScreen({super.key, required this.fromCheckout, this.address});
+  const AddAddressScreen({
+    super.key,
+    required this.fromCheckout,
+    this.fromBooking = false,
+    this.address,
+  });
 
   @override
   State<AddAddressScreen> createState() => _AddAddressScreenState();
@@ -46,10 +52,14 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
   final ValueNotifier<double> _bottomSheetExtent = ValueNotifier<double>(0.25);
 
   bool _showDetailsStep = false;
+  Set<Polygon> _zonePolygons = {};
+
+  bool get _restrictToSessionZone => widget.fromCheckout || widget.fromBooking;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadServiceAreaPolygons());
     final locationController = Get.find<LocationController>();
     if (widget.address != null) {
       _initialPosition = LatLng(
@@ -105,13 +115,25 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     }
   }
 
+  Future<void> _loadServiceAreaPolygons() async {
+    final serviceAreaController = Get.find<ServiceAreaController>();
+    await serviceAreaController.getZoneList(reload: false);
+    final zones = serviceAreaController.zoneList;
+    if (!mounted || zones == null || zones.isEmpty) {
+      return;
+    }
+    setState(() {
+      _zonePolygons = MapHelper.polygonsFromZones(zones);
+    });
+  }
+
   Future<void> _onMapCameraIdle() async {
     if (_cameraPosition == null) return;
     final locationController = Get.find<LocationController>();
     await locationController.updatePosition(
       _cameraPosition!,
       true,
-      formCheckout: widget.fromCheckout,
+      formCheckout: _restrictToSessionZone,
     );
     if (!mounted) return;
     _serviceAddressController.text = locationController.address.address ?? '';
@@ -180,7 +202,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         googleMapController: Get.find<LocationController>().mapController,
         route: null,
         canRoute: false,
-        formCheckout: widget.fromCheckout,
+        formCheckout: _restrictToSessionZone,
         zone: null,
       ),
     );
@@ -224,8 +246,11 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       locationController.updateAddressType(Address.service, shouldUpdate: false);
     }
     locationController.setPlaceMark(addressModel: address);
-    locationController.buttonDisabledOption = false;
-    locationController.setUpdateAddress(address, shouldUpdate: false);
+    locationController.setUpdateAddress(
+      address,
+      shouldUpdate: false,
+      formCheckout: _restrictToSessionZone,
+    );
 
     _initialPosition = LatLng(
       double.tryParse(address.latitude ?? '') ?? 0,
@@ -280,7 +305,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 ? _MobileAddressLayout(
                     initialPosition: _initialPosition!,
                     controller: _controller,
-                    fromCheckout: widget.fromCheckout,
+                    restrictToSessionZone: _restrictToSessionZone,
+                    zonePolygons: _zonePolygons,
                     formKey: addressFormKey,
                     contactPersonNameController: _contactPersonNameController,
                     contactPersonNumberController: _contactPersonNumberController,
@@ -339,7 +365,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                     : _MobileAddressLocationStep(
                         initialPosition: _initialPosition!,
                         controller: _controller,
-                        fromCheckout: widget.fromCheckout,
+                        restrictToSessionZone: _restrictToSessionZone,
+                        zonePolygons: _zonePolygons,
                         serviceAddressController: _serviceAddressController,
                         onContinue: _continueToAddressDetails,
                         onCameraMove: (position) => _cameraPosition = position,
@@ -354,7 +381,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             : _DesktopAddressLayout(
                 initialPosition: _initialPosition!,
                 controller: _controller,
-                fromCheckout: widget.fromCheckout,
+                restrictToSessionZone: _restrictToSessionZone,
+                zonePolygons: _zonePolygons,
                 formKey: addressFormKey,
                 contactPersonNameController: _contactPersonNameController,
                 contactPersonNumberController: _contactPersonNumberController,
@@ -431,20 +459,25 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         return;
       }
 
-      var zoneId = locationController.zoneID.isNotEmpty
-          ? locationController.zoneID
-          : widget.address?.zoneId;
-      if (zoneId == null || zoneId.isEmpty) {
-        final zoneResponse = await locationController.getZone(
-          locationController.position.latitude.toString(),
-          locationController.position.longitude.toString(),
-          false,
-          isLoading: true,
-        );
-        if (zoneResponse.isSuccess && zoneResponse.zoneIds.isNotEmpty) {
-          zoneId = zoneResponse.zoneIds;
-        }
+      if (locationController.buttonDisabled) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.info);
+        return;
       }
+
+      final zoneResponse = await locationController.getZone(
+        locationController.position.latitude.toString(),
+        locationController.position.longitude.toString(),
+        false,
+        isLoading: true,
+      );
+      if (!locationController.isZoneServiceable(
+        zoneResponse,
+        formCheckout: _restrictToSessionZone,
+      )) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.info);
+        return;
+      }
+      final zoneId = zoneResponse.zoneIds;
 
       AddressModel addressModel = AddressModel(
         id: widget.address?.id ,
@@ -514,7 +547,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
 class _MobileAddressLocationStep extends StatelessWidget {
   final LatLng initialPosition;
   final Completer<GoogleMapController> controller;
-  final bool fromCheckout;
+  final bool restrictToSessionZone;
+  final Set<Polygon> zonePolygons;
   final TextEditingController serviceAddressController;
   final VoidCallback onContinue;
   final Function(CameraPosition) onCameraMove;
@@ -526,7 +560,8 @@ class _MobileAddressLocationStep extends StatelessWidget {
   const _MobileAddressLocationStep({
     required this.initialPosition,
     required this.controller,
-    required this.fromCheckout,
+    required this.restrictToSessionZone,
+    required this.zonePolygons,
     required this.serviceAddressController,
     required this.onContinue,
     required this.onCameraMove,
@@ -559,6 +594,7 @@ class _MobileAddressLocationStep extends StatelessWidget {
                       ),
                       zoom: 16,
                     ),
+                    polygons: zonePolygons,
                     zoomControlsEnabled: false,
                     onCameraIdle: onCameraIdle,
                     onCameraMove: onCameraMove,
@@ -585,6 +621,7 @@ class _MobileAddressLocationStep extends StatelessWidget {
                     child: LocationSearchDialog(
                       getMapController: () => Get.find<LocationController>().mapController,
                       pickedLocation: addressText.isEmpty ? 'search_location'.tr : addressText,
+                      formCheckout: restrictToSessionZone,
                       child: Container(
                         height: 44,
                         padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
@@ -655,7 +692,7 @@ class _MobileAddressLocationStep extends StatelessWidget {
                                 Get.find<LocationController>().getCurrentLocation(
                                   true,
                                   deviceCurrentLocation: true,
-                                  isFromCheckout: fromCheckout,
+                                  isFromCheckout: restrictToSessionZone,
                                   mapController: Get.find<LocationController>().mapController,
                                 ).then((address) {
                                   serviceAddressController.text = address.address ?? '';
@@ -899,7 +936,8 @@ class _MobileAddressDetailsStep extends StatelessWidget {
 class _MobileAddressLayout extends StatelessWidget {
   final LatLng initialPosition;
   final Completer<GoogleMapController> controller;
-  final bool fromCheckout;
+  final bool restrictToSessionZone;
+  final Set<Polygon> zonePolygons;
   final GlobalKey<FormState> formKey;
   final TextEditingController contactPersonNameController;
   final TextEditingController contactPersonNumberController;
@@ -931,7 +969,8 @@ class _MobileAddressLayout extends StatelessWidget {
   const _MobileAddressLayout({
     required this.initialPosition,
     required this.controller,
-    required this.fromCheckout,
+    required this.restrictToSessionZone,
+    required this.zonePolygons,
     required this.formKey,
     required this.contactPersonNameController,
     required this.contactPersonNumberController,
@@ -981,6 +1020,7 @@ class _MobileAddressLayout extends StatelessWidget {
                       ),
                       zoom: 16,
                     ),
+                    polygons: zonePolygons,
                     zoomControlsEnabled: false,
                     onCameraIdle: onCameraIdle,
                     onCameraMove: onCameraMove,
@@ -1010,6 +1050,7 @@ class _MobileAddressLayout extends StatelessWidget {
                         pickedLocation: serviceAddressController.text.isEmpty
                             ? 'search_location'.tr
                             : serviceAddressController.text,
+                        formCheckout: restrictToSessionZone,
                         child: Container(
                           height: 44,
                           padding: const EdgeInsets.symmetric(
@@ -1094,7 +1135,7 @@ class _MobileAddressLayout extends StatelessWidget {
                                   Get.find<LocationController>().getCurrentLocation(
                                     true,
                                     deviceCurrentLocation: true,
-                                    isFromCheckout: fromCheckout,
+                                    isFromCheckout: restrictToSessionZone,
                                     mapController: Get.find<LocationController>().mapController,
                                   );
                                 }),
@@ -1163,7 +1204,8 @@ class _MobileAddressLayout extends StatelessWidget {
 class _DesktopAddressLayout extends StatelessWidget {
   final LatLng initialPosition;
   final Completer<GoogleMapController> controller;
-  final bool fromCheckout;
+  final bool restrictToSessionZone;
+  final Set<Polygon> zonePolygons;
   final GlobalKey<FormState> formKey;
   final TextEditingController contactPersonNameController;
   final TextEditingController contactPersonNumberController;
@@ -1194,7 +1236,8 @@ class _DesktopAddressLayout extends StatelessWidget {
   const _DesktopAddressLayout({
     required this.initialPosition,
     required this.controller,
-    required this.fromCheckout,
+    required this.restrictToSessionZone,
+    required this.zonePolygons,
     required this.formKey,
     required this.contactPersonNameController,
     required this.contactPersonNumberController,
@@ -1261,7 +1304,8 @@ class _DesktopAddressLayout extends StatelessWidget {
                               onCameraMove: onCameraMove,
                               onCameraIdle: onCameraIdle,
                               onMapCreated: onMapCreated,
-                              fromCheckout: fromCheckout,
+                              restrictToSessionZone: restrictToSessionZone,
+                              zonePolygons: zonePolygons,
                               isDesktop: true,
                               isUpdate: isUpdate,
                               serviceAddressController: serviceAddressController,

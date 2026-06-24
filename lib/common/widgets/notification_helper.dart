@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:demandium/firebase_options.dart';
+import 'package:demandium/helper/notification_sound_util.dart';
 import 'package:demandium/util/core_export.dart';
 
 class NotificationHelper {
@@ -16,26 +17,11 @@ class NotificationHelper {
   ) async {
     if (!GetPlatform.isAndroid) return;
 
-    const withSound = AndroidNotificationChannel(
-      'demandium',
-      'demandium with sound',
-      description: 'Notifications with sound',
-      importance: Importance.max,
-      playSound: true,
-      sound: RawResourceAndroidNotificationSound('notification'),
-    );
-    const withoutSound = AndroidNotificationChannel(
-      'demandiumWithoutsound',
-      'demandium without sound',
-      description: 'Notifications without sound',
-      importance: Importance.max,
-      playSound: false,
-    );
-
     final androidPlugin = flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    await androidPlugin?.createNotificationChannel(withSound);
-    await androidPlugin?.createNotificationChannel(withoutSound);
+    for (final channel in NotificationSoundUtil.buildAndroidChannels()) {
+      await androidPlugin?.createNotificationChannel(channel);
+    }
   }
 
   static Future<void> initialize(FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
@@ -78,8 +64,7 @@ class NotificationHelper {
           }
 
           else if(notificationBody.notificationType == 'logout'){
-            Get.find<AuthController>().clearSharedData();
-            Get.offNamed(RouteHelper.getSignInRoute());
+            Get.find<AuthController>().performLogout(showSuccessMessage: false);
           }
           else if(notificationBody.notificationType == 'wallet'){
             if(!Get.currentRoute.contains(RouteHelper.myWallet)){
@@ -180,13 +165,9 @@ class NotificationHelper {
         else if(message.data['type'] == 'logout'){
           NotificationHelper.showNotification(message, flutterLocalNotificationsPlugin,false);
 
-          Get.find<AuthController>().logOut();
-          Get.find<AuthController>().clearSharedData();
-          Get.find<AuthController>().googleLogout();
-          Get.find<AuthController>().signOutWithFacebook();
-          Get.find<LocationController>().updateSelectedAddress(null);
-          Get.offNamed(RouteHelper.getSignInRoute());
-          customSnackBar(message.data['title'], duration: 4);
+          Get.find<AuthController>().performLogout(showSuccessMessage: false).then((_) {
+            customSnackBar(message.data['title'], duration: 4);
+          });
         }
         else if(message.data['type'] == 'maintenance'){
           Get.find<SplashController>().getConfigData();
@@ -220,7 +201,7 @@ class NotificationHelper {
 
           if(Get.find<AuthController>().isNotificationActive()){
             final player = AudioPlayer();
-            player.play(AssetSource('notification.wav'));
+            player.play(AssetSource(NotificationSoundUtil.assetSoundForType(message.data['type']?.toString())));
           }
           Get.dialog( Center(child: NotificationIgnoredBottomSheet(bookingId: message.data['booking_id'],)), barrierDismissible: false);
         }
@@ -303,8 +284,7 @@ class NotificationHelper {
            }
          }
          else if(notificationBody.notificationType == 'logout'){
-           Get.find<AuthController>().clearSharedData();
-           Get.offNamed(RouteHelper.getSignInRoute());
+           Get.find<AuthController>().performLogout(showSuccessMessage: false);
          }
          else if(NotificationHelper.isServiceNotification(notificationBody)){
            await NotificationHelper.navigateToServiceNotification(notificationBody);
@@ -327,13 +307,15 @@ class NotificationHelper {
     final playLoad = jsonEncode(message.data);
     if (title == null || title.isEmpty) return;
 
+    final notificationType = message.data['type']?.toString();
+    final soundEnabled = _notificationSoundEnabled();
+
     if (GetPlatform.isIOS) {
-      const darwinDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
+      final darwinDetails = NotificationSoundUtil.darwinDetailsForType(
+        notificationType,
+        withSound: soundEnabled,
       );
-      const platformChannelSpecifics = NotificationDetails(iOS: darwinDetails);
+      final platformChannelSpecifics = NotificationDetails(iOS: darwinDetails);
       await fln.show(
         id: Random().nextInt(100000),
         title: title,
@@ -353,13 +335,13 @@ class NotificationHelper {
 
     if(image != null && image.isNotEmpty) {
       try{
-        await showBigPictureNotificationHiddenLargeIcon(title, body, playLoad, image, fln);
+        await showBigPictureNotificationHiddenLargeIcon(title, body, playLoad, image, fln, notificationType);
       }catch(e) {
-        await showBigTextNotification(title, body, playLoad, orderID, fln);
+        await showBigTextNotification(title, body, playLoad, orderID, fln, notificationType);
       }
 
     }else {
-      await showBigTextNotification(title, body, playLoad, orderID, fln);
+      await showBigTextNotification(title, body, playLoad, orderID, fln, notificationType);
     }
   }
 
@@ -371,50 +353,36 @@ class NotificationHelper {
     await showNotification(message, fln, false);
   }
 
-  static Future<void> showTextNotification(String title, String? body, String orderID, FlutterLocalNotificationsPlugin fln) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'demandium', 'demandium', playSound: true,
-      importance: Importance.max, priority: Priority.max, sound: RawResourceAndroidNotificationSound('notification'),
+  static Future<void> showTextNotification(String title, String? body, String orderID, FlutterLocalNotificationsPlugin fln, {String? notificationType}) async {
+    final androidPlatformChannelSpecifics = NotificationSoundUtil.androidDetailsForType(
+      notificationType,
+      withSound: _notificationSoundEnabled(),
     );
     int randomNumber = Random().nextInt(100);
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    final platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
     await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: orderID);
   }
 
-  static Future<void> showBigTextNotification(String title, String? body, String payload, String image, FlutterLocalNotificationsPlugin fln) async {
+  static Future<void> showBigTextNotification(String title, String? body, String payload, String image, FlutterLocalNotificationsPlugin fln, String? notificationType) async {
+    final resolvedType = notificationType ?? NotificationSoundUtil.typeFromPayload(payload);
     BigTextStyleInformation bigTextStyleInformation = BigTextStyleInformation(
       body ?? "", htmlFormatBigText: true,
       contentTitle: title, htmlFormatContentTitle: true,
     );
-    if(!_notificationSoundEnabled()){
-      AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        "demandiumWithoutsound","demandium without sound", channelDescription:"description",
-        playSound: false,
-        importance: Importance.max,
-        styleInformation: bigTextStyleInformation, priority: Priority.max,
+    final androidPlatformChannelSpecifics = NotificationSoundUtil.androidDetailsForType(
+      resolvedType,
+      withSound: _notificationSoundEnabled(),
+      styleInformation: bigTextStyleInformation,
+    );
 
-      );
+    int randomNumber = Random().nextInt(100);
 
-      int randomNumber = Random().nextInt(100);
-
-      NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-      await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
-    }
-    else {
-      AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        "demandium", 'demandium with sound', channelDescription:"description",
-        playSound: true,
-        sound: const RawResourceAndroidNotificationSound('notification'),
-        importance: Importance.max,
-        styleInformation: bigTextStyleInformation, priority: Priority.max,
-      );
-      int randomNumber = Random().nextInt(100);
-      NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-      await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
-    }
+    NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
   }
 
-  static Future<void> showBigPictureNotificationHiddenLargeIcon(String title, String body, String payload, String image, FlutterLocalNotificationsPlugin fln) async {
+  static Future<void> showBigPictureNotificationHiddenLargeIcon(String title, String body, String payload, String image, FlutterLocalNotificationsPlugin fln, String? notificationType) async {
+    final resolvedType = notificationType ?? NotificationSoundUtil.typeFromPayload(payload);
     final String largeIconPath = await _downloadAndSaveFile(image, 'largeIcon');
     final String bigPicturePath = await _downloadAndSaveFile(image, 'bigPicture');
     final BigPictureStyleInformation bigPictureStyleInformation = BigPictureStyleInformation(
@@ -422,29 +390,15 @@ class NotificationHelper {
       contentTitle: title, htmlFormatContentTitle: true,
       summaryText: body, htmlFormatSummaryText: true,
     );
-    if(!_notificationSoundEnabled()){
-      AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        "demandiumWithoutsound","demandium without sound", channelDescription:"description",
-        playSound: false,
-        largeIcon: FilePathAndroidBitmap(largeIconPath), priority: Priority.max,
-        styleInformation: bigPictureStyleInformation, importance: Importance.max,
-      );
-      int randomNumber = Random().nextInt(100);
-      NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-      await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
-
-    }else{
-      AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        "demandium", 'demandium with sound', channelDescription:"description",
-        playSound: true,
-        sound: const RawResourceAndroidNotificationSound('notification'),
-        largeIcon: FilePathAndroidBitmap(largeIconPath), priority: Priority.max,
-        styleInformation: bigPictureStyleInformation, importance: Importance.max,
-      );
-      int randomNumber = Random().nextInt(100);
-      NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-      await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
-    }
+    final androidPlatformChannelSpecifics = NotificationSoundUtil.androidDetailsForType(
+      resolvedType,
+      withSound: _notificationSoundEnabled(),
+      styleInformation: bigPictureStyleInformation,
+      largeIcon: FilePathAndroidBitmap(largeIconPath),
+    );
+    int randomNumber = Random().nextInt(100);
+    NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
   }
 
   static Future<String> _downloadAndSaveFile(String url, String fileName) async {

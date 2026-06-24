@@ -15,9 +15,20 @@ class _FeatheredCategoryViewState extends State<FeatheredCategoryView> {
     return GetBuilder<ServiceController>(builder: (serviceController){
 
       final categoryList = serviceController.featheredCategoriesForSection('feathered_categories');
-      return categoryList == null ? const SizedBox() :
+      if (categoryList == null) {
+        return const Column(
+          children: [
+            SizedBox(height: Dimensions.paddingSizeLarge),
+            PopularServiceShimmer(enabled: true),
+          ],
+        );
+      }
 
-       SizedBox(
+      if (categoryList.isEmpty) {
+        return const SizedBox();
+      }
+
+      return SizedBox(
         height: categoryList.length * ServiceCardLayout.featheredCategoryRowHeight(context),
         child: ListView.builder(itemBuilder: (context,categoryIndex){
 

@@ -134,6 +134,8 @@ class ScheduleController extends GetxController implements GetxService{
       return "${'you_can_not_select_schedule_before'.tr} ${DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.now().add(Duration(days: advanceBooking.advancedBookingRestrictionValue!)))}";
     }else if (advanceBooking.advancedBookingRestrictionType == "hour" && difference.inHours < advanceBooking.advancedBookingRestrictionValue!){
       return "${'you_can_not_select_schedule_before'.tr} ${DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.now().add(Duration(hours: advanceBooking.advancedBookingRestrictionValue!)))}";
+    }else if (advanceBooking.advancedBookingRestrictionType == "minute" && difference.inMinutes < advanceBooking.advancedBookingRestrictionValue!){
+      return "${'you_can_not_select_schedule_before'.tr} ${DateConverter.dateMonthYearTimeTwentyFourFormat(DateTime.now().add(Duration(minutes: advanceBooking.advancedBookingRestrictionValue!)))}";
     }else{
       return null;
     }

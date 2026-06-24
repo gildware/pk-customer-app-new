@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:demandium/feature/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/helper/mobile_app_icon_helper.dart';
 
@@ -42,17 +43,7 @@ class MenuButton extends StatelessWidget {
           if(menu.isLogout) {
             Get.back();
             if(Get.find<AuthController>().isLoggedIn()) {
-              Get.dialog(ConfirmationDialog(
-                  icon: Images.logoutIcon,
-                  title: 'are_you_sure_to_logout'.tr,
-                  description: "if_you_logged_out_your_cart_will_be_removed".tr,
-                  onYesPressed: () async {
-                    await Get.find<AuthController>().logOut();
-                    await Get.find<AuthController>().clearSharedData();
-                    await Get.find<AuthController>().googleLogout();
-                    await Get.find<AuthController>().signOutWithFacebook();
-                    Get.offAllNamed(RouteHelper.getInitialRoute());
-              }), useSafeArea: false);
+              LogoutConfirmationDialog.show();
             }else {
               Get.toNamed(RouteHelper.getSignInRoute());
             }

@@ -57,6 +57,7 @@ class ConfigContent {
   String? footerText;
   int? phoneNumberVisibility;
   int? walletStatus;
+  double? maxWalletSpendPerTransaction;
   int? addFundToWallet;
   int? loyaltyPointStatus;
   int? referEarnStatus;
@@ -134,6 +135,7 @@ class ConfigContent {
         this.footerText,
         this.phoneNumberVisibility,
         this.walletStatus,
+        this.maxWalletSpendPerTransaction,
         this.addFundToWallet,
         this.loyaltyPointStatus,
         this.referEarnStatus,
@@ -223,6 +225,7 @@ class ConfigContent {
     footerText = json['footer_text'];
     phoneNumberVisibility = json['phone_number_visibility_for_chatting'];
     walletStatus = json['wallet_status'];
+    maxWalletSpendPerTransaction = double.tryParse(json['max_wallet_spend_per_transaction'].toString());
     addFundToWallet = json['add_to_fund_wallet'];
     loyaltyPointStatus = json['loyalty_point_status'];
     referEarnStatus = json['referral_earning_status'];
@@ -382,6 +385,7 @@ class ConfigContent {
     data['footer_text'] = footerText;
     data['phone_number_visibility_for_chatting'] = phoneNumberVisibility;
     data['wallet_status'] = walletStatus;
+    data['max_wallet_spend_per_transaction'] = maxWalletSpendPerTransaction;
     data['add_to_fund_wallet'] = addFundToWallet;
     data['loyalty_point_status'] = loyaltyPointStatus;
     data['referral_earning_status'] = referEarnStatus;
@@ -743,15 +747,21 @@ class DigitalPaymentMethod {
 class AdvanceBooking {
   int? advancedBookingRestrictionValue;
   String? advancedBookingRestrictionType;
+  int? cartCheckoutLeniencyValue;
+  String? cartCheckoutLeniencyType;
 
   AdvanceBooking(
       {this.advancedBookingRestrictionValue,
-        this.advancedBookingRestrictionType});
+        this.advancedBookingRestrictionType,
+        this.cartCheckoutLeniencyValue,
+        this.cartCheckoutLeniencyType});
 
   AdvanceBooking.fromJson(Map<String, dynamic> json) {
     advancedBookingRestrictionValue =
     json['advanced_booking_restriction_value'];
     advancedBookingRestrictionType = json['advanced_booking_restriction_type'];
+    cartCheckoutLeniencyValue = json['cart_checkout_leniency_value'];
+    cartCheckoutLeniencyType = json['cart_checkout_leniency_type'];
   }
 
   Map<String, dynamic> toJson() {
@@ -760,6 +770,8 @@ class AdvanceBooking {
         advancedBookingRestrictionValue;
     data['advanced_booking_restriction_type'] =
         advancedBookingRestrictionType;
+    data['cart_checkout_leniency_value'] = cartCheckoutLeniencyValue;
+    data['cart_checkout_leniency_type'] = cartCheckoutLeniencyType;
     return data;
   }
 }

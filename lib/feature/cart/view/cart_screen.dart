@@ -20,6 +20,9 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     super.initState();
     _loadCart();
+    if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
+      unawaited(Get.find<CompanyAvailabilityConfigWatcher>().refreshNow());
+    }
   }
 
   Future<void> _loadCart() async {
@@ -157,9 +160,16 @@ class _PriceButtonWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return GetBuilder<SplashController>(
+      id: CompanyAvailabilityConfigWatcher.bookingConfigUpdateId,
+      builder: (_) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final minBookingAmount = Get.find<SplashController>().configModel.content?.minBookingAmount ?? 0;
     final isBelowMinimum = minBookingAmount > cartController.totalPrice;
-    final hasPastSchedule = cartController.hasPastScheduleCartItems;
+    final hasInvalidSchedule = cartController.hasInvalidScheduleCartItems;
 
     return Column(children: [
 
@@ -198,7 +208,7 @@ class _PriceButtonWidget extends StatelessWidget {
           height:  ResponsiveHelper.isDesktop(context)? 50 : 45,
           radius: Dimensions.radiusDefault,
           buttonText: 'proceed_to_checkout'.tr,
-          onPressed: hasPastSchedule
+          onPressed: hasInvalidSchedule
               ? null
               : isBelowMinimum
                   ? () {
@@ -212,7 +222,7 @@ class _PriceButtonWidget extends StatelessWidget {
                     },
         ),
       ),
-      if (hasPastSchedule)
+      if (hasInvalidSchedule)
         Padding(
           padding: const EdgeInsets.fromLTRB(
             Dimensions.paddingSizeDefault,
@@ -221,7 +231,7 @@ class _PriceButtonWidget extends StatelessWidget {
             Dimensions.paddingSizeDefault,
           ),
           child: Text(
-            'cart_items_need_attention'.tr,
+            'cart_schedule_needs_update'.tr,
             textAlign: TextAlign.center,
             style: robotoRegular.copyWith(
               fontSize: Dimensions.fontSizeSmall,

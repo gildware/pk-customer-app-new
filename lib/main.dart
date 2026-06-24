@@ -68,7 +68,7 @@ class _MyAppState extends State<MyApp> {
     await AuthSessionHelper.syncFromStorage();
 
     if (Get.find<AuthController>().isLoggedIn()) {
-      Get.find<UserController>().getUserInfo();
+      await Get.find<UserController>().getUserInfo();
     }
 
     if (Get.find<SplashController>().getGuestId().isEmpty) {
@@ -110,16 +110,17 @@ class _MyAppState extends State<MyApp> {
                 : RouteHelper.getSplashRoute(null, AppStartup.initialDeepLinkPath),
             getPages: RouteHelper.routes,
             defaultTransition: Transition.fadeIn,
-            transitionDuration: const Duration(milliseconds: 500),
+            transitionDuration: const Duration(milliseconds: 200),
             builder: (context, widget) => MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1)),
               child: Material(
+                color: Colors.transparent,
                 child: SafeArea(
                   top: false,
                   bottom: GetPlatform.isAndroid,
                   child: Stack(
                     children: [
-                      widget!,
+                      if (widget != null) widget,
                       GetBuilder<SplashController>(builder: (splashController) {
                         if (!splashController.savedCookiesData ||
                             !splashController.getAcceptCookiesStatus(

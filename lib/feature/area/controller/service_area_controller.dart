@@ -26,7 +26,7 @@ class ServiceAreaController extends GetxController implements GetxService{
     LatLng currentLocation = const LatLng(0, 0);
 
 
-    DataSyncHelper.fetchAndSyncData(
+    await DataSyncHelper.fetchAndSyncData(
       fetchFromLocal: ()=> serviceAreaRepo.getZoneList<CacheResponseData>(source: DataSourceEnum.local),
       fetchFromClient: ()=> serviceAreaRepo.getZoneList(source: DataSourceEnum.client),
       onResponse: (data, source) {

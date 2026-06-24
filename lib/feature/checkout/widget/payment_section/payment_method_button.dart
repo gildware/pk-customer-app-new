@@ -43,9 +43,10 @@ class _WalletPaymentView extends StatelessWidget {
       double paidAmount =  CheckoutHelper.calculatePaidAmount(walletBalance: walletBalance ?? 0, bookingAmount: bookingAmount ?? 0);
       double remainingWalletBalance = CheckoutHelper.calculateRemainingWalletBalance(walletBalance: walletBalance ?? 0, bookingAmount: bookingAmount ?? 0);
       double remainingBill = (bookingAmount ?? 0) - paidAmount;
+      final double spendableWallet = CheckoutHelper.effectiveWalletSpendLimit(walletBalance ?? 0);
 
       return Opacity(
-        opacity: ((walletBalance ?? 0) <= 0) ? 0.5 : 1,
+        opacity: spendableWallet <= 0 ? 0.5 : 1,
         child: Stack(children: [
           ! isDesktopView ?
 
@@ -85,7 +86,7 @@ class _WalletPaymentView extends StatelessWidget {
             )
           ]),
 
-          if((walletBalance ?? 0) <= 0) Positioned.fill(child: Container(
+          if(spendableWallet <= 0) Positioned.fill(child: Container(
             color: Colors.transparent,
           ))
         ]),
@@ -130,13 +131,7 @@ class _WalletPaymentView extends StatelessWidget {
 
   GestureDetector walletCartWidget(BuildContext context, bool walletPaymentStatus, double remainingWalletBalance, double? walletBalance, CartController cartController, bool isDesktopView, bool isPartialPayment) {
     return GestureDetector(
-      onTap:(){
-        if(paymentMethodName == PaymentMethodName.walletMoney){
-          controller.changePaymentMethod(walletPayment: true);
-        }else{
-          controller.changePaymentMethod();
-        }
-      },
+      onTap: (){},
       child: Container(
         padding: const EdgeInsets.symmetric(vertical : Dimensions.paddingSizeDefault, horizontal: Dimensions.paddingSizeSmall),
         decoration: BoxDecoration(
@@ -167,16 +162,16 @@ class _WalletPaymentView extends StatelessWidget {
               const SizedBox(width: Dimensions.paddingSizeSmall,),
               InkWell(
                 onTap: (){
-                  controller.getPaymentMethodList(shouldUpdate: true);
                   cartController.updateWalletPaymentStatus(false);
-                  controller.changePaymentMethod();
+                  controller.getPaymentMethodList(shouldUpdate: true);
+                  controller.ensureDefaultDigitalPaymentSelected();
                 },
                 child: Icon(Icons.close, size: 25, color: Theme.of(context).colorScheme.error,),
               )
             ]) : InkWell(
               onTap: (){
                 cartController.updateWalletPaymentStatus(true);
-                controller.changePaymentMethod(walletPayment: true);
+                controller.applyWalletPayment(isPartialPayment: isPartialPayment);
                 controller.getPaymentMethodList(isPartialPayment: isPartialPayment, shouldUpdate: true);
               },
               child: Container(

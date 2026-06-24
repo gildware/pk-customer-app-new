@@ -102,9 +102,27 @@ class CheckoutHelper {
   }
 
 
-  static bool checkPartialPayment({required double walletBalance, required double bookingAmount }) => walletBalance < bookingAmount;
+  static double maxWalletSpendPerTransaction() {
+    return configModel.content?.maxWalletSpendPerTransaction ?? 0;
+  }
 
-  static double calculatePaidAmount({required double walletBalance, required double bookingAmount }) => checkPartialPayment(walletBalance: walletBalance, bookingAmount: bookingAmount) ? walletBalance : bookingAmount;
+  /// Wallet amount that may be applied in one checkout transaction (balance capped by admin limit).
+  static double effectiveWalletSpendLimit(double walletBalance) {
+    final maxSpend = maxWalletSpendPerTransaction();
+    if (maxSpend <= 0) {
+      return walletBalance;
+    }
+    return walletBalance < maxSpend ? walletBalance : maxSpend;
+  }
+
+  static bool checkPartialPayment({required double walletBalance, required double bookingAmount}) {
+    return effectiveWalletSpendLimit(walletBalance) < bookingAmount;
+  }
+
+  static double calculatePaidAmount({required double walletBalance, required double bookingAmount}) {
+    final spendable = effectiveWalletSpendLimit(walletBalance);
+    return spendable < bookingAmount ? spendable : bookingAmount;
+  }
 
 
 
@@ -169,7 +187,45 @@ class CheckoutHelper {
   }
 
   static double calculateRemainingWalletBalance({required double walletBalance, required double bookingAmount}){
-    return checkPartialPayment(walletBalance: walletBalance, bookingAmount: bookingAmount)  ? 0 : walletBalance - bookingAmount;
+    final paid = calculatePaidAmount(walletBalance: walletBalance, bookingAmount: bookingAmount);
+    return walletBalance - paid;
+  }
+
+  /// Builds a properly encoded checkout payment URL (critical params before long base64 fields).
+  static String buildCheckoutDigitalPaymentUrl({
+    required String gateway,
+    required String accessToken,
+    required String zoneId,
+    required String schedule,
+    required String addressId,
+    required String callbackUrl,
+    required String encodedAddress,
+    required String encodedNewUserInfo,
+    required int isPartial,
+    required String platform,
+    required String serviceLocation,
+    String? paymentAmountType,
+  }) {
+    final queryParams = <String, String>{
+      'payment_method': gateway,
+      if (paymentAmountType != null && paymentAmountType.isNotEmpty)
+        'payment_amount_type': paymentAmountType,
+      'access_token': accessToken,
+      'zone_id': zoneId,
+      'service_schedule': schedule,
+      'service_address_id': addressId,
+      'callback': callbackUrl,
+      'is_partial': isPartial.toString(),
+      'payment_platform': platform,
+      'service_location': serviceLocation,
+      'service_address': encodedAddress,
+      'new_user_info': encodedNewUserInfo,
+    };
+
+    return Uri.parse(AppConstants.baseUrl).replace(
+      path: '/payment',
+      queryParameters: queryParams,
+    ).toString();
   }
 
   static int calculateDaysCountBetweenDateRange(DateTimeRange? dateRange){

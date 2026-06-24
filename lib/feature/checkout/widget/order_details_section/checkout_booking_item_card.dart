@@ -1,5 +1,8 @@
+import 'package:demandium/feature/cart/widget/booking_date_time_picker.dart';
+import 'package:demandium/helper/validation_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
 class CheckoutBookingItemCard extends StatefulWidget {
   final CartModel cart;
@@ -39,6 +42,67 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
     final address = _bookingAddress?.address?.trim();
     if (address == null || address.isEmpty) return null;
     return address;
+  }
+
+  ProviderData? get _assignedProvider {
+    final provider = cart.provider;
+    if (provider != null && ValidationHelper.isValidUuid(provider.id)) {
+      return provider;
+    }
+    return null;
+  }
+
+  void _prepareScheduleControllerForEdit() {
+    final scheduleController = Get.find<ScheduleController>();
+    final raw = CartBookingDisplayHelper.resolveRawScheduleForCartItem(cart);
+    final parsed = raw != null ? DateConverter.tryParseScheduleDateTime(raw) : null;
+
+    scheduleController.updateScheduleType(
+      scheduleType: ScheduleType.schedule,
+      shouldUpdate: false,
+    );
+
+    if (parsed != null && !CartBookingDisplayHelper.isAsapSchedule(parsed)) {
+      scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(parsed);
+      scheduleController.selectedTime = DateFormat('HH:mm:ss').format(parsed);
+      scheduleController.buildSchedule(
+        shouldUpdate: false,
+        scheduleType: ScheduleType.schedule,
+        schedule: raw,
+      );
+      return;
+    }
+
+    final min = BookingDateTimePicker.minimumScheduleTime();
+    scheduleController.selectedDate = DateFormat('yyyy-MM-dd').format(min);
+    scheduleController.selectedTime = DateFormat('HH:mm:ss').format(min);
+    scheduleController.buildSchedule(
+      shouldUpdate: false,
+      scheduleType: ScheduleType.schedule,
+    );
+  }
+
+  Future<void> _openScheduleEditor(BuildContext context) async {
+    _prepareScheduleControllerForEdit();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BookingDateTimePicker(
+        providerToValidate: _assignedProvider,
+        onScheduleConfirmed: (scheduleTime, selected) {
+          return Get.find<CartController>().updateCartItemBookingSchedule(
+            cartId: cart.id,
+            scheduleTime: scheduleTime,
+            selectedDateTime: selected,
+            provider: _assignedProvider,
+            zoneId: cart.zoneId,
+          );
+        },
+      ),
+    );
+    if (mounted) setState(() {});
   }
 
   List<Widget> _buildPriceDetailLines(BuildContext context) {
@@ -112,6 +176,8 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
   List<Widget> _buildBookingDetailLines(BuildContext context) {
     final scheduleLabel =
         CartBookingDisplayHelper.resolveScheduleLabelForCartItem(cart);
+    final hasInvalidSchedule =
+        CartBookingDisplayHelper.isCartItemScheduleInvalid(cart);
     final lines = <Widget>[
       _MetaLine(
         icon: Icons.storefront_outlined,
@@ -126,7 +192,36 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
         icon: Icons.schedule_rounded,
         label: 'preferable_time'.tr,
         value: scheduleLabel,
+        subtitle: hasInvalidSchedule
+            ? CartBookingDisplayHelper.invalidScheduleMessageForCartItem(cart)
+            : null,
+        valueColor: hasInvalidSchedule ? Theme.of(context).colorScheme.error : null,
+        trailing: InkWell(
+          onTap: () => _openScheduleEditor(context),
+          borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
       ));
+      if (hasInvalidSchedule) {
+        lines.add(const SizedBox(height: Dimensions.paddingSizeSmall));
+        lines.add(
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _openScheduleEditor(context),
+              icon: const Icon(Icons.update_rounded, size: 18),
+              label: Text('update_schedule_time'.tr),
+            ),
+          ),
+        );
+      }
     }
 
     return lines;
@@ -134,9 +229,17 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
 
   @override
   Widget build(BuildContext context) {
+    return GetBuilder<SplashController>(
+      id: CompanyAvailabilityConfigWatcher.bookingConfigUpdateId,
+      builder: (_) => _buildCheckoutCard(context),
+    );
+  }
+
+  Widget _buildCheckoutCard(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final hasPastSchedule = CartBookingDisplayHelper.isCartItemScheduleInPast(cart);
-    final borderColor = hasPastSchedule
+    final hasInvalidSchedule =
+        CartBookingDisplayHelper.isCartItemScheduleInvalid(cart);
+    final borderColor = hasInvalidSchedule
         ? Theme.of(context).colorScheme.error
         : Theme.of(context).dividerColor.withValues(alpha: 0.25);
 
@@ -148,7 +251,7 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
           borderRadius: BorderRadius.circular(Dimensions.radiusLarge),
           border: Border.all(
             color: borderColor,
-            width: hasPastSchedule ? 1.5 : 1,
+            width: hasInvalidSchedule ? 1.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -190,6 +293,17 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
                             icon: Icons.tune_rounded,
                             label: _variationLabel,
                           ),
+                          if (hasInvalidSchedule) ...[
+                            const SizedBox(height: Dimensions.paddingSizeSmall),
+                            Text(
+                              CartBookingDisplayHelper
+                                  .invalidScheduleMessageForCartItem(cart),
+                              style: robotoRegular.copyWith(
+                                fontSize: Dimensions.fontSizeSmall,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ],
                           if (_addressLine != null) ...[
                             const SizedBox(height: Dimensions.paddingSizeSmall),
                             Row(
@@ -305,12 +419,18 @@ class _CheckoutBookingItemCardState extends State<CheckoutBookingItemCard> {
                       ],
                     ),
                   ),
-                  Text(
-                    '${'quantity'.tr}: ${cart.quantity}',
-                    style: robotoMedium.copyWith(
-                      fontSize: Dimensions.fontSizeSmall,
+                  if (hasInvalidSchedule)
+                    TextButton(
+                      onPressed: () => _openScheduleEditor(context),
+                      child: Text('update_schedule_time'.tr),
+                    )
+                  else
+                    Text(
+                      '${'quantity'.tr}: ${cart.quantity}',
+                      style: robotoMedium.copyWith(
+                        fontSize: Dimensions.fontSizeSmall,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -394,11 +514,17 @@ class _MetaLine extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final String? subtitle;
+  final Color? valueColor;
+  final Widget? trailing;
 
   const _MetaLine({
     required this.icon,
     required this.label,
     required this.value,
+    this.subtitle,
+    this.valueColor,
+    this.trailing,
   });
 
   @override
@@ -422,13 +548,29 @@ class _MetaLine extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
+                style: robotoMedium.copyWith(
+                  fontSize: Dimensions.fontSizeSmall,
+                  color: valueColor,
+                ),
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: robotoRegular.copyWith(
+                    fontSize: Dimensions.fontSizeExtraSmall,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
+        if (trailing != null) trailing!,
       ],
     );
   }

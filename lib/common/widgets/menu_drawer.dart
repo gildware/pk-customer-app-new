@@ -1,3 +1,4 @@
+import 'package:demandium/feature/auth/widgets/logout_confirmation_dialog.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:demandium/helper/mobile_app_icon_helper.dart';
 import 'package:get/get.dart';
@@ -12,8 +13,11 @@ class MenuDrawer extends StatefulWidget {
 
 class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderStateMixin {
 
+  List<Menu> _buildMenuList() {
+    final config = Get.find<SplashController>().configModel.content;
+    final isLoggedIn = Get.find<AuthController>().isLoggedIn();
 
-  late final List<Menu> _menuList = [
+    return [
     Menu(iconKey: 'profile', icon: Images.profileIcon, title: 'profile'.tr, onTap: () {
       Get.back();
       Get.toNamed(RouteHelper.getProfileRoute());
@@ -32,7 +36,7 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
     }),
 
     // Bidding/post menu — hidden unless enabled via admin (Mobile App Management → App Features).
-    if(Get.find<SplashController>().configModel.content?.biddingStatus==1)
+    if(config?.biddingStatus == 1)
     Menu(iconKey: 'custom_post', icon: Images.customPostIcon, title: 'my_posts'.tr, onTap: () {
       Get.back();
       Get.toNamed(RouteHelper.getMyPostScreen());
@@ -43,29 +47,25 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
       Get.toNamed(RouteHelper.getMyFavoriteScreen());
     }),
 
-    if(Get.find<SplashController>().configModel.content!.walletStatus != 0 && Get.find<AuthController>().isLoggedIn())
+    if(config?.walletStatus != 0 && isLoggedIn)
     Menu(iconKey: 'wallet', icon: Images.walletMenu, title: 'my_wallet'.tr, onTap: () {
       Get.back();
       Get.toNamed(RouteHelper.getMyWalletScreen());
     }),
-    if(Get.find<SplashController>().configModel.content!.loyaltyPointStatus != 0 && Get.find<AuthController>().isLoggedIn())
+    if(config?.loyaltyPointStatus != 0 && isLoggedIn)
     Menu(iconKey: 'loyalty_point', icon: Images.myPoint, title: 'loyalty_point'.tr, onTap: () {
       Get.back();
       Get.toNamed(RouteHelper.getLoyaltyPointScreen());
     }),
 
-    if(Get.find<SplashController>().configModel.content?.referEarnStatus==1)
+    if(config?.referEarnStatus == 1)
       Menu(
         title:'refer_and_earn'.tr, iconKey: 'refer_and_earn', icon: Images.shareIcon, onTap: (){
           Get.back();
           Get.toNamed(RouteHelper.getReferAndEarnScreen());
       }),
 
-    ...(Get.find<SplashController>()
-        .configModel
-        .content!
-        .businessPages
-        ?? [])
+    ...(config?.businessPages ?? [])
         .where((page) => HtmlType.isVisibleBusinessPage(page.pageKey, title: page.title))
         .map((page) => Menu(
       iconKey: _pageIconKey(page),
@@ -92,26 +92,16 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
       Get.toNamed( RouteHelper.getServiceArea());
     }),
 
-     Menu(iconKey: 'logout', icon: Images.logout, title:Get.find<AuthController>().isLoggedIn() ? 'logout'.tr : 'sign_in'.tr, onTap: () {
+     Menu(iconKey: 'logout', icon: Images.logout, title: isLoggedIn ? 'logout'.tr : 'sign_in'.tr, onTap: () {
        Get.back();
-       if(Get.find<AuthController>().isLoggedIn()) {
-         Get.dialog(ConfirmationDialog(icon: Images.logoutIcon,
-             title: 'are_you_sure_to_logout'.tr,
-             description: "if_you_logged_out_your_cart_will_be_removed".tr,
-             yesButtonColor: Theme.of(Get.context!).colorScheme.primary,
-             onYesPressed: () async {
-           await Get.find<AuthController>().logOut();
-           await Get.find<AuthController>().clearSharedData();
-           await Get.find<AuthController>().googleLogout();
-           await Get.find<AuthController>().signOutWithFacebook();
-           Get.offAllNamed(RouteHelper.getInitialRoute());
-           customSnackBar("logged_out_successfully".tr, type : ToasterMessageType.success);
-         }), useSafeArea: false);
+       if(isLoggedIn) {
+         LogoutConfirmationDialog.show();
        }else {
          Get.toNamed(RouteHelper.getSignInRoute(redirectUrl: Get.currentRoute));
        }
       }),
-  ];
+    ];
+  }
 
   String _pageIconKey(BusinessPage page) {
     if (page.pageKey == HtmlType.aboutUs.value) return 'about_us';
@@ -160,24 +150,24 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
   void initState() {
     super.initState();
 
-    _createAnimationIntervals();
+    _createAnimationIntervals(20);
     _staggeredController = AnimationController(
       vsync: this,
       duration: _animationDuration,
     )..forward();
   }
 
-  void _createAnimationIntervals() {
-    for (var i = 0; i < _menuList.length; ++i) {
-      final startTime = _initialDelayTime + (_staggerTime * i);
-      final endTime = startTime + _itemSlideTime;
-      _itemSlideIntervals.add(
-        Interval(
+  void _createAnimationIntervals(int itemCount) {
+    _itemSlideIntervals
+      ..clear()
+      ..addAll(List.generate(itemCount, (i) {
+        final startTime = _initialDelayTime + (_staggerTime * i);
+        final endTime = startTime + _itemSlideTime;
+        return Interval(
           startTime.inMilliseconds / _animationDuration.inMilliseconds,
           endTime.inMilliseconds / _animationDuration.inMilliseconds,
-        ),
-      );
-    }
+        );
+      }));
   }
 
   @override
@@ -192,7 +182,11 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
   }
 
   Widget _buildContent(){
-    return Align(alignment:Get.find<LocalizationController>().isLtr? Alignment.topRight : Alignment.topLeft, child: Container(
+    return GetBuilder<SplashController>(builder: (splashController) {
+      return GetBuilder<AuthController>(builder: (authController) {
+        final menuList = _buildMenuList();
+
+        return Align(alignment:Get.find<LocalizationController>().isLtr? Alignment.topRight : Alignment.topLeft, child: Container(
       width: 300,
       decoration: BoxDecoration(borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30)), color: Theme.of(context).cardColor),
       child: Column(
@@ -213,16 +207,17 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
 
           Expanded(
             child: ListView.builder(
-              itemCount: _menuList.length,
+              itemCount: menuList.length,
               physics: const AlwaysScrollableScrollPhysics(),
               shrinkWrap: true,
               padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
               itemBuilder: (context, index) {
+                final intervalIndex = index < _itemSlideIntervals.length ? index : _itemSlideIntervals.length - 1;
                 return AnimatedBuilder(
                   animation: _staggeredController,
                   builder: (context, child) {
                     final animationPercent = Curves.easeOut.transform(
-                      _itemSlideIntervals[index].transform(_staggeredController.value),
+                      _itemSlideIntervals[intervalIndex].transform(_staggeredController.value),
                     );
                     final opacity = animationPercent;
                     final slideDistance = (1.0 - animationPercent) * 150;
@@ -236,7 +231,7 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
                     );
                   },
                   child: InkWell(
-                    onTap: _menuList[index].onTap as void Function()?,
+                    onTap: menuList[index].onTap as void Function()?,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall, vertical: Dimensions.paddingSizeExtraSmall),
                       child: Row(children: [
@@ -248,15 +243,15 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
                             color: Theme.of(context).primaryColor,
                           ),
                           child: MobileAppIconHelper.icon(
-                            iconKey: _menuList[index].iconKey ?? '',
-                            fallbackAsset: _menuList[index].icon!,
+                            iconKey: menuList[index].iconKey ?? '',
+                            fallbackAsset: menuList[index].icon!,
                             height: 30,
                             width: 30,
                           ),
                         ),
                         const SizedBox(width: Dimensions.paddingSizeSmall),
 
-                        Expanded(child: Text(_menuList[index].title ?? '', style: robotoMedium, overflow: TextOverflow.ellipsis, maxLines: 1)),
+                        Expanded(child: Text(menuList[index].title ?? '', style: robotoMedium, overflow: TextOverflow.ellipsis, maxLines: 1)),
 
                       ]),
                     ),
@@ -269,6 +264,8 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
         ],
       ),
     ));
+      });
+    });
   }
 }
 

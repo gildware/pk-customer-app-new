@@ -36,6 +36,11 @@ class LocationController extends GetxController implements GetxService {
   List<PredictionModel> _predictionList = [];
   PredictionModel? _firstPredictionModel;
   bool _skipNextPositionUpdate = false;
+  bool _isResolvingCurrentLocation = false;
+  ZoneModel? _mapPolygonRestrictZone;
+  List<List<LatLng>> _mapValidationPolygons = [];
+  bool _requireMapPolygonValidation = false;
+  bool _mapPolygonsReady = false;
   Address _selectedAddressType = Address.service;
   AddressLabel _selectedAddressLabel = AddressLabel.home;
   TextEditingController searchController = TextEditingController();
@@ -87,14 +92,142 @@ class LocationController extends GetxController implements GetxService {
     }
   }
 
+  bool isZoneServiceable(ZoneResponseModel response, {bool formCheckout = false}) {
+    if (formCheckout) {
+      return response.isSuccess &&
+          response.zoneIds.contains(getUserAddress()?.zoneId ?? '');
+    }
+    return response.isSuccess && (response.totalServiceCount ?? 0) > 0;
+  }
 
+  void syncPickAvailability(
+    ZoneResponseModel response, {
+    bool formCheckout = false,
+    LatLng? point,
+  }) {
+    final apiServiceable = isZoneServiceable(response, formCheckout: formCheckout);
+    var inOperationalArea = point == null || isPointInsideServiceAreaPolygons(point);
+
+    if (!inOperationalArea &&
+        apiServiceable &&
+        point != null &&
+        response.zoneIds.trim().isNotEmpty) {
+      inOperationalArea = _isPointInsideOperationalZoneById(point, response.zoneIds);
+    }
+
+    _inZone = apiServiceable && inOperationalArea;
+    _buttonDisabled = !_inZone;
+
+    if (_requireMapPolygonValidation && !_mapPolygonsReady) {
+      _buttonDisabled = true;
+      _inZone = false;
+    }
+  }
+
+  bool _isPointInsideOperationalZoneById(LatLng point, String zoneId) {
+    if (!Get.isRegistered<ServiceAreaController>()) {
+      return false;
+    }
+    final zones = Get.find<ServiceAreaController>().zoneList;
+    if (zones == null || zones.isEmpty) {
+      return false;
+    }
+    for (final zone in MapHelper.operationalZones(zones)) {
+      if (zone.id == zoneId) {
+        return MapHelper.isPointInsidePolygon(
+          point,
+          MapHelper.latLngListFromZone(zone),
+        );
+      }
+    }
+    return false;
+  }
+
+  void beginMapPolygonValidation() {
+    _requireMapPolygonValidation = true;
+    _mapPolygonsReady = false;
+    _mapValidationPolygons = [];
+    _buttonDisabled = true;
+    _inZone = false;
+  }
+
+  void setMapValidationPolygons(List<List<LatLng>> polygons) {
+    _mapValidationPolygons = polygons;
+    _mapPolygonsReady = polygons.isNotEmpty;
+    if (_requireMapPolygonValidation && _pickPosition.latitude != 0) {
+      unawaited(_recheckPickAvailability());
+    }
+  }
+
+  Future<void> _recheckPickAvailability({bool formCheckout = false}) async {
+    if (_pickPosition.latitude == 0 && _pickPosition.longitude == 0) {
+      return;
+    }
+    final point = LatLng(_pickPosition.latitude, _pickPosition.longitude);
+    final zoneResponse = await getZone(
+      _pickPosition.latitude.toString(),
+      _pickPosition.longitude.toString(),
+      false,
+      isLoading: true,
+    );
+    syncPickAvailability(zoneResponse, formCheckout: formCheckout, point: point);
+    refreshUi();
+  }
+
+  void endMapPolygonValidation() {
+    _requireMapPolygonValidation = false;
+    _mapPolygonsReady = false;
+    _mapValidationPolygons = [];
+    _mapPolygonRestrictZone = null;
+  }
+
+  bool get mapPolygonsReady => _mapPolygonsReady;
+
+  void setMapPolygonRestrictZone(ZoneModel? zone) {
+    _mapPolygonRestrictZone = zone;
+    if (zone != null) {
+      final polygon = MapHelper.latLngListFromZone(zone);
+      if (polygon.length >= 3) {
+        setMapValidationPolygons([polygon]);
+      }
+    }
+  }
+
+  bool isPointInsideServiceAreaPolygons(LatLng point) {
+    if (_mapValidationPolygons.isNotEmpty) {
+      for (final polygon in _mapValidationPolygons) {
+        if (MapHelper.isPointInsidePolygon(point, polygon)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (_mapPolygonRestrictZone != null) {
+      final polygon = MapHelper.latLngListFromZone(_mapPolygonRestrictZone!);
+      if (polygon.length >= 3) {
+        return MapHelper.isPointInsidePolygon(point, polygon);
+      }
+    }
+
+    if (Get.isRegistered<ServiceAreaController>()) {
+      final zones = Get.find<ServiceAreaController>().zoneList;
+      if (zones != null && zones.isNotEmpty) {
+        return MapHelper.isPointInsideOperationalZones(point, zones);
+      }
+    }
+
+    return !_requireMapPolygonValidation;
+  }
 
   Future<AddressModel> getCurrentLocation(bool fromAddress, {bool deviceCurrentLocation = false, GoogleMapController? mapController, LatLng? defaultLatLng, bool notify = true, bool isFromCheckout = false}) async {
+    _isResolvingCurrentLocation = true;
+    _skipNextPositionUpdate = true;
     _loading = true;
     if(notify) {
       refreshUi();
     }
-    AddressModel addressModel;
+    AddressModel addressModel = AddressModel();
     Position myPosition;
     try {
       await Geolocator.requestPermission();
@@ -131,68 +264,66 @@ class LocationController extends GetxController implements GetxService {
             timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1,  altitudeAccuracy: 1, headingAccuracy: 1
         );
       }
-
     }
-    if(fromAddress) {
-      _position = myPosition;
-    }else {
-      _pickPosition = myPosition;
-    }
-    if (mapController != null) {
 
-      mapController.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(myPosition.latitude, myPosition.longitude), zoom: 16),
-      ));
-    }
-    AddressModel address = await getAddressFromGeocode(LatLng(myPosition.latitude, myPosition.longitude));
-
-
-    ZoneResponseModel responseModel = await getZone(myPosition.latitude.toString(), myPosition.longitude.toString(), true, isLoading: fromAddress);
-
-    print('--------------res-----> ${responseModel.zoneIds} || ${getUserAddress()?.zoneId}');
-
-    print('--------address----> $fromAddress');
-
-
-    if(isFromCheckout){
-      if(responseModel.zoneIds == getUserAddress()?.zoneId){
-        _buttonDisabled = false;
-        print('--------------false-----');
-
-      }else{
-        print('--------------ture-----');
-        _buttonDisabled = true;
+    try {
+      if(fromAddress) {
+        _position = myPosition;
+      }else {
+        _pickPosition = myPosition;
       }
-    }else{
-      _buttonDisabled = !responseModel.isSuccess;
+      if (mapController != null) {
+        _skipNextPositionUpdate = true;
+        mapController.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(myPosition.latitude, myPosition.longitude), zoom: 16),
+        ));
+      }
+      AddressModel address = await getAddressFromGeocode(LatLng(myPosition.latitude, myPosition.longitude));
+
+      ZoneResponseModel responseModel = await getZone(myPosition.latitude.toString(), myPosition.longitude.toString(), true, isLoading: fromAddress);
+
+      syncPickAvailability(
+        responseModel,
+        formCheckout: isFromCheckout,
+        point: LatLng(myPosition.latitude, myPosition.longitude),
+      );
+
+      String? firstName;
+
+      if( Get.find<AuthController>().isLoggedIn() && Get.find<UserController>().userInfoModel?.phone!=null && Get.find<UserController>().userInfoModel?.fName !=null){
+        firstName = "${Get.find<UserController>().userInfoModel?.fName} ";
+      }
+      addressModel = AddressModel(
+          latitude: myPosition.latitude.toString(), longitude: myPosition.longitude.toString(), addressType: 'others',
+          zoneId: responseModel.isSuccess ? responseModel.zoneIds : '',
+          address: address.address ?? "",
+          country: address.country ?? "",
+          house: address.house ?? "",
+          street: address.street ?? "",
+          city: address.city ?? "",
+          zipCode: address.zipCode ?? "",
+          addressLabel: deviceCurrentLocation
+              ? AddressSessionHelper.currentLocationSourceLabel
+              : AddressLabel.home.name,
+          availableServiceCountInZone: responseModel.totalServiceCount,
+          contactPersonNumber: firstName !=null? Get.find<UserController>().userInfoModel?.phone ?? "" : "",
+          contactPersonName: firstName!=null ? "$firstName${Get.find<UserController>().userInfoModel?.lName ?? "" }" : ""
+      );
+
+      fromAddress ? _address = addressModel : _pickAddress = addressModel;
+      return addressModel;
+    } catch (e) {
+      if (kDebugMode) {
+        print('getCurrentLocation error: $e');
+      }
+      _buttonDisabled = true;
+      _inZone = false;
+      return addressModel;
+    } finally {
+      _loading = false;
+      _isResolvingCurrentLocation = false;
+      refreshUi();
     }
-
-    String? firstName;
-
-    if( Get.find<AuthController>().isLoggedIn() && Get.find<UserController>().userInfoModel?.phone!=null && Get.find<UserController>().userInfoModel?.fName !=null){
-      firstName = "${Get.find<UserController>().userInfoModel?.fName} ";
-    }
-    addressModel = AddressModel(
-        latitude: myPosition.latitude.toString(), longitude: myPosition.longitude.toString(), addressType: 'others',
-        zoneId: responseModel.isSuccess ? responseModel.zoneIds : '',
-        address: address.address ?? "",
-        country: address.country ?? "",
-        house: address.house ?? "",
-        street: address.street ?? "",
-        city: address.city ?? "",
-        zipCode: address.zipCode ?? "",
-        addressLabel: deviceCurrentLocation
-            ? AddressSessionHelper.currentLocationSourceLabel
-            : AddressLabel.home.name,
-        availableServiceCountInZone: responseModel.totalServiceCount,
-        contactPersonNumber: firstName !=null? Get.find<UserController>().userInfoModel?.phone ?? "" : "",
-        contactPersonName: firstName!=null ? "$firstName${Get.find<UserController>().userInfoModel?.lName ?? "" }" : ""
-    );
-
-    fromAddress ? _address = addressModel : _pickAddress = addressModel;
-    _loading = false;
-    refreshUi();
-    return addressModel;
   }
 
   Future<ZoneResponseModel> getZone(String lat, String long, bool markerLoad, {bool isLoading = false}) async {
@@ -231,6 +362,9 @@ class LocationController extends GetxController implements GetxService {
   Future<void> updatePosition(CameraPosition position, bool fromAddress, {bool formCheckout = false}) async {
     if (_skipNextPositionUpdate) {
       _skipNextPositionUpdate = false;
+      return;
+    }
+    if (_isResolvingCurrentLocation) {
       return;
     }
 
@@ -273,11 +407,11 @@ class LocationController extends GetxController implements GetxService {
         isLoading: true,
       );
 
-      if (formCheckout && !zoneResponse.zoneIds.contains(getUserAddress()?.zoneId ?? '')) {
-        _buttonDisabled = true;
-      } else {
-        _buttonDisabled = !zoneResponse.isSuccess;
-      }
+      syncPickAvailability(
+        zoneResponse,
+        formCheckout: formCheckout,
+        point: position.target,
+      );
 
       if (_changeAddress) {
         final address = await getAddressFromGeocode(
@@ -296,6 +430,7 @@ class LocationController extends GetxController implements GetxService {
         print('updatePosition error: $e');
       }
       _buttonDisabled = true;
+      _inZone = false;
     } finally {
       _loading = false;
       if (!isClosed) {
@@ -355,6 +490,7 @@ class LocationController extends GetxController implements GetxService {
         }
       }
     }
+    AddressSessionHelper.clearAddressServiceabilityCache();
    // _isLoading = false;
 
     refreshUi();
@@ -578,7 +714,12 @@ class LocationController extends GetxController implements GetxService {
     }
   }
 
-  Future<AddressModel> setLocation(String placeID, String address, GoogleMapController? mapController) async {
+  Future<AddressModel> setLocation(
+    String placeID,
+    String address,
+    GoogleMapController? mapController, {
+    bool formCheckout = false,
+  }) async {
     _loading = true;
     refreshUi();
 
@@ -635,21 +776,43 @@ class LocationController extends GetxController implements GetxService {
     if (Get.currentRoute?.contains(RouteHelper.addAddress) ?? false) {
       _position = _pickPosition;
       _address = addressModel;
-      final zoneResponse = await getZone(
-        latLng.latitude.toString(),
-        latLng.longitude.toString(),
-        true,
-      );
-      _buttonDisabled = !zoneResponse.isSuccess;
     }
 
     if (mapController != null) {
-      mapController.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(target: latLng, zoom: 17)));
+      await mapController.animateCamera(
+        CameraUpdate.newCameraPosition(CameraPosition(target: latLng, zoom: 17)),
+      );
     }
+
+    await updatePosition(
+      CameraPosition(target: latLng, zoom: 17),
+      false,
+      formCheckout: formCheckout,
+    );
+    _skipNextPositionUpdate = true;
+
     _loading = false;
     refreshUi();
 
     return addressModel;
+  }
+
+  Future<bool> validatePickedLocationServiceable({bool formCheckout = false}) async {
+    if (_pickPosition.latitude == 0 && _pickPosition.longitude == 0) {
+      return false;
+    }
+
+    final zoneResponse = await getZone(
+      _pickPosition.latitude.toString(),
+      _pickPosition.longitude.toString(),
+      false,
+    );
+    syncPickAvailability(zoneResponse, formCheckout: formCheckout, point: _pickPositionLatLng());
+    return _inZone && !_buttonDisabled;
+  }
+
+  LatLng _pickPositionLatLng() {
+    return LatLng(_pickPosition.latitude, _pickPosition.longitude);
   }
 
   void disableButton() {
@@ -657,15 +820,42 @@ class LocationController extends GetxController implements GetxService {
     update();
   }
 
-  void setAddAddressData() {
+  void setAddAddressData({bool formCheckout = false}) {
     _position = _pickPosition;
     _address = _pickAddress;
     _skipNextPositionUpdate = true;
-    _buttonDisabled = false;
+    unawaited(_syncPositionZoneGate(formCheckout: formCheckout));
+  }
+
+  Future<void> setAddAddressDataAsync({bool formCheckout = false}) async {
+    _position = _pickPosition;
+    _address = _pickAddress;
+    _skipNextPositionUpdate = true;
+    await _syncPositionZoneGate(formCheckout: formCheckout);
+  }
+
+  Future<void> _syncPositionZoneGate({bool formCheckout = false}) async {
+    if (_position.latitude == 0 && _position.longitude == 0) {
+      _buttonDisabled = true;
+      _inZone = false;
+      refreshUi();
+      return;
+    }
+
+    final zoneResponse = await getZone(
+      _position.latitude.toString(),
+      _position.longitude.toString(),
+      false,
+    );
+    syncPickAvailability(
+      zoneResponse,
+      formCheckout: formCheckout,
+      point: LatLng(_position.latitude, _position.longitude),
+    );
     refreshUi();
   }
 
-  void setUpdateAddress(AddressModel address, {bool shouldUpdate = true}){
+  void setUpdateAddress(AddressModel address, {bool shouldUpdate = true, bool formCheckout = false}){
     final latitude = double.tryParse(address.latitude?.toString() ?? '') ?? 0;
     final longitude = double.tryParse(address.longitude?.toString() ?? '') ?? 0;
     _position = Position(
@@ -684,10 +874,10 @@ class LocationController extends GetxController implements GetxService {
     _address.address = address.address ?? '';
     if (address.zoneId != null && address.zoneId!.trim().isNotEmpty) {
       _zoneID = address.zoneId!.trim();
-      _inZone = true;
     }
     _skipNextPositionUpdate = true;
     refreshUi(notify: shouldUpdate);
+    unawaited(_syncPositionZoneGate(formCheckout: formCheckout));
   }
 
   void updateAddressType(Address address, {bool shouldUpdate = true}){
@@ -722,8 +912,10 @@ class LocationController extends GetxController implements GetxService {
   Future<bool> setAddressIndex(AddressModel address,{bool fromAddressScreen = true}) async {
     bool isSuccess = false;
     if(fromAddressScreen){
-      ZoneResponseModel selectedZone = await  getZone('${address.latitude}', '${address.longitude}', false);
-      if(selectedZone.zoneIds.contains(getUserAddress()?.zoneId??"")) {
+      ZoneResponseModel selectedZone = await getZone('${address.latitude}', '${address.longitude}', false);
+      if(selectedZone.isSuccess &&
+          isZoneServiceable(selectedZone) &&
+          selectedZone.zoneIds.contains(getUserAddress()?.zoneId??"")) {
         _selectedAddress = address;
 
         refreshUi();
@@ -782,9 +974,7 @@ class LocationController extends GetxController implements GetxService {
   Future<AddressModel> getAddressFromGeocode(LatLng latLng) async {
     Response response = await locationRepo.getAddressFromGeocode(latLng);
     AddressFormat addressFormat;
-    AddressModel address = AddressModel(
-      address: 'Unknown Location Found'
-    );
+    AddressModel address = AddressModel();
     if(response.statusCode == 200 && response.body['content']['status'] == 'OK') {
 
       addressFormat = AddressFormat.fromJson( response.body['content']['results'][0]);
@@ -922,6 +1112,10 @@ class LocationController extends GetxController implements GetxService {
 
   void updateCameraMovingStatus(bool status){
     _isCameraMoving = status;
+    if (status) {
+      _loading = true;
+      _buttonDisabled = true;
+    }
     refreshUi();
   }
 

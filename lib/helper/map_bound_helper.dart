@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -5,6 +7,7 @@ import 'package:demandium/feature/location/controller/location_controller.dart';
 import 'package:demandium/feature/splash/controller/splash_controller.dart';
 import 'package:demandium/feature/address/model/address_model.dart';
 import 'package:demandium/feature/provider/model/provider_model.dart';
+import 'package:demandium/feature/area/model/zone_model.dart';
 
 class MapHelper {
   /// Resolves a valid map camera target (never 0,0 unless that is intentional).
@@ -68,5 +71,119 @@ class MapHelper {
     return  Geolocator.distanceBetween(userLat, userLon, providerLat, providerLon)/1000;
   }
 
+  static List<LatLng> latLngListFromZone(ZoneModel zone) {
+    final coordinates = zone.formattedCoordinates;
+    if (coordinates == null || coordinates.isEmpty) {
+      return [];
+    }
+    return coordinates
+        .where((c) => c.latitude != null && c.longitude != null)
+        .map((c) => LatLng(c.latitude!, c.longitude!))
+        .toList();
+  }
+
+  /// Zones drawn on a huge area (e.g. "All over the World") must not define pickable service area.
+  static bool isCatchAllZone(ZoneModel zone) {
+    final polygon = latLngListFromZone(zone);
+    if (polygon.length < 3) {
+      return true;
+    }
+    final bounds = boundsFromLatLngList(polygon);
+    final latSpan = (bounds.northeast.latitude - bounds.southwest.latitude).abs();
+    final lngSpan = (bounds.northeast.longitude - bounds.southwest.longitude).abs();
+    return latSpan > 10 || lngSpan > 10;
+  }
+
+  /// Leaf / local zones used for map shading and pick validation (excludes parent + world zones).
+  static List<ZoneModel> operationalZones(List<ZoneModel> zones) {
+    if (zones.isEmpty) {
+      return zones;
+    }
+
+    final parentIds = zones
+        .map((zone) => zone.id)
+        .whereType<String>()
+        .where((id) => zones.any((other) => other.id != id && other.parentId == id))
+        .toSet();
+
+    final operational = zones.where((zone) {
+      if (isCatchAllZone(zone)) {
+        return false;
+      }
+      final zoneId = zone.id;
+      if (zoneId != null && parentIds.contains(zoneId)) {
+        return false;
+      }
+      return latLngListFromZone(zone).length >= 3;
+    }).toList();
+
+    return operational.isEmpty
+        ? zones.where((zone) => !isCatchAllZone(zone) && latLngListFromZone(zone).length >= 3).toList()
+        : operational;
+  }
+
+  static bool isPointInsideOperationalZones(LatLng point, List<ZoneModel> zones) {
+    return isPointInsideAnyZone(point, operationalZones(zones));
+  }
+
+  static Set<Polygon> polygonsFromZones(List<ZoneModel> zones) {
+    final polygonList = <Polygon>[];
+    final drawableZones = operationalZones(zones);
+    for (int index = 0; index < drawableZones.length; index++) {
+      final points = latLngListFromZone(drawableZones[index]);
+      if (points.length < 3) {
+        continue;
+      }
+      polygonList.add(
+        Polygon(
+          polygonId: PolygonId('zone_$index'),
+          points: points,
+          strokeWidth: 2,
+          strokeColor: Get.theme.colorScheme.primary,
+          fillColor: Get.theme.colorScheme.primary.withValues(alpha: .2),
+        ),
+      );
+    }
+    return HashSet<Polygon>.of(polygonList);
+  }
+
+  static bool isPointInsidePolygon(LatLng point, List<LatLng> polygon) {
+    if (polygon.length < 3) {
+      return false;
+    }
+
+    bool inside = false;
+    for (int i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      final latI = polygon[i].latitude;
+      final lngI = polygon[i].longitude;
+      final latJ = polygon[j].latitude;
+      final lngJ = polygon[j].longitude;
+
+      final intersects = ((latI > point.latitude) != (latJ > point.latitude)) &&
+          (point.longitude <
+              (lngJ - lngI) * (point.latitude - latI) / (latJ - latI + 0.0) + lngI);
+      if (intersects) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  static bool isPointInsideAnyZone(LatLng point, List<ZoneModel> zones) {
+    for (final zone in zones) {
+      final polygon = latLngListFromZone(zone);
+      if (isPointInsidePolygon(point, polygon)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static List<List<LatLng>> polygonsFromZoneModels(List<ZoneModel> zones) {
+    return operationalZones(zones)
+        .map(latLngListFromZone)
+        .where((polygon) => polygon.length >= 3)
+        .toList();
+  }
 
 }

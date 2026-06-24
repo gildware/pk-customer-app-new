@@ -195,7 +195,15 @@ class BottomButton extends StatelessWidget {
             return;
           }
           Get.toNamed(RouteHelper.getPickMapRoute(
-              route == null ? fromSignUp ? RouteHelper.signUp : RouteHelper.accessLocation : route!, route != null, 'false', null, Get.find<LocationController>().getUserAddress()
+              route == null
+                  ? fromSignUp
+                      ? RouteHelper.signUp
+                      : RouteHelper.getMainRoute('home')
+                  : route!,
+              route != null,
+              'false',
+              null,
+              Get.find<LocationController>().getUserAddress()
           ));
         },
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [

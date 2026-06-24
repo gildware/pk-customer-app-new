@@ -178,7 +178,8 @@ class AiChatController extends GetxController implements GetxService {
     }
 
     if (action == 'pick' && choice == 'new') {
-      await Get.toNamed(RouteHelper.getAddAddressRoute(false));
+      await Get.toNamed(RouteHelper.getAddAddressRoute(false, fromBooking: true));
+      await Get.find<LocationController>().getAddressList();
       await performBookingAction(action: 'pick', choice: 'done');
       return;
     }

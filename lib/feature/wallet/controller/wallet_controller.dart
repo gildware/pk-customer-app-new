@@ -128,11 +128,15 @@ class WalletController extends GetxController{
     }
   }
 
-  void setWalletAccessToken(String accessToken){
-    walletRepo.setWalletAccessToken(accessToken);
+  Future<void> setWalletAccessToken(String accessToken) async {
+    await walletRepo.setWalletAccessToken(accessToken);
   }
 
-  String getWalletAccessToken (){
+  Future<String> getWalletAccessToken() async {
     return walletRepo.getWalletAccessToken();
+  }
+
+  String getWalletAccessTokenSync(){
+    return walletRepo.getWalletAccessTokenSync();
   }
 }

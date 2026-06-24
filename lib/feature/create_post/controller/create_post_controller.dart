@@ -1,4 +1,7 @@
 import 'dart:convert';
+
+import 'package:demandium/helper/address_session_helper.dart';
+import 'package:demandium/helper/validation_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
@@ -41,7 +44,24 @@ class CreatePostController extends GetxController implements GetxService{
   Future<void> createCustomPost(String? schedule, {AddressModel? serviceAddress }) async {
     _isLoading = true;
     update();
-    AddressModel? addressModel = Get.find<LocationController>().selectedAddress;
+    AddressModel? addressModel = serviceAddress ?? Get.find<LocationController>().selectedAddress ?? Get.find<LocationController>().getUserAddress();
+
+    if (addressModel == null) {
+      customSnackBar('add_address_first'.tr, type: ToasterMessageType.info);
+      _isLoading = false;
+      update();
+      return;
+    }
+
+    final valid = await AddressSessionHelper.validateAddressForUse(
+      addressModel,
+      requireSessionZone: true,
+    );
+    if (!valid) {
+      _isLoading = false;
+      update();
+      return;
+    }
 
     Response  response = await createPostRepo.createCustomPost(
       CreatePostBody(
@@ -52,7 +72,7 @@ class CreatePostController extends GetxController implements GetxService{
         serviceDescription: descriptionController.text,
         serviceSchedule: schedule,
         additionDescriptions: additionalInstruction,
-        serviceAddress: jsonEncode(serviceAddress)
+        serviceAddress: jsonEncode(serviceAddress ?? addressModel)
       )
     );
 
@@ -184,13 +204,16 @@ class CreatePostController extends GetxController implements GetxService{
   Future<Response> makePayment({String? postId, String? providerId, String? paymentMethod, String? offlinePaymentId, String? customerInfo, int? isPartial} ) async {
 
     await Get.find<LocationController>().refreshSavedAddressZone();
-    final savedAddress = Get.find<LocationController>().getUserAddress();
-    final zoneId = savedAddress?.zoneId?.trim() ?? '';
-    if (zoneId.isEmpty) {
+    AddressModel? addressModel = Get.find<LocationController>().selectedAddress ?? Get.find<LocationController>().getUserAddress();
+    if (addressModel == null) {
+      return Response(statusCode: 400, statusText: 'add_address_first'.tr);
+    }
+
+    final zoneId = await AddressSessionHelper.resolveZoneIdFromCoordinates(addressModel);
+    if (!ValidationHelper.isValidUuid(zoneId)) {
       return Response(statusCode: 400, statusText: 'service_not_available_in_this_area'.tr);
     }
     String? schedule = Get.find<ScheduleController>().scheduleTime;
-    AddressModel? addressModel = Get.find<LocationController>().selectedAddress ?? savedAddress;
 
     Response response = await createPostRepo.makePayment(
       paymentMethod : paymentMethod,

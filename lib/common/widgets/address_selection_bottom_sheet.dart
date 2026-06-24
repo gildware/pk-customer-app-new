@@ -130,7 +130,7 @@ class AddressSelectionBottomSheet extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                            AddressActionButtons(
+                          AddressActionButtons(
                             locationController: locationController,
                             isLoggedIn: isLoggedIn,
                             redirectRoute: redirectRoute,
@@ -150,55 +150,171 @@ class AddressSelectionBottomSheet extends StatelessWidget {
   }
 }
 
-class AddressListContent extends StatelessWidget {
+class AddressListContent extends StatefulWidget {
   final LocationController locationController;
   final Function(AddressModel)? onAddressTap;
+  final void Function(AddressModel)? onAddressDeleted;
   final String? redirectRoute;
+  final String? selectedAddressId;
   
   const AddressListContent({
     super.key,
     required this.locationController,
     this.onAddressTap,
+    this.onAddressDeleted,
     this.redirectRoute,
+    this.selectedAddressId,
   });
 
   @override
-  Widget build(BuildContext context) {
+  State<AddressListContent> createState() => AddressListContentState();
+}
 
+class AddressListContentState extends State<AddressListContent> {
+  final Map<String, bool> _serviceableById = {};
+  bool _isValidating = false;
+
+  static final Map<String, bool> serviceabilityCache = AddressSessionHelper.addressServiceabilityCache;
+
+  bool isAddressServiceable(AddressModel address) {
+    final id = address.id;
+    if (id != null && _serviceableById.containsKey(id)) {
+      return _serviceableById[id]!;
+    }
+    return AddressSessionHelper.isAddressLikelyServiceable(address);
+  }
+
+  bool get hasNonServiceableAddresses {
+    final list = widget.locationController.addressList;
+    if (list == null || list.isEmpty) return false;
+    return list.any((address) => !isAddressServiceable(address));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _validateAddresses();
+  }
+
+  @override
+  void didUpdateWidget(covariant AddressListContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.locationController.addressList?.length !=
+        widget.locationController.addressList?.length) {
+      _validateAddresses();
+    }
+  }
+
+  Future<void> _validateAddresses() async {
+    final list = widget.locationController.addressList;
+    if (list == null || list.isEmpty) return;
+
+    setState(() => _isValidating = true);
+
+    final results = <String, bool>{};
+    for (final address in list) {
+      final id = address.id;
+      if (id == null) continue;
+
+      if (serviceabilityCache.containsKey(id)) {
+        results[id] = serviceabilityCache[id]!;
+        continue;
+      }
+
+      final serviceable = await AddressSessionHelper.evaluateAddressServiceability(address);
+      results[id] = serviceable;
+      serviceabilityCache[id] = serviceable;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _serviceableById
+        ..clear()
+        ..addAll(results);
+      _isValidating = false;
+    });
+    AddressSessionHelper.addressServiceabilityCache
+      ..clear()
+      ..addAll(results);
+    widget.locationController.refreshUi();
+  }
+
+  void _confirmDeleteAddress(BuildContext context, AddressModel address) {
+    if (Get.isSnackbarOpen) {
+      Get.back();
+    }
+    Get.dialog(
+      ConfirmationDialog(
+        icon: Images.warning,
+        description: 'are_you_sure_want_to_delete_address'.tr,
+        onYesPressed: () async {
+          Get.back();
+          Get.dialog(const CustomLoader(), barrierDismissible: false);
+          final response = await widget.locationController.deleteUserAddressByID(address);
+          if (address.id != null) {
+            AddressSessionHelper.addressServiceabilityCache.remove(address.id);
+          }
+          if (Get.isDialogOpen == true) Get.back();
+          customSnackBar(
+            response.message!.tr.capitalizeFirst!,
+            type: response.isSuccess == true ? ToasterMessageType.success : ToasterMessageType.error,
+          );
+          if (response.isSuccess == true && mounted) {
+            widget.onAddressDeleted?.call(address);
+            _validateAddresses();
+          }
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Skeletonizer(
-      enabled: locationController.addressList == null,
+      enabled: widget.locationController.addressList == null,
       child: StaggeredListAnimationWrapper(
-        // Key changes when list length changes, forcing animation to replay
-        key: ValueKey(locationController.addressList?.length),
+        key: ValueKey(widget.locationController.addressList?.length),
         duration: const Duration(milliseconds: 600),
         child: ListView.builder(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          itemCount: locationController.addressList!.length,
+          itemCount: widget.locationController.addressList!.length,
           itemBuilder: (context, index) {
-            final address = locationController.addressList![index];
-            final isSelected = locationController.getUserAddress()?.id == address.id;
-            final isNewlyAdded = locationController.newlyAddedAddressId == address.id;
+            final address = widget.locationController.addressList![index];
+            final isSelected = widget.selectedAddressId != null
+                ? widget.selectedAddressId == address.id
+                : widget.locationController.getUserAddress()?.id == address.id;
+            final isNewlyAdded = widget.locationController.newlyAddedAddressId == address.id;
+            final isServiceable = isAddressServiceable(address);
+            final isDisabled = !isServiceable;
 
+            final isChecking = _isValidating && address.id != null && !_serviceableById.containsKey(address.id);
             return StaggeredListAnimationItem(
               index: index,
               child: AddressListItem(
                 address: address,
                 isSelected: isSelected,
                 isNewlyAdded: isNewlyAdded,
-                onTap: () async {
-                  if (onAddressTap != null) {
-                    onAddressTap!(address);
+                isDisabled: isDisabled,
+                isChecking: isChecking,
+                onTap: isDisabled
+                    ? null
+                    : () async {
+                  if (widget.onAddressTap != null) {
+                    widget.onAddressTap!(address);
                   } else {
                     Get.dialog(const CustomLoader(), barrierDismissible: false);
                     await AddressSessionHelper.applySelectedAddress(
                       address,
-                      redirectRoute: redirectRoute ?? RouteHelper.getMainRoute('home'),
+                      redirectRoute: widget.redirectRoute ?? RouteHelper.getMainRoute('home'),
                       canRoute: true,
                     );
                     if (Get.isDialogOpen == true) Get.back();
                   }
                 },
+                onDelete: isDisabled && !isChecking
+                    ? () => _confirmDeleteAddress(context, address)
+                    : null,
               ),
             );
           },
@@ -212,14 +328,20 @@ class AddressListItem extends StatelessWidget {
   final AddressModel address;
   final bool isSelected;
   final bool isNewlyAdded;
-  final VoidCallback onTap;
+  final bool isDisabled;
+  final bool isChecking;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
   
   const AddressListItem({
     super.key,
     required this.address,
     required this.isSelected,
     required this.isNewlyAdded,
-    required this.onTap,
+    this.isDisabled = false,
+    this.isChecking = false,
+    this.onTap,
+    this.onDelete,
   });
   
   IconData _getAddressIcon() {
@@ -235,117 +357,191 @@ class AddressListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final disabledColor = theme.disabledColor;
+    final primaryColor = theme.colorScheme.primary;
+    final contentColor = isDisabled ? disabledColor : theme.textTheme.bodyLarge?.color;
+    final iconColor = isDisabled ? disabledColor : primaryColor;
+
     return CustomHighlightAnimationWidget(
-      shouldAnimate: isNewlyAdded,
+      shouldAnimate: isNewlyAdded && !isDisabled,
       child: Builder(
         builder: (context) {
-          // Use the highlight animation extension methods
-          final backgroundColor = isSelected 
-              ? Theme.of(context).hintColor.withValues(alpha: 0.1)
-              : context.highlightBackgroundColor(
-                  null,
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+          final backgroundColor = isDisabled
+              ? theme.hintColor.withValues(alpha: 0.06)
+              : isSelected
+                  ? theme.hintColor.withValues(alpha: 0.1)
+                  : context.highlightBackgroundColor(
+                      null,
+                      primaryColor.withValues(alpha: 0.08),
+                    );
+
+          final borderColor = isDisabled
+              ? theme.hintColor.withValues(alpha: 0.15)
+              : context.highlightBorderColor(
+                  theme.hintColor.withValues(alpha: 0.2),
+                  primaryColor.withValues(alpha: 0.4),
                 );
-
-          final borderColor = context.highlightBorderColor(
-            Theme.of(context).hintColor.withValues(alpha: 0.2),
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-          );
           
-          return InkWell(
-            onTap: onTap,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
-              padding: const EdgeInsets.all(15), // 15px padding as per Figma
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(8), // 8px radius as per Figma
-                border: Border.all(
-                  color: borderColor!,
-                  width: 1, // 1px border as per Figma
-                ),
+          return Container(
+            margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: borderColor!,
+                width: 1,
               ),
-              child: Row(
-                children: [
-                  // Address Icon (simple, no background)
-
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-
-                            Icon(
-                              _getAddressIcon(),
-                              color: Theme.of(context).colorScheme.primary,
-                              size: Dimensions.paddingSizeLarge,
-                            ),
-                            const SizedBox(width: Dimensions.paddingSizeExtraSmall),
-
-
-
-                            Text(
-                              (address.addressLabel ?? 'others').tr,
-                              style: isSelected
-                                  ? robotoBold.copyWith(fontSize: Dimensions.fontSizeLarge)
-                                  : robotoRegular.copyWith(fontSize: Dimensions.fontSizeLarge),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-
-                        Row(
-                          children: [
-                            SizedBox(width: Dimensions.paddingSizeExtraLarge),
-
-                            Flexible(child: Text(
-                              address.address ?? '',
-                              style: robotoRegular.copyWith(
-                                fontSize: Dimensions.fontSizeSmall,
-                                color: Theme.of(context).textTheme.titleLarge?.color?.withValues(alpha: 0.5),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            )),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(width: Dimensions.paddingSizeSmall),
-                  
-                  // Radio Button
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected 
-                            ? Theme.of(context).colorScheme.primary 
-                            : Theme.of(context).hintColor.withValues(alpha: 0.5),
-                        width: 2,
+            ),
+            child: Stack(
+              children: [
+                Opacity(
+                  opacity: isDisabled ? 0.55 : 1,
+                  child: InkWell(
+                    onTap: isChecking ? null : onTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        15,
+                        15,
+                        isDisabled && onDelete != null ? 48 : 15,
+                        15,
                       ),
-                    ),
-                    child: isSelected
-                        ? Center(
-                            child: Container(
-                              width: 12,
-                              height: 12,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      _getAddressIcon(),
+                                      color: iconColor,
+                                      size: Dimensions.paddingSizeLarge,
+                                    ),
+                                    const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                                    Expanded(
+                                      child: Text(
+                                        (address.addressLabel ?? 'others').tr,
+                                        style: (isSelected && !isDisabled)
+                                            ? robotoBold.copyWith(
+                                                fontSize: Dimensions.fontSizeLarge,
+                                                color: contentColor,
+                                              )
+                                            : robotoRegular.copyWith(
+                                                fontSize: Dimensions.fontSizeLarge,
+                                                color: contentColor,
+                                              ),
+                                      ),
+                                    ),
+                                    if (isChecking)
+                                      SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: primaryColor.withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: Dimensions.paddingSizeExtraLarge),
+                                  child: Text(
+                                    address.address ?? '',
+                                    style: robotoRegular.copyWith(
+                                      fontSize: Dimensions.fontSizeSmall,
+                                      color: isDisabled
+                                          ? disabledColor
+                                          : theme.textTheme.titleLarge?.color?.withValues(alpha: 0.5),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isDisabled && !isChecking) ...[
+                                  const SizedBox(height: Dimensions.paddingSizeSmall),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.error.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                                      border: Border.all(
+                                        color: theme.colorScheme.error.withValues(alpha: 0.2),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'we_dont_service_this_area'.tr,
+                                      style: robotoRegular.copyWith(
+                                        fontSize: Dimensions.fontSizeSmall,
+                                        color: theme.colorScheme.error.withValues(alpha: 0.9),
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (!isDisabled) ...[
+                            const SizedBox(width: Dimensions.paddingSizeSmall),
+                            Container(
+                              width: 24,
+                              height: 24,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Theme.of(context).colorScheme.primary,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? primaryColor
+                                      : theme.hintColor.withValues(alpha: 0.5),
+                                  width: 2,
+                                ),
                               ),
+                              child: isSelected
+                                  ? Center(
+                                      child: Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    )
+                                  : null,
                             ),
-                          )
-                        : null,
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-              ),
+                ),
+                if (isDisabled && !isChecking && onDelete != null)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: IconButton(
+                      onPressed: onDelete,
+                      tooltip: 'delete'.tr,
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      style: IconButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                        backgroundColor: theme.colorScheme.error.withValues(alpha: 0.1),
+                      ),
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                    ),
+                  ),
+              ],
             ),
           );
         },

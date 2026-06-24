@@ -46,7 +46,7 @@ class UserController extends GetxController implements GetxService {
       _userInfoModel = null;
     }
 
-    DataSyncHelper.fetchAndSyncData(
+    await DataSyncHelper.fetchAndSyncData(
       fetchFromLocal: ()=> userRepo.getUserInfo<CacheResponseData>( source: DataSourceEnum.local),
       fetchFromClient: ()=>userRepo.getUserInfo(source: DataSourceEnum.client),
       onResponse: (data, source) {
@@ -70,6 +70,7 @@ class UserController extends GetxController implements GetxService {
         }
         update();
       },
+      suppressErrorWhenLocalSucceeded: true,
     );
   }
 

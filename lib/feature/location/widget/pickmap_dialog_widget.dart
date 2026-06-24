@@ -20,10 +20,14 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   LatLng? _initialPosition;
   bool _isMapReady = false;
   bool _mapInitializing = true;
+  bool _zonesLoaded = false;
+  Set<Polygon> _polygons = {};
 
   @override
   void initState() {
     super.initState();
+    final locationController = Get.find<LocationController>();
+    locationController.beginMapPolygonValidation();
     
     // Initialize map position
     if (widget.previousAddress != null && 
@@ -44,10 +48,36 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
     Get.find<LocationController>().setPickData();
 
     _cameraPosition = CameraPosition(target: _initialPosition!, zoom: 16);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadServiceAreaPolygons());
+  }
+
+  Future<void> _loadServiceAreaPolygons() async {
+    final serviceAreaController = Get.find<ServiceAreaController>();
+    await serviceAreaController.getZoneList(reload: false);
+    final zones = serviceAreaController.zoneList;
+    if (!mounted || zones == null || zones.isEmpty) {
+      return;
+    }
+
+    final polygons = MapHelper.polygonsFromZoneModels(zones);
+    Get.find<LocationController>().setMapValidationPolygons(polygons);
+
+    setState(() {
+      _polygons = MapHelper.polygonsFromZones(zones);
+      _zonesLoaded = true;
+    });
+    if (mounted && _cameraPosition != null) {
+      await Get.find<LocationController>().updatePosition(
+        _cameraPosition!,
+        false,
+        formCheckout: false,
+      );
+    }
   }
 
   @override
   void dispose() {
+    Get.find<LocationController>().endMapPolygonValidation();
     _mapController?.dispose();
     super.dispose();
   }
@@ -77,7 +107,7 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
                 child: MapViewWidget(
                     fromAddAddress: true,
                     initialPosition: _initialPosition,
-                    polygons: {},
+                    polygons: _polygons,
                     onMapCreated: _onMapCreated,
                     onCameraMove: _onCameraMove,
                     onCameraMoveStarted: _onCameraMoveStarted,
@@ -99,6 +129,9 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
     _mapController = mapController;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _mapInitializing = true;
+      if (!_zonesLoaded) {
+        await _loadServiceAreaPolygons();
+      }
       final locationController = Get.find<LocationController>();
       await locationController.getCurrentLocation(
         false,
@@ -128,7 +161,7 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   }
 
   void _onCameraIdle() {
-    if (!_isMapReady || _mapInitializing || _cameraPosition == null) return;
+    if (!_isMapReady || _mapInitializing || _cameraPosition == null || !_zonesLoaded) return;
     final locationController = Get.find<LocationController>();
     locationController.updateCameraMovingStatus(false);
     locationController.updatePosition(
@@ -139,17 +172,57 @@ class _PickMapDialogWidgetState extends State<PickMapDialogWidget> {
   }
 
   void _onLocationTap() {
-    _checkPermission(() {
-      Get.find<LocationController>().getCurrentLocation(
+    _checkPermission(() async {
+      final locationController = Get.find<LocationController>();
+      await locationController.getCurrentLocation(
         false,
         deviceCurrentLocation: true,
         mapController: _mapController,
       );
+      if (locationController.buttonDisabled) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      }
     });
   }
 
   Future<void> _onPickLocationTap() async {
     final locationController = Get.find<LocationController>();
+
+    if (locationController.isCameraMoving ||
+        locationController.loading ||
+        locationController.buttonDisabled ||
+        !locationController.inZone) {
+      return;
+    }
+
+    if (_cameraPosition != null) {
+      await locationController.updatePosition(
+        _cameraPosition!,
+        false,
+        formCheckout: false,
+      );
+    }
+
+    if (!locationController.inZone || locationController.buttonDisabled) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
+    final pickedPoint = LatLng(
+      locationController.pickPosition.latitude,
+      locationController.pickPosition.longitude,
+    );
+    if (!locationController.isPointInsideServiceAreaPolygons(pickedPoint)) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
+    final isServiceable = await locationController.validatePickedLocationServiceable();
+    if (!isServiceable) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
     final pickedAddress = locationController.pickAddress.address ?? '';
     if (locationController.pickPosition.latitude != 0 && pickedAddress.isNotEmpty) {
       String? firstName;

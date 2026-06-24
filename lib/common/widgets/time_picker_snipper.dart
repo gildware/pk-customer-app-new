@@ -58,6 +58,8 @@ class ItemScrollPhysics extends ScrollPhysics {
 typedef SelectedIndexCallback = void Function(int);
 typedef TimePickerCallback = void Function(DateTime);
 
+enum _SpinnerColumn { hour, minute, second }
+
 
 
 class TimePickerSpinner extends StatefulWidget {
@@ -68,11 +70,15 @@ class TimePickerSpinner extends StatefulWidget {
   final bool isShowSeconds;
   final TextStyle? highlightedTextStyle;
   final TextStyle? normalTextStyle;
+  final TextStyle? disabledTextStyle;
   final double? itemHeight;
   final double? itemWidth;
   final AlignmentGeometry? alignment;
   final double? spacing;
   final bool isForce2Digits;
+  final DateTime? minSelectableTime;
+  final DateTime? maxSelectableTime;
+  final bool restrictToAllowedRange;
   final TimePickerCallback? onTimeChange;
 
   const TimePickerSpinner(
@@ -84,11 +90,15 @@ class TimePickerSpinner extends StatefulWidget {
         this.isShowSeconds = false,
         this.highlightedTextStyle,
         this.normalTextStyle,
+        this.disabledTextStyle,
         this.itemHeight,
         this.itemWidth,
         this.alignment,
         this.spacing,
         this.isForce2Digits = false,
+        this.minSelectableTime,
+        this.maxSelectableTime,
+        this.restrictToAllowedRange = true,
         this.onTimeChange})
       ;
 
@@ -97,10 +107,10 @@ class TimePickerSpinner extends StatefulWidget {
 }
 
 class TimePickerSpinnerState extends State<TimePickerSpinner> {
-  ScrollController hourController = ScrollController();
-  ScrollController minuteController = ScrollController();
-  ScrollController secondController = ScrollController();
-  ScrollController apController = ScrollController();
+  late ScrollController hourController;
+  late ScrollController minuteController;
+  late ScrollController secondController;
+  late ScrollController apController;
   int currentSelectedHourIndex = -1;
   int currentSelectedMinuteIndex = -1;
   int currentSelectedSecondIndex = -1;
@@ -126,6 +136,215 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
 
   TextStyle? _getNormalTextStyle() {
     return widget.normalTextStyle ?? defaultNormalTextStyle;
+  }
+
+  TextStyle? _getDisabledTextStyle() {
+    return widget.disabledTextStyle ??
+        _getNormalTextStyle()?.copyWith(
+          color: (_getNormalTextStyle()?.color ?? Colors.black54).withValues(alpha: 0.25),
+        );
+  }
+
+  DateTime _dateOnSameDay(int hour, int minute, [int second = 0]) {
+    return DateTime(
+      currentTime!.year,
+      currentTime!.month,
+      currentTime!.day,
+      hour,
+      minute,
+      second,
+    );
+  }
+
+  bool _isSelectable(DateTime value) {
+    if (!widget.restrictToAllowedRange) {
+      return true;
+    }
+    final min = widget.minSelectableTime;
+    final max = widget.maxSelectableTime;
+    if (min != null && value.isBefore(min)) {
+      return false;
+    }
+    if (max != null && value.isAfter(max)) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _isHourIndexSelectable(int index, int max, int interval) {
+    for (var minute = 0; minute < 60; minute += widget.minutesInterval) {
+      final candidate = _dateTimeForSpinnerIndex(
+        hourIndex: index,
+        minuteIndex: currentSelectedMinuteIndex,
+        secondIndex: currentSelectedSecondIndex,
+        hourMax: max,
+        minuteOverride: minute,
+      );
+      if (_isSelectable(candidate)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isMinuteIndexSelectable(int index, int max, int interval) {
+    final candidate = _dateTimeForSpinnerIndex(
+      hourIndex: currentSelectedHourIndex,
+      minuteIndex: index,
+      secondIndex: currentSelectedSecondIndex,
+      hourMax: _getHourCount(),
+      minuteMax: max,
+    );
+    return _isSelectable(candidate);
+  }
+
+  DateTime _dateTimeForSpinnerIndex({
+    required int hourIndex,
+    required int minuteIndex,
+    required int secondIndex,
+    required int hourMax,
+    int? minuteMax,
+    int? minuteOverride,
+  }) {
+    final savedHourIndex = currentSelectedHourIndex;
+    final savedMinuteIndex = currentSelectedMinuteIndex;
+    final savedSecondIndex = currentSelectedSecondIndex;
+
+    currentSelectedHourIndex = hourIndex;
+    currentSelectedMinuteIndex = minuteIndex;
+    currentSelectedSecondIndex = secondIndex;
+
+    if (minuteOverride != null) {
+      final minute = minuteOverride;
+      int hour = hourIndex - hourMax;
+      if (!widget.is24HourMode && currentSelectedAPIndex == 2) {
+        hour += 12;
+      }
+      final result = _dateOnSameDay(hour, minute);
+      currentSelectedHourIndex = savedHourIndex;
+      currentSelectedMinuteIndex = savedMinuteIndex;
+      currentSelectedSecondIndex = savedSecondIndex;
+      return result;
+    }
+
+    final result = getDateTime();
+    currentSelectedHourIndex = savedHourIndex;
+    currentSelectedMinuteIndex = savedMinuteIndex;
+    currentSelectedSecondIndex = savedSecondIndex;
+    return result;
+  }
+
+  DateTime _clampToSelectable(DateTime value) {
+    if (!widget.restrictToAllowedRange) {
+      return value;
+    }
+    var clamped = value;
+    final min = widget.minSelectableTime;
+    final max = widget.maxSelectableTime;
+    if (min != null && clamped.isBefore(min)) {
+      clamped = min;
+    }
+    if (max != null && clamped.isAfter(max)) {
+      clamped = max;
+    }
+    return clamped;
+  }
+
+  void _safeJumpTo(ScrollController controller, double offset) {
+    if (!controller.hasClients) {
+      return;
+    }
+    controller.jumpTo(offset);
+  }
+
+  void _syncControllersToTime(DateTime time, {bool deferIfNeeded = false}) {
+    void apply() {
+      currentTime = time;
+      currentSelectedHourIndex =
+          (time.hour % (widget.is24HourMode ? 24 : 12)) + _getHourCount();
+      _safeJumpTo(
+        hourController,
+        (currentSelectedHourIndex - 1) * _getItemHeight()!,
+      );
+
+      currentSelectedMinuteIndex =
+          (time.minute / widget.minutesInterval).floor() +
+              (isLoop(_getMinuteCount()) ? _getMinuteCount() : 1);
+      _safeJumpTo(
+        minuteController,
+        (currentSelectedMinuteIndex - 1) * _getItemHeight()!,
+      );
+
+      currentSelectedSecondIndex =
+          (time.second / widget.secondsInterval).floor() +
+              (isLoop(_getSecondCount()) ? _getSecondCount() : 1);
+      _safeJumpTo(
+        secondController,
+        (currentSelectedSecondIndex - 1) * _getItemHeight()!,
+      );
+
+      if (!widget.is24HourMode) {
+        currentSelectedAPIndex = time.hour >= 12 ? 2 : 1;
+        _safeJumpTo(
+          apController,
+          (currentSelectedAPIndex - 1) * _getItemHeight()!,
+        );
+      }
+    }
+
+    if (deferIfNeeded &&
+        (!hourController.hasClients || !minuteController.hasClients)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        apply();
+      });
+      return;
+    }
+
+    apply();
+  }
+
+  bool _isSamePickerTime(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
+    return a.year == b.year &&
+        a.month == b.month &&
+        a.day == b.day &&
+        a.hour == b.hour &&
+        a.minute == b.minute;
+  }
+
+  void _finalizeTimeSelection() {
+    final current = getDateTime();
+    final clamped = _clampToSelectable(current);
+    if (clamped != current) {
+      _syncControllersToTime(clamped, deferIfNeeded: true);
+    }
+    widget.onTimeChange?.call(clamped);
+  }
+
+  @override
+  void didUpdateWidget(covariant TimePickerSpinner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.restrictToAllowedRange) {
+      return;
+    }
+
+    final incoming = widget.time ?? currentTime ?? DateTime.now();
+    final clamped = _clampToSelectable(incoming);
+    final dayChanged = currentTime != null &&
+        !_isSamePickerTime(
+          DateTime(currentTime!.year, currentTime!.month, currentTime!.day),
+          DateTime(clamped.year, clamped.month, clamped.day),
+        );
+    final timeChanged = !_isSamePickerTime(currentTime, clamped);
+
+    if (currentTime == null ||
+        dayChanged ||
+        timeChanged ||
+        oldWidget.minSelectableTime != widget.minSelectableTime ||
+        oldWidget.maxSelectableTime != widget.maxSelectableTime) {
+      _syncControllersToTime(clamped, deferIfNeeded: true);
+    }
   }
 
   int _getHourCount() {
@@ -175,7 +394,8 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
 
   @override
   void initState() {
-    currentTime = widget.time ?? DateTime.now();
+    final initial = _clampToSelectable(widget.time ?? DateTime.now());
+    currentTime = initial;
 
     currentSelectedHourIndex =
         (currentTime!.hour % (widget.is24HourMode ? 24 : 12)) + _getHourCount();
@@ -202,10 +422,15 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
         initialScrollOffset: (currentSelectedAPIndex - 1) * _getItemHeight()!);
 
     super.initState();
+  }
 
-    if (widget.onTimeChange != null) {
-     // WidgetsBinding.instance.addPostFrameCallback((_) => widget.onTimeChange!(getDateTime()));
-    }
+  @override
+  void dispose() {
+    hourController.dispose();
+    minuteController.dispose();
+    secondController.dispose();
+    apController.dispose();
+    super.dispose();
   }
 
   @override
@@ -223,6 +448,7 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
             currentSelectedHourIndex = index;
             isHourScrolling = true;
           }, () => isHourScrolling = false,
+          _SpinnerColumn.hour,
         ),
       ),
        Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
@@ -242,6 +468,7 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
             isMinuteScrolling = true;
           },
               () => isMinuteScrolling = false,
+          _SpinnerColumn.minute,
         ),
       ),
     ];
@@ -262,6 +489,7 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
             isSecondsScrolling = true;
           },
               () => isSecondsScrolling = false,
+          _SpinnerColumn.second,
         ),
       ));
     }
@@ -296,7 +524,8 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
       bool isScrolling,
       int interval,
       SelectedIndexCallback onUpdateSelectedIndex,
-      VoidCallback onScrollEnd) {
+      VoidCallback onScrollEnd,
+      _SpinnerColumn column) {
 
     Widget spinner = NotificationListener<ScrollNotification>(
       onNotification: (scrollNotification) {
@@ -307,19 +536,21 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
               int segment = (selectedIndex / max).floor();
               if (segment == 0) {
                 onUpdateSelectedIndex(selectedIndex + max);
-                controller
-                    .jumpTo(controller.offset + (max * _getItemHeight()!));
+                if (controller.hasClients) {
+                  controller
+                      .jumpTo(controller.offset + (max * _getItemHeight()!));
+                }
               } else if (segment == 2) {
                 onUpdateSelectedIndex(selectedIndex - max);
-                controller
-                    .jumpTo(controller.offset - (max * _getItemHeight()!));
+                if (controller.hasClients) {
+                  controller
+                      .jumpTo(controller.offset - (max * _getItemHeight()!));
+                }
               }
             }
             setState(() {
               onScrollEnd();
-              if (widget.onTimeChange != null) {
-                widget.onTimeChange!(getDateTime());
-              }
+              _finalizeTimeSelection();
             });
           }
         } else if (scrollNotification is ScrollUpdateNotification) {
@@ -353,6 +584,11 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
               if (widget.isForce2Digits && text != '') {
                 text = text.padLeft(2, '0');
               }
+              final isSelectable = switch (column) {
+                _SpinnerColumn.hour => _isHourIndexSelectable(index, max, interval),
+                _SpinnerColumn.minute => _isMinuteIndexSelectable(index, max, interval),
+                _SpinnerColumn.second => true,
+              };
               return Container(
                 height: _getItemHeight(),
                 alignment: _getAlignment(),
@@ -361,7 +597,9 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
                     text,
                     style: selectedIndex == index
                         ? _getHighlightedTextStyle()
-                        : _getNormalTextStyle(),
+                        : isSelectable
+                            ? _getNormalTextStyle()
+                            : _getDisabledTextStyle(),
                   ),
                 ),
               );
@@ -394,9 +632,7 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
         if (scrollNotification is UserScrollNotification) {
           if (scrollNotification.direction.toString() == "ScrollDirection.idle") {
             isAPScrolling = false;
-            if (widget.onTimeChange != null) {
-              widget.onTimeChange!(getDateTime());
-            }
+            _finalizeTimeSelection();
           }
         } else if (scrollNotification is ScrollUpdateNotification) {
           setState(() {

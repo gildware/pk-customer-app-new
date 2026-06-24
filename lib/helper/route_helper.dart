@@ -203,7 +203,10 @@ class RouteHelper {
   static String getSupportRoute() => support;
   static String getUpdateRoute(String fromPage) => '$update?update=$fromPage';
   static String getCartRoute() => cart;
-  static String getAddAddressRoute(bool fromCheckout) => '$addAddress?page=${fromCheckout ? 'checkout' : 'address'}';
+  static String getAddAddressRoute(bool fromCheckout, {bool fromBooking = false}) {
+    if (fromBooking) return '$addAddress?page=booking';
+    return '$addAddress?page=${fromCheckout ? 'checkout' : 'address'}';
+  }
   static String getEditAddressRoute(AddressModel address, bool fromCheckout) {
     return '$editAddress?page=${fromCheckout ? 'checkout' : 'address'}';
   }
@@ -301,14 +304,21 @@ class RouteHelper {
   static List<GetPage> routes = [
     GetPage(
       name: initial,
-      page: () => getRoute(const BottomNavScreen(
-        pageIndex: 0,
-        previousAddress: null,
-        showServiceNotAvailableDialog: false,
-      )),
+      transition: Transition.noTransition,
+      page: () => getRoute(
+        const BottomNavScreen(
+          pageIndex: 0,
+          previousAddress: null,
+          showServiceNotAvailableDialog: false,
+        ),
+        requireServiceableAddress: true,
+      ),
     ),
     GetPage(name: areaNotServiceable, page: () => const AreaNotServiceableScreen()),
-    GetPage(name: splash, page: () {
+    GetPage(
+      name: splash,
+      transition: Transition.noTransition,
+      page: () {
       NotificationBody? data;
       if(Get.parameters['data'] != 'null') {
         List<int> decode = base64Decode(Get.parameters['data']!.replaceAll(' ', '+'));
@@ -316,7 +326,11 @@ class RouteHelper {
       }
       return SplashScreen(body: data, route: Get.parameters['route'],);
     }),
-    GetPage(name: languageScreen, page: () => LanguageScreen(fromPage: Get.parameters['fromPage'],)),
+    GetPage(
+      name: languageScreen,
+      transition: Transition.noTransition,
+      page: () => LanguageScreen(fromPage: Get.parameters['fromPage'],),
+    ),
     GetPage(name: offers, page: () => getRoute(const OfferScreen())),
     GetPage(name: signIn, page: () => SignInScreen(
       exitFromApp: Get.parameters['page'] == signUp || Get.parameters['page'] == splash,
@@ -377,7 +391,10 @@ class RouteHelper {
           );
         }),
 
-    GetPage(name: home, page: () {
+    GetPage(
+      name: home,
+      transition: Transition.noTransition,
+      page: () {
       AddressModel? addressData;
       if(Get.parameters['address'] != ""){
         try{
@@ -389,7 +406,8 @@ class RouteHelper {
           }
         }
       }
-      return getRoute( BottomNavScreen(
+      return getRoute(
+        BottomNavScreen(
         pageIndex: Get.parameters['page'] == 'home' ? 0 :
         Get.parameters['page'] == 'booking' ? 1 :
         Get.parameters['page'] == 'favorites' ? 2 :
@@ -402,7 +420,9 @@ class RouteHelper {
         Get.parameters['page'] == 'menu' ? 5 : 0,
         previousAddress: addressData,
         showServiceNotAvailableDialog: Get.parameters['showDialog'] == 'false' ? false : true,
-      ));
+      ),
+        requireServiceableAddress: true,
+      );
     },
     ),
 
@@ -560,7 +580,10 @@ class RouteHelper {
         ),
       ],
     ),
-    GetPage(name: addAddress, page: () => AddAddressScreen(fromCheckout: Get.parameters['page'] == 'checkout')),
+    GetPage(name: addAddress, page: () => AddAddressScreen(
+      fromCheckout: Get.parameters['page'] == 'checkout',
+      fromBooking: Get.parameters['page'] == 'booking',
+    )),
     GetPage(name: editAddress, page: () {
       AddressModel? address;
       if (Get.arguments is AddressModel) {
@@ -581,6 +604,7 @@ class RouteHelper {
       }
       return getRoute(AddAddressScreen(
         fromCheckout: Get.parameters['page'] == 'checkout',
+        fromBooking: Get.parameters['page'] == 'booking',
         address: address,
       ));
     }),
@@ -804,7 +828,11 @@ class RouteHelper {
 
 
 
-  static Widget getRoute(Widget navigateTo, {bool isIgnoreRouteExistCheck = false}) {
+  static Widget getRoute(
+    Widget navigateTo, {
+    bool isIgnoreRouteExistCheck = false,
+    bool requireServiceableAddress = false,
+  }) {
     bool isRouteExist = (Get.currentRoute == "/" || routes.any((route) {
       String routeName = route.name == "/" ? "*" : route.name.replaceAll("/", "");
       return Get.currentRoute.split('?')[0].replaceAll("/", "") == routeName;
@@ -812,11 +840,16 @@ class RouteHelper {
 
     var config = Get.find<SplashController>().configModel.content?.maintenanceMode;
     bool maintenance = config?.maintenanceStatus == 1 && config?.selectedMaintenanceSystem?.webApp == 1 && kIsWeb && !AppConstants.avoidMaintenanceMode;
+
+    final addressReady = requireServiceableAddress
+        ? AddressSessionHelper.hasUsableSessionAddress()
+        : AddressSessionHelper.hasValidActiveAddress();
+
     return !isRouteExist
         ? const NotFoundScreen()
         : maintenance
             ? const MaintenanceScreen()
-            : AddressSessionHelper.hasValidActiveAddress()
+            : addressReady
                 ? navigateTo
                 : AccessLocationScreen(fromSignUp: false, route: Get.currentRoute);
   }

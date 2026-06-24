@@ -86,6 +86,27 @@ class SplashController extends GetxController implements GetxService {
     return true;
   }
 
+  /// Fetches the latest config from the server without waiting on local cache.
+  Future<bool> refreshConfigFromServer() async {
+    try {
+      final clientResponse = await splashRepo.getConfigData(source: DataSourceEnum.client);
+      if (!clientResponse.isSuccess || clientResponse.response?.statusCode != 200) {
+        return false;
+      }
+
+      _currentDataSource = DataSourceEnum.client;
+      _configModel = ConfigModel.fromJson(clientResponse.response?.body);
+      update();
+      update(['home_layout']);
+      if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
+        await Get.find<CompanyAvailabilityConfigWatcher>().onConfigRefreshed();
+      }
+      return true;
+    } catch (e, stack) {
+      ErrorLogger.record(e, stack, reason: 'SplashController refreshConfigFromServer');
+      return false;
+    }
+  }
 
 
   void _startTimer (DateTime startTime){

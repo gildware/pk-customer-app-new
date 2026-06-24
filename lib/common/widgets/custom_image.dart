@@ -23,16 +23,31 @@ class CustomImage extends StatelessWidget {
     return url.toLowerCase().endsWith('.gif');
   }
 
+  bool _usesNeutralPlaceholder(String? asset) {
+    return asset == null || asset == Images.placeholder;
+  }
+
+  Widget _placeholderWidget(BuildContext context) {
+    if (_usesNeutralPlaceholder(placeholder)) {
+      return Container(
+        height: height,
+        width: width,
+        color: Theme.of(context).shadowColor.withValues(alpha: 0.12),
+      );
+    }
+    return Image.asset(
+      placeholder!,
+      height: height,
+      width: width,
+      fit: placeHolderBoxFit ?? fit,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rawUrl = image?.trim() ?? '';
     if (rawUrl.isEmpty) {
-      return Image.asset(
-        placeholder ?? Images.placeholder,
-        height: height,
-        width: width,
-        fit: placeHolderBoxFit ?? fit,
-      );
+      return _placeholderWidget(context);
     }
 
     final resolvedUrl = MobileAppIconHelper.normalizeMediaUrl(rawUrl) ?? rawUrl;
@@ -47,20 +62,10 @@ class CustomImage extends StatelessWidget {
         fit: fit,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return Image.asset(
-            placeholder ?? Images.placeholder,
-            height: height,
-            width: width,
-            fit: placeHolderBoxFit ?? fit,
-          );
+          return _placeholderWidget(context);
         },
         errorBuilder: (context, error, stackTrace) {
-          return Image.asset(
-            placeholder ?? Images.placeholder,
-            height: height,
-            width: width,
-            fit: placeHolderBoxFit ?? fit,
-          );
+          return _placeholderWidget(context);
         },
       );
     }
@@ -71,18 +76,8 @@ class CustomImage extends StatelessWidget {
       height: height,
       width: width,
       fit: fit,
-      placeholder: (context, url) => Image.asset(
-        placeholder ?? Images.placeholder,
-        height: height,
-        width: width,
-        fit: placeHolderBoxFit ?? fit,
-      ),
-      errorWidget: (context, url, error) => Image.asset(
-        placeholder ?? Images.placeholder,
-        height: height,
-        width: width,
-        fit: placeHolderBoxFit ?? fit,
-      ),
+      placeholder: (context, url) => _placeholderWidget(context),
+      errorWidget: (context, url, error) => _placeholderWidget(context),
     );
   }
 }

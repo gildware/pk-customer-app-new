@@ -2,6 +2,7 @@ import 'package:demandium/util/core_export.dart';
 
 class ZoneModel {
   String? id;
+  String? parentId;
   String? name;
   List<Coordinates>? formattedCoordinates;
   int? status;
@@ -9,10 +10,11 @@ class ZoneModel {
   String? updatedAt;
 
 
-  ZoneModel({this.id, this.name, this.formattedCoordinates, this.status, this.createdAt, this.updatedAt});
+  ZoneModel({this.id, this.parentId, this.name, this.formattedCoordinates, this.status, this.createdAt, this.updatedAt});
 
   ZoneModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
+    parentId = json['parent_id'];
     name = json['name'];
     if (json['formatted_coordinates'] != null) {
       formattedCoordinates = <Coordinates>[];
@@ -29,6 +31,7 @@ class ZoneModel {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
+    data['parent_id'] = parentId;
     data['name'] = name;
     if (formattedCoordinates != null) {
       data['formatted_coordinates'] = formattedCoordinates!.map((v) => v.toJson()).toList();

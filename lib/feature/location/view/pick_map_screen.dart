@@ -2,6 +2,7 @@ import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/helper/address_session_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
+import 'dart:async';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
 import 'package:demandium/common/widgets/map_view_widget.dart';
 
@@ -40,10 +41,16 @@ class _PickMapScreenState extends State<PickMapScreen> {
   String? pageSubTitle;
   bool _isMapReady = false;
   bool _mapInitializing = true;
+  bool _zonesLoaded = false;
+  Timer? _cameraIdleDebounce;
 
   @override
   void initState() {
     super.initState();
+    final locationController = Get.find<LocationController>();
+    locationController.beginMapPolygonValidation();
+    locationController.setMapPolygonRestrictZone(widget.zone);
+
     if(widget.fromAddAddress!) {
       Get.find<LocationController>().setPickData();
     }
@@ -89,10 +96,66 @@ class _PickMapScreenState extends State<PickMapScreen> {
     else if(widget.route == RouteHelper.home){
       pageTitle = "home".tr;
       pageSubTitle = "${'you_must_select_location_first_to_view'.tr} ${'home_content'.tr.toLowerCase()}";
-    }else if(widget.route == RouteHelper.categories || widget.route ==  RouteHelper.cart || widget.route ==  RouteHelper.offers || widget.route ==  RouteHelper.notification || widget.route == RouteHelper.voucherScreen){
+    }    else if(widget.route == RouteHelper.categories || widget.route ==  RouteHelper.cart || widget.route ==  RouteHelper.offers || widget.route ==  RouteHelper.notification || widget.route == RouteHelper.voucherScreen){
       pageTitle = widget.route?.replaceAll("/", "").tr;
       pageSubTitle = "${'you_must_select_location_first_to_view'.tr} ${widget.route?.replaceAll("/", "").tr.toLowerCase()}";
     }
+
+    if (widget.zone == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadServiceAreaPolygons());
+    } else {
+      _zonesLoaded = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _cameraIdleDebounce?.cancel();
+    Get.find<LocationController>().endMapPolygonValidation();
+    super.dispose();
+  }
+
+  Future<void> _resyncPickAvailabilityAfterPolygonsLoaded() async {
+    if (!mounted || _cameraPosition == null) return;
+    await Get.find<LocationController>().updatePosition(
+      _cameraPosition!,
+      false,
+      formCheckout: widget.formCheckout,
+    );
+  }
+
+  Future<void> _loadServiceAreaPolygons() async {
+    final serviceAreaController = Get.find<ServiceAreaController>();
+    await serviceAreaController.getZoneList(reload: false);
+    final zones = serviceAreaController.zoneList;
+    if (!mounted || zones == null || zones.isEmpty) {
+      return;
+    }
+
+    final polygons = MapHelper.polygonsFromZoneModels(zones);
+    Get.find<LocationController>().setMapValidationPolygons(polygons);
+
+    setState(() {
+      _polygone = MapHelper.polygonsFromZones(zones);
+      zoneLatLongList = zones
+          .expand((zone) => MapHelper.latLngListFromZone(zone))
+          .toList();
+      _zonesLoaded = true;
+    });
+    await _resyncPickAvailabilityAfterPolygonsLoaded();
+  }
+
+  bool _isPickedPointServiceable(LocationController locationController) {
+    if (locationController.buttonDisabled || !locationController.inZone) {
+      return false;
+    }
+
+    final pickedPoint = LatLng(
+      locationController.pickPosition.latitude,
+      locationController.pickPosition.longitude,
+    );
+
+    return locationController.isPointInsideServiceAreaPolygons(pickedPoint);
   }
 
   @override
@@ -123,6 +186,7 @@ class _PickMapScreenState extends State<PickMapScreen> {
                             fromAddAddress: widget.fromAddAddress!,
                             initialPosition: _initialPosition,
                             polygons: _polygone,
+                            formCheckout: widget.formCheckout,
                             onMapCreated: _onMapCreated,
                             onCameraMove: _onCameraMove,
                             onCameraMoveStarted: _onCameraMoveStarted,
@@ -158,6 +222,7 @@ class _PickMapScreenState extends State<PickMapScreen> {
                   fromAddAddress: widget.fromAddAddress!,
                   initialPosition: _initialPosition,
                   polygons: _polygone,
+                  formCheckout: widget.formCheckout,
                   onMapCreated: _onMapCreated,
                   onCameraMove: _onCameraMove,
                   onCameraMoveStarted: _onCameraMoveStarted,
@@ -179,6 +244,10 @@ class _PickMapScreenState extends State<PickMapScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _mapInitializing = true;
       final locationController = Get.find<LocationController>();
+
+      if (widget.zone == null && !_zonesLoaded) {
+        await _loadServiceAreaPolygons();
+      }
 
       if (widget.fromAddAddress!) {
         final target = MapHelper.resolveMapTarget(
@@ -221,6 +290,9 @@ class _PickMapScreenState extends State<PickMapScreen> {
           );
         }
       } else {
+        if (widget.zone == null && !_zonesLoaded) {
+          await _loadServiceAreaPolygons();
+        }
         await locationController.getCurrentLocation(
           false,
           mapController: mapController,
@@ -254,28 +326,48 @@ class _PickMapScreenState extends State<PickMapScreen> {
 
   void _onCameraIdle() {
     if (!_isMapReady || _mapInitializing || _cameraPosition == null) return;
-    final locationController = Get.find<LocationController>();
-    locationController.updateCameraMovingStatus(false);
-    locationController.updatePosition(
-      _cameraPosition!,
-      false,
-      formCheckout: widget.formCheckout,
-    );
+    if (widget.zone == null && !_zonesLoaded) return;
+
+    _cameraIdleDebounce?.cancel();
+    _cameraIdleDebounce = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted || _cameraPosition == null) return;
+      final locationController = Get.find<LocationController>();
+      locationController.updateCameraMovingStatus(false);
+      await locationController.updatePosition(
+        _cameraPosition!,
+        false,
+        formCheckout: widget.formCheckout,
+      );
+    });
   }
 
   void _onLocationTap() {
-    _checkPermission(() {
-      Get.find<LocationController>().getCurrentLocation(
+    _checkPermission(() async {
+      final locationController = Get.find<LocationController>();
+      await locationController.getCurrentLocation(
         false,
         deviceCurrentLocation: true,
         isFromCheckout: widget.formCheckout,
         mapController: _mapController,
       );
+      if (locationController.buttonDisabled) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      }
     });
   }
 
   Future<void> _onPickLocationTap() async {
     final locationController = Get.find<LocationController>();
+
+    if (locationController.isCameraMoving ||
+        locationController.loading ||
+        locationController.buttonDisabled ||
+        !locationController.inZone) {
+      if (!locationController.buttonDisabled && !locationController.inZone) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      }
+      return;
+    }
 
     if (_cameraPosition != null) {
       await locationController.updatePosition(
@@ -285,10 +377,28 @@ class _PickMapScreenState extends State<PickMapScreen> {
       );
     }
 
+    if (!locationController.inZone || locationController.buttonDisabled) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
+    if (!_isPickedPointServiceable(locationController)) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
+    final isServiceable = await locationController.validatePickedLocationServiceable(
+      formCheckout: widget.formCheckout,
+    );
+    if (!isServiceable) {
+      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      return;
+    }
+
     final pickedAddress = locationController.pickAddress.address ?? '';
     if (locationController.pickPosition.latitude != 0 && pickedAddress.isNotEmpty) {
       if (widget.fromAddAddress!) {
-        locationController.setAddAddressData();
+        await locationController.setAddAddressDataAsync(formCheckout: widget.formCheckout);
         widget.googleMapController?.moveCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(
@@ -332,9 +442,10 @@ class _PickMapScreenState extends State<PickMapScreen> {
         if (kDebugMode) {
           print("Inside Here ===> Route === > ${widget.route}");
         }
+        final redirectRoute = _resolveRedirectRouteAfterPick();
         final applied = await AddressSessionHelper.applySelectedAddress(
           address,
-          redirectRoute: widget.route ?? RouteHelper.getMainRoute('home'),
+          redirectRoute: redirectRoute,
           canRoute: widget.canRoute ?? true,
         );
 
@@ -349,6 +460,17 @@ class _PickMapScreenState extends State<PickMapScreen> {
     } else {
       customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);
     }
+  }
+
+  String _resolveRedirectRouteAfterPick() {
+    final route = widget.route;
+    if (route == null ||
+        route.isEmpty ||
+        route == RouteHelper.accessLocation ||
+        route.contains(RouteHelper.accessLocation)) {
+      return RouteHelper.getMainRoute('home');
+    }
+    return route;
   }
 
   void _checkPermission(Function onTap) async {

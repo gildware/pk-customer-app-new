@@ -21,6 +21,9 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   @override
   void initState() {
     super.initState();
+    if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
+      Get.find<CompanyAvailabilityConfigWatcher>().start();
+    }
     final nav = Get.find<BottomNavController>();
     switch (widget.pageIndex) {
       case 1:

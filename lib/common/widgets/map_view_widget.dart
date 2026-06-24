@@ -8,6 +8,7 @@ class MapViewWidget extends StatelessWidget {
   final bool fromAddAddress;
   final LatLng? initialPosition;
   final Set<Polygon> polygons;
+  final bool formCheckout;
   final Function(GoogleMapController) onMapCreated;
   final Function(CameraPosition) onCameraMove;
   final Function() onCameraMoveStarted;
@@ -21,6 +22,7 @@ class MapViewWidget extends StatelessWidget {
     required this.fromAddAddress,
     required this.initialPosition,
     required this.polygons,
+    this.formCheckout = false,
     required this.onMapCreated,
     required this.onCameraMove,
     required this.onCameraMoveStarted,
@@ -70,6 +72,14 @@ class MapViewWidget extends StatelessWidget {
               )
             : _buildGoogleMap();
 
+        final bool isResolving = locationController.loading ||
+            locationController.isCameraMoving ||
+            !locationController.mapPolygonsReady;
+
+        final bool showOutOfArea = !isResolving &&
+            locationController.mapPolygonsReady &&
+            (!locationController.inZone || locationController.buttonDisabled);
+
         return Stack(
           children: [
             mapWidget,
@@ -94,6 +104,7 @@ class MapViewWidget extends StatelessWidget {
               child: LocationSearchDialog(
                 getMapController: getMapController,
                 pickedLocation: locationController.pickAddress.address ?? 'search_location'.tr,
+                formCheckout: formCheckout,
                 child: Container(
                   height: 50,
                   padding: const EdgeInsets.symmetric(
@@ -198,12 +209,15 @@ class MapViewWidget extends StatelessWidget {
               right: Dimensions.paddingSizeSmall,
               child: CustomButton(
                 fontSize: Dimensions.fontSizeDefault,
-                buttonText: locationController.inZone
-                    ? fromAddAddress
-                    ? 'pick_address'.tr
-                    : 'pick_location'.tr
-                    : 'service_not_available_in_this_area'.tr,
-                onPressed: (locationController.loading || locationController.buttonDisabled)
+                isLoading: isResolving,
+                buttonText: showOutOfArea
+                    ? 'service_not_available_in_this_area'.tr
+                    : fromAddAddress
+                        ? 'pick_address'.tr
+                        : 'pick_location'.tr,
+                onPressed: (isResolving ||
+                        locationController.buttonDisabled ||
+                        !locationController.inZone)
                     ? null
                     : onPickLocationTap,
               ),

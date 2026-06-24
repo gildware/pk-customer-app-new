@@ -7,6 +7,115 @@ import 'package:demandium/util/core_export.dart';
 
 /// Builds customer home sections from admin [mobile_app_home] config.
 class CustomerHomeSections {
+  /// Whether a section currently has data to render (not just an empty placeholder).
+  static bool sectionHasVisibleContent(String sectionKey) {
+    if (!Get.isRegistered<SplashController>()) return false;
+
+    final splash = Get.find<SplashController>().configModel.content;
+    final directBooking = splash?.directProviderBooking == 1;
+    final biddingOn = splash?.biddingStatus == 1;
+    final isLoggedIn = Get.find<AuthController>().isLoggedIn();
+    final availableServiceCount =
+        Get.find<LocationController>().getUserAddress()?.availableServiceCountInZone ?? 0;
+
+    final section = MobileAppHomeHelper.section(sectionKey);
+    if (section == null || !section.enabled) return false;
+
+    if (availableServiceCount <= 0 && sectionKey != 'banners') {
+      return false;
+    }
+
+    switch (sectionKey) {
+      case 'banners':
+        final banners = Get.find<BannerController>().bannersForSection(sectionKey);
+        return banners == null || banners.isNotEmpty;
+      case 'categories':
+        final categories = Get.find<CategoryController>().categoriesForSection(sectionKey);
+        return categories == null || categories.isNotEmpty;
+      case 'highlight_providers':
+        if (MobileAppHomeHelper.usesManualData(sectionKey)) {
+          final curated = Get.find<ProviderBookingController>().providersForHomeSection(sectionKey);
+          return curated == null || curated.isNotEmpty;
+        }
+        final ads = Get.find<AdvertisementController>().advertisementList;
+        return ads == null || ads.isNotEmpty;
+      case 'popular_services':
+        return _hasServicesOrLoading(Get.find<ServiceController>().servicesForHomeSection(sectionKey));
+      case 'campaigns':
+        final campaigns = Get.find<CampaignController>().campaignsForSection(sectionKey);
+        return campaigns == null || campaigns.isNotEmpty;
+      case 'recommended_services':
+        if (!MobileAppHomeHelper.usesManualData(sectionKey)) {
+          final list = Get.find<ServiceController>().recommendedServiceList;
+          return list == null || list.isNotEmpty;
+        }
+        return _hasServicesOrLoading(Get.find<ServiceController>().servicesForHomeSection(sectionKey));
+      case 'nearby_providers':
+        if (splash?.directProviderBooking != 1) return false;
+        if (MobileAppHomeHelper.usesManualData(sectionKey)) {
+          final curated = Get.find<NearbyProviderController>().providersForHomeSection(sectionKey);
+          return curated != null && curated.isNotEmpty;
+        }
+        final providers = Get.find<ProviderBookingController>().providerList;
+        return providers != null && providers.isNotEmpty;
+      case 'explore_provider_card':
+        return splash?.directProviderBooking == 1;
+      case 'recommended_providers':
+        if (!directBooking) return false;
+        if (MobileAppHomeHelper.usesManualData(sectionKey)) {
+          final curated = Get.find<ProviderBookingController>().providersForHomeSection(sectionKey);
+          return curated != null && curated.isNotEmpty;
+        }
+        return Get.find<ProviderBookingController>().providerList?.isNotEmpty ?? false;
+      case 'create_post':
+        return biddingOn;
+      case 'recently_viewed':
+        if (!isLoggedIn && !MobileAppHomeHelper.usesManualData(sectionKey)) return false;
+        return _hasServicesOrLoading(Get.find<ServiceController>().servicesForHomeSection(sectionKey));
+      case 'trending_services':
+        return _hasServicesOrLoading(Get.find<ServiceController>().servicesForHomeSection(sectionKey));
+      case 'feathered_categories':
+        final list = Get.find<ServiceController>().categoryList;
+        return list == null || list.isNotEmpty;
+      default:
+        if (!MobileAppHomeHelper.isCustomSection(sectionKey)) return false;
+        if (section.isSubCategoryContent) {
+          final categoryController = Get.find<CategoryController>();
+          if (!categoryController.subCategoriesLoadedForSection(sectionKey)) {
+            return true;
+          }
+          final subs = categoryController.subCategoriesForSection(sectionKey);
+          return subs != null && subs.isNotEmpty;
+        }
+        if (section.isServiceContent) {
+          return _hasServices(Get.find<ServiceController>().servicesForHomeSection(sectionKey));
+        }
+        if (section.isProviderContent && directBooking) {
+          final curated = Get.find<ProviderBookingController>().providersForHomeSection(sectionKey);
+          return curated != null && curated.isNotEmpty;
+        }
+        if (section.isBannerContent) {
+          final banners = Get.find<BannerController>().bannersForSection(sectionKey);
+          return banners != null && banners.isNotEmpty;
+        }
+        if (section.isCampaignContent) {
+          final campaigns = Get.find<CampaignController>().campaignsForSection(sectionKey);
+          return campaigns != null && campaigns.isNotEmpty;
+        }
+        if (section.isCategoryContent) {
+          final categories = Get.find<CategoryController>().categoriesForSection(sectionKey);
+          return categories != null && categories.isNotEmpty;
+        }
+        return false;
+    }
+  }
+
+  static bool _hasServices(List<Service>? services) =>
+      services != null && services.isNotEmpty;
+
+  static bool _hasServicesOrLoading(List<Service>? services) =>
+      services == null || services.isNotEmpty;
+
   /// Slivers in admin sort order (search uses [HomeSearchWidget] pinned header).
   static List<Widget> buildHomeSlivers({
     required BuildContext context,

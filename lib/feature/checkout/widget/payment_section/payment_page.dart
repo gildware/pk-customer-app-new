@@ -20,9 +20,24 @@ class _PaymentPageState extends State<PaymentPage> {
   void initState() {
     super.initState();
     final checkout = Get.find<CheckOutController>();
+    final cartController = Get.find<CartController>();
     Get.find<SplashController>().getConfigData();
     checkout.getPaymentMethodList(avoidPartialPayment: (widget.avoidPartialPayment || Get.find<SplashController>().configModel.content?.partialPayment == 0) );
-    checkout.changePaymentMethod(shouldUpdate: false);
+    checkout.ensureDefaultDigitalPaymentSelected(shouldUpdate: false);
+    if (cartController.walletPaymentStatus) {
+      final fullBookingAmount = widget.bookingAmount ?? (widget.fromPage == "custom-checkout" ? checkout.totalAmount : cartController.totalPrice);
+      final bookingAmount = CheckoutHelper.showBookingPaymentAmountOptions(
+        fromPage: widget.fromPage,
+        isRepeatBooking: Get.find<ScheduleController>().selectedServiceType == ServiceType.repeat,
+      ) ? checkout.payableCheckoutAmount(fullBookingAmount) : fullBookingAmount;
+      checkout.applyWalletPayment(
+        isPartialPayment: CheckoutHelper.checkPartialPayment(
+          walletBalance: cartController.walletBalance,
+          bookingAmount: bookingAmount,
+        ),
+        shouldUpdate: false,
+      );
+    }
   }
 
   @override
@@ -42,16 +57,16 @@ class _PaymentPageState extends State<PaymentPage> {
           double bookingAmount = showPaymentAmountOptions
               ? checkoutController.payableCheckoutAmount(fullBookingAmount)
               : fullBookingAmount;
-          bool walletPaymentStatus = cartController.walletPaymentStatus;
           bool isPartialPayment = CheckoutHelper.checkPartialPayment(walletBalance: walletBalance, bookingAmount: bookingAmount);
-          bool hidePaymentMethod = walletPaymentStatus && !isPartialPayment;
           final double confirmationAmount = CheckoutHelper.bookingConfirmationAmount(fullAmount: fullBookingAmount);
-          final List<DigitalPaymentMethod> onlinePaymentGateways = checkoutController.digitalPaymentList
-              .where((m) => (m.gateway ?? '').toLowerCase() != 'offline')
+          final List<PaymentMethodButton> walletMethods = checkoutController.othersPaymentList
+              .where((method) => method.paymentMethodName == PaymentMethodName.walletMoney)
               .toList();
+          final bool hasOnlineGateway = checkoutController.onlineDigitalPaymentGateways.isNotEmpty;
+          final bool hasWallet = walletMethods.isNotEmpty;
 
           return Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: 0),
-            child: (checkoutController.othersPaymentList.isEmpty && onlinePaymentGateways.isEmpty) ?
+            child: (!hasWallet && !hasOnlineGateway) ?
             Padding(padding: const EdgeInsets.symmetric( vertical: Dimensions.paddingSizeLarge * 2),
               child: Text("no_payment_method_available".tr,style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeLarge,color: Theme.of(context).colorScheme.error)),
             ) : isRepeatBooking ? const _RepeatBookingCashPaymentCard () :
@@ -63,88 +78,52 @@ class _PaymentPageState extends State<PaymentPage> {
                   selectedType: checkoutController.paymentAmountType ?? 'full',
                   onSelect: checkoutController.changePaymentAmountType,
                 ),
-              if(checkoutController.othersPaymentList.isNotEmpty)
-                Padding( padding: const EdgeInsets.symmetric(vertical :Dimensions.paddingSizeDefault),
-                  child: Row(children: [
-                    Text(" ${'choose_payment_method'.tr} ", style: robotoBold.copyWith(fontSize: Dimensions.fontSizeDefault)),
-                    Expanded(child: Text('click_one_of_the_option_bellow'.tr, style: robotoLight.copyWith(fontSize: Dimensions.fontSizeSmall - 2, color: Theme.of(context).hintColor))),
-                  ]),
-                ),
 
-              (checkoutController.othersPaymentList.isNotEmpty) && ResponsiveHelper.isDesktop(context) && widget.avoidDesktopDesign == false ?
-              GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: cartController.walletPaymentStatus ? 1 : 2,
-                  mainAxisExtent: cartController.walletPaymentStatus && isPartialPayment ?
-                    Get.find<LocalizationController>().isLtr ? 110 : 100 : 90,
-                  crossAxisSpacing: 15,
-                  mainAxisSpacing: 0
-                ),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: checkoutController.othersPaymentList.length,
-                itemBuilder: (ctx, index){
-                  return PaymentMethodButton(
-                    title: checkoutController.othersPaymentList[index].title,
-                    paymentMethodName: checkoutController.othersPaymentList[index].paymentMethodName,
-                    assetName: checkoutController.othersPaymentList[index].assetName,
-                    hidePaymentMethod: hidePaymentMethod,
-                    itemHeight: 75,
-                    walletBalance: walletBalance,
-                    bookingAmount: bookingAmount,
-                    avoidDesktopDesign: widget.avoidDesktopDesign,
-                  );
-                },
-              ) : (checkoutController.othersPaymentList.isNotEmpty) ?
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: checkoutController.othersPaymentList.length,
-                itemBuilder: (ctx, index){
-                  return Padding(
-                    padding:  const EdgeInsets.only(bottom: Dimensions.paddingSizeDefault),
-                    child: PaymentMethodButton(
-                      title: checkoutController.othersPaymentList[index].title,
-                      paymentMethodName: checkoutController.othersPaymentList[index].paymentMethodName,
-                      assetName: checkoutController.othersPaymentList[index].assetName,
-                      hidePaymentMethod: hidePaymentMethod,
+              if (hasWallet && ResponsiveHelper.isDesktop(context) && widget.avoidDesktopDesign == false)
+                GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 1,
+                    mainAxisExtent: cartController.walletPaymentStatus && isPartialPayment
+                        ? (Get.find<LocalizationController>().isLtr ? 110 : 100)
+                        : 90,
+                    crossAxisSpacing: 15,
+                    mainAxisSpacing: 0,
+                  ),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: walletMethods.length,
+                  itemBuilder: (ctx, index) {
+                    return PaymentMethodButton(
+                      title: walletMethods[index].title,
+                      paymentMethodName: walletMethods[index].paymentMethodName,
+                      assetName: walletMethods[index].assetName,
                       walletBalance: walletBalance,
                       bookingAmount: bookingAmount,
                       avoidDesktopDesign: widget.avoidDesktopDesign,
-                    ),
-                  );
-                },
-              ) : const SizedBox(),
-
-              const SizedBox(height: Dimensions.paddingSizeLarge,),
-
-              Stack(children: [
-                Opacity( opacity: hidePaymentMethod ? 0.5 : 1,
-                  child: Column(children: [
-                    if(onlinePaymentGateways.isNotEmpty)
-                      Row( children: [
-                        Text(" ${'pay_via_online'.tr} ", style: robotoBold.copyWith(fontSize: Dimensions.fontSizeDefault)),
-                        Expanded(child: Text('faster_and_secure_way_to_pay_bill'.tr, style: robotoLight.copyWith(fontSize: Dimensions.fontSizeSmall - 2, color: Theme.of(context).hintColor))),
-                      ]),
-                    if(onlinePaymentGateways.isNotEmpty)
-                      Padding( padding: const EdgeInsets.only(top: Dimensions.paddingSizeDefault),
-                        child: DigitalPaymentMethodView(
-                          paymentList: onlinePaymentGateways,
-                          onTap: (index) => checkoutController.changePaymentMethod(digitalMethod: onlinePaymentGateways[index]),
-                          tooltipController: widget.tooltipController,
-                          fromPage: widget.fromPage,
-                        ),
+                    );
+                  },
+                )
+              else if (hasWallet)
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: walletMethods.length,
+                  itemBuilder: (ctx, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: Dimensions.paddingSizeDefault),
+                      child: PaymentMethodButton(
+                        title: walletMethods[index].title,
+                        paymentMethodName: walletMethods[index].paymentMethodName,
+                        assetName: walletMethods[index].assetName,
+                        walletBalance: walletBalance,
+                        bookingAmount: bookingAmount,
+                        avoidDesktopDesign: widget.avoidDesktopDesign,
                       ),
-                  ]),
+                    );
+                  },
                 ),
-
-                if(hidePaymentMethod) Positioned.fill(child: Container(
-                  color: Colors.transparent,
-                )),
-
-              ])
             ]),
           );
         });

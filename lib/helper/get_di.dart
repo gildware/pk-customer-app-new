@@ -5,6 +5,7 @@ import 'package:demandium/feature/home/repository/home_bundle_repo.dart';
 import 'package:demandium/feature/auth/controller/facebook_login_controller.dart';
 import 'package:get/get.dart';
 // import 'package:demandium/feature/ai_chat/repository/ai_chat_repo.dart';
+import 'package:demandium/helper/company_availability_config_watcher.dart';
 import 'package:demandium/util/core_export.dart';
 
 final database = AppDatabase();
@@ -91,6 +92,7 @@ Future<Map<String, Map<String, String>>> init() async {
   Get.lazyPut(() => ScheduleController(scheduleRepo: ScheduleRepo(apiClient: Get.find())));
   Get.lazyPut(() => ServiceAreaController(serviceAreaRepo: ServiceAreaRepo(apiClient: Get.find(), sharedPreferences: Get.find())));
   Get.lazyPut(() => ServiceDetailsController(serviceDetailsRepo: ServiceDetailsRepo(apiClient: Get.find())));
+  Get.put(CompanyAvailabilityConfigWatcher(), permanent: true);
 
 
   Map<String, Map<String, String>> languages = {};

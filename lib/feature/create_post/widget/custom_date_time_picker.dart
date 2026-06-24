@@ -55,7 +55,7 @@ class CustomDateTimePicker extends StatelessWidget {
 
             Padding(padding: EdgeInsets.symmetric(
                 horizontal:  ResponsiveHelper.isDesktop(Get.context!)?Dimensions.paddingSizeLarge*2:0),
-              child: const CustomTimePicker(),
+              child: const ScheduleTimePicker(),
             ),
 
             if(configModel.content?.instantBooking == 1)
@@ -147,6 +147,14 @@ class CustomDateTimePicker extends StatelessWidget {
     );
     if (selected == null) {
       customSnackBar('select_your_preferable_booking_time'.tr, showDefaultSnackBar: false);
+      return;
+    }
+    if (!CompanyAvailabilityHelper.isSelectableBookingTime(selected)) {
+      customSnackBar(
+        CompanyAvailabilityHelper.outsideHoursMessage() ??
+            'company_service_outside_hours_notice'.tr,
+        showDefaultSnackBar: false,
+      );
       return;
     }
 

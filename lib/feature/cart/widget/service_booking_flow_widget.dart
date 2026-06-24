@@ -1,5 +1,7 @@
+import 'package:demandium/common/widgets/address_selection_bottom_sheet.dart';
 import 'package:demandium/feature/cart/model/service_booking_step.dart';
 import 'package:demandium/feature/cart/widget/booking_date_time_picker.dart';
+import 'package:demandium/helper/address_session_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -77,6 +79,8 @@ class _AddressStep extends StatefulWidget {
 }
 
 class _AddressStepState extends State<_AddressStep> {
+  bool _loadingAddresses = true;
+
   @override
   void initState() {
     super.initState();
@@ -91,7 +95,17 @@ class _AddressStepState extends State<_AddressStep> {
         await locationController.getAddressList();
       }
     }
+    _loadingAddresses = false;
     cartController.tryAutoSelectSingleBookingAddress();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _refreshAddresses() async {
+    final locationController = Get.find<LocationController>();
+    final cartController = Get.find<CartController>();
+    await locationController.getAddressList();
+    cartController.tryAutoSelectSingleBookingAddress();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -99,8 +113,8 @@ class _AddressStepState extends State<_AddressStep> {
     final isLoggedIn = Get.find<AuthController>().isLoggedIn();
     return GetBuilder<CartController>(builder: (cartController) {
       return GetBuilder<LocationController>(builder: (locationController) {
-        final addresses = locationController.addressList ?? [];
         final hasSelection = cartController.pendingBookingAddress != null;
+        final addressList = locationController.addressList ?? [];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,9 +127,8 @@ class _AddressStepState extends State<_AddressStep> {
             if (isLoggedIn)
               InkWell(
                 onTap: () async {
-                  await Get.toNamed(RouteHelper.getAddAddressRoute(false));
-                  await locationController.getAddressList();
-                  cartController.tryAutoSelectSingleBookingAddress();
+                  await Get.toNamed(RouteHelper.getAddAddressRoute(false, fromBooking: true));
+                  await _refreshAddresses();
                 },
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
@@ -134,70 +147,33 @@ class _AddressStepState extends State<_AddressStep> {
                 child: CustomButton(
                   buttonText: 'pick_an_address'.tr,
                   onPressed: () async {
-                    await Get.toNamed(RouteHelper.getAddAddressRoute(false));
+                    await Get.toNamed(RouteHelper.getAddAddressRoute(false, fromBooking: true));
                     final saved = locationController.getUserAddress();
                     if (saved != null) {
-                      cartController.setPendingBookingAddress(saved);
+                      final valid = await cartController.selectBookingAddress(saved);
+                      if (!valid && mounted) setState(() {});
                     }
                   },
                 ),
               ),
             ConstrainedBox(
               constraints: BoxConstraints(maxHeight: Get.height * 0.35),
-              child: addresses.isEmpty
+              child: _loadingAddresses
+                  ? const Center(child: CircularProgressIndicator())
+                  : !isLoggedIn
+                  ? const SizedBox.shrink()
+                  : addressList.isEmpty
                   ? Center(child: Text('no_saved_address_fount'.tr, style: robotoRegular))
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: addresses.length,
-                      itemBuilder: (context, index) {
-                        final address = addresses[index];
-                        final isSelected = cartController.pendingBookingAddress?.id == address.id;
-                        return GestureDetector(
-                          onTap: () => cartController.setPendingBookingAddress(address),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
-                            padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                              border: Border.all(
-                                color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).hintColor.withValues(alpha: 0.3),
-                                width: isSelected ? 1.5 : 0.5,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.location_on, color: Theme.of(context).colorScheme.primary, size: 22),
-                                const SizedBox(width: Dimensions.paddingSizeSmall),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(address.addressLabel ?? '', style: robotoMedium),
-                                      Text(
-                                        address.address ?? '',
-                                        style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      if (address.landmark != null && address.landmark!.trim().isNotEmpty)
-                                        Text(
-                                          address.landmark!,
-                                          style: robotoRegular.copyWith(
-                                            fontSize: Dimensions.fontSizeExtraSmall,
-                                            color: Theme.of(context).hintColor,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                if (isSelected) Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
-                              ],
-                            ),
-                          ),
-                        );
+                  : AddressListContent(
+                      locationController: locationController,
+                      selectedAddressId: cartController.pendingBookingAddress?.id,
+                      onAddressTap: (address) async {
+                        await cartController.selectBookingAddress(address);
+                      },
+                      onAddressDeleted: (address) {
+                        if (cartController.pendingBookingAddress?.id == address.id) {
+                          cartController.clearPendingBookingAddress();
+                        }
                       },
                     ),
             ),
@@ -207,12 +183,20 @@ class _AddressStepState extends State<_AddressStep> {
               onBack: () => cartController.setBookingStep(ServiceBookingStep.variations),
               nextLabel: 'continue'.tr,
               nextEnabled: hasSelection,
-              onNext: () {
+              onNext: () async {
                 if (!hasSelection) {
                   customSnackBar('add_address_first'.tr, type: ToasterMessageType.info, aboveOverlays: true);
                   return;
                 }
-                final address = AddressHelper.ensureContactPerson(cartController.pendingBookingAddress!);
+                final pending = cartController.pendingBookingAddress!;
+                final valid = await AddressSessionHelper.validateAddressForUse(
+                  pending,
+                  requireSessionZone: true,
+                );
+                if (!valid) {
+                  return;
+                }
+                final address = AddressHelper.ensureContactPerson(pending);
                 cartController.setPendingBookingAddress(address);
                 if (!AddressHelper.hasValidContactPerson(address)) {
                   customSnackBar(
@@ -232,9 +216,27 @@ class _AddressStepState extends State<_AddressStep> {
   }
 }
 
-class _ScheduleStep extends StatelessWidget {
+class _ScheduleStep extends StatefulWidget {
   final Service service;
   const _ScheduleStep({required this.service});
+
+  @override
+  State<_ScheduleStep> createState() => _ScheduleStepState();
+}
+
+class _ScheduleStepState extends State<_ScheduleStep> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
+        Get.find<CompanyAvailabilityConfigWatcher>().refreshNow();
+      } else {
+        Get.find<SplashController>().refreshConfigFromServer();
+      }
+      Get.find<ScheduleController>().initBookingScheduleForFlow();
+    });
+  }
 
   bool _isCustomSelected(ScheduleController scheduleController) {
     return scheduleController.initialSelectedScheduleType == ScheduleType.schedule ||
@@ -253,8 +255,7 @@ class _ScheduleStep extends StatelessWidget {
       return false;
     }
     final resolution = CompanyAvailabilityHelper.resolveCustomSchedule(selected);
-    return CompanyAvailabilityHelper.isWithinCompanyHours(resolution.schedule) &&
-        !resolution.schedule.isBefore(CompanyAvailabilityHelper.minimumScheduleTime());
+    return CompanyAvailabilityHelper.isSelectableBookingTime(resolution.schedule);
   }
 
   DateTime? _parseScheduleTime(String schedule) {
@@ -484,7 +485,7 @@ class _ScheduleStep extends StatelessWidget {
                   }
                 }
                 cartController.setPendingBookingSchedule(scheduleToUse);
-                cartController.loadProvidersForBooking(service.subCategoryId ?? '');
+                cartController.loadProvidersForBooking(widget.service.subCategoryId ?? '');
                 cartController.setBookingStep(ServiceBookingStep.provider);
               },
             ),
@@ -514,90 +515,375 @@ class _ScheduleStep extends StatelessWidget {
   }
 }
 
-class _ProviderStep extends StatelessWidget {
+class _ProviderStep extends StatefulWidget {
   final Service service;
   const _ProviderStep({required this.service});
 
   @override
+  State<_ProviderStep> createState() => _ProviderStepState();
+}
+
+class _ProviderStepState extends State<_ProviderStep> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _providerSubtitle(CartController cartController, bool isLoadingProviders) {
+    if (isLoadingProviders) return 'loading'.tr;
+    final count = (cartController.filteredBookingProviders ?? []).length;
+    if (count == 0) return 'no_provider_available_for_slot'.tr;
+    return '$count ${count > 1 ? 'providers_available'.tr : 'provider_available'.tr}';
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GetBuilder<CartController>(builder: (cartController) {
+      final isManual = cartController.bookingProviderSelectionMode == BookingProviderSelectionMode.manual;
+      final isExpanded = cartController.isBookingProviderSheetExpanded;
       final isLoadingProviders = cartController.isLoadingBookingProviders;
-      final providers = cartController.filteredBookingProviders ?? [];
+      final providers = cartController.displayedBookingProviders;
+      final canContinue = !isManual || cartController.selectedProviderIndex >= 0;
+      final primary = Theme.of(context).colorScheme.primary;
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: isExpanded ? MainAxisSize.max : MainAxisSize.min,
         children: [
-          _StepHeader(
-            title: 'available_providers'.tr,
-            subtitle: isLoadingProviders
-                ? 'loading'.tr
-                : providers.isEmpty
-                    ? 'no_provider_available_for_slot'.tr
-                    : '${providers.length} ${providers.length > 1 ? 'providers_available'.tr : 'provider_available'.tr}',
-          ),
-          GestureDetector(
-            onTap: () {
-              cartController.setPendingBookingProvider(null);
-              cartController.updateProviderSelectedIndex(-1);
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
-              padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                border: Border.all(
-                  color: cartController.selectedProviderIndex == -1
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).hintColor.withValues(alpha: 0.3),
-                  width: cartController.selectedProviderIndex == -1 ? 1.5 : 0.5,
-                ),
-              ),
+          if (isManual)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
               child: Row(
                 children: [
-                  const UnselectedProductWidget(),
-                  const SizedBox(width: Dimensions.paddingSizeDefault),
                   Expanded(
                     child: Text(
-                      '${'let'.tr} ${AppConstants.appName} ${'choose_for_you'.tr}',
+                      'available_providers'.tr,
                       style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault),
                     ),
                   ),
-                  if (cartController.selectedProviderIndex == -1)
-                    Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+                  Text(
+                    _providerSubtitle(cartController, isLoadingProviders),
+                    style: robotoRegular.copyWith(
+                      fontSize: Dimensions.fontSizeExtraSmall,
+                      color: Theme.of(context).hintColor,
+                    ),
+                  ),
                 ],
               ),
+            )
+          else
+            _StepHeader(
+              title: 'available_providers'.tr,
+              subtitle: _providerSubtitle(cartController, isLoadingProviders),
             ),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: Get.height * 0.3),
-            child: isLoadingProviders
-                ? const Padding(
-                    padding: EdgeInsets.all(Dimensions.paddingSizeLarge),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : providers.isEmpty
-                    ? const SizedBox()
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: providers.length,
-                        itemBuilder: (context, index) => ProviderCartItemView(
-                          providerData: providers[index],
-                          index: index,
+          if (isManual)
+            Row(
+              children: [
+                _CompactSegmentButton(
+                  label: '${'let'.tr} ${AppConstants.appName} ${'choose_for_you'.tr}',
+                  isSelected: !isManual,
+                  onTap: () {
+                    _searchController.clear();
+                    cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.auto);
+                  },
+                ),
+                const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                _CompactSegmentButton(
+                  label: 'choose_yourself'.tr,
+                  isSelected: isManual,
+                  onTap: () => cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.manual),
+                ),
+              ],
+            )
+          else ...[
+            _ProviderChoiceCard(
+              isSelected: true,
+              label: '${'let'.tr} ${AppConstants.appName} ${'choose_for_you'.tr}',
+              onTap: () {
+                _searchController.clear();
+                cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.auto);
+              },
+            ),
+            _ProviderChoiceCard(
+              isSelected: false,
+              label: 'choose_yourself'.tr,
+              onTap: () => cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.manual),
+            ),
+          ],
+          if (isManual) ...[
+            const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 36,
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        cartController.setBookingProviderSearchQuery(value);
+                        setState(() {});
+                      },
+                      style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall),
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        filled: true,
+                        fillColor: Theme.of(context).cardColor,
+                        hintText: 'search_providers'.tr,
+                        hintStyle: robotoRegular.copyWith(
+                          fontSize: Dimensions.fontSizeSmall,
+                          color: Theme.of(context).hintColor,
+                        ),
+                        prefixIcon: Icon(Icons.search, color: Theme.of(context).hintColor, size: 18),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? InkWell(
+                                onTap: () {
+                                  _searchController.clear();
+                                  cartController.setBookingProviderSearchQuery('');
+                                  setState(() {});
+                                },
+                                child: Icon(Icons.close, color: Theme.of(context).hintColor, size: 16),
+                              )
+                            : null,
+                        suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 36),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                          borderSide: BorderSide(color: Theme.of(context).hintColor.withValues(alpha: 0.25)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                          borderSide: BorderSide(color: Theme.of(context).hintColor.withValues(alpha: 0.25)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                          borderSide: BorderSide(color: primary),
                         ),
                       ),
-          ),
-          const SizedBox(height: Dimensions.paddingSizeLarge),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                _ProviderSortButton(
+                  sortBy: cartController.bookingProviderSortBy,
+                  onSelected: cartController.setBookingProviderSortBy,
+                ),
+              ],
+            ),
+            const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+            if (isExpanded)
+              Expanded(
+                child: _buildProviderList(context, cartController, isLoadingProviders, providers),
+              )
+            else
+              _buildProviderList(context, cartController, isLoadingProviders, providers),
+          ],
+          SizedBox(height: isManual ? Dimensions.paddingSizeSmall : Dimensions.paddingSizeLarge),
           _BookingNavButtons(
             backLabel: 'back'.tr,
-            onBack: () => cartController.setBookingStep(ServiceBookingStep.schedule),
+            onBack: () {
+              if (isManual) {
+                _searchController.clear();
+                cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.auto);
+              }
+              cartController.setBookingStep(ServiceBookingStep.schedule);
+            },
             nextLabel: 'continue'.tr,
-            nextEnabled: true,
+            nextEnabled: canContinue,
+            compact: isManual,
             onNext: () => cartController.setBookingStep(ServiceBookingStep.preview),
           ),
         ],
       );
     });
+  }
+
+  Widget _buildProviderList(
+    BuildContext context,
+    CartController cartController,
+    bool isLoadingProviders,
+    List<ProviderData> providers,
+  ) {
+    if (isLoadingProviders) {
+      return const Center(child: SizedBox(height: 28, width: 28, child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+    if (providers.isEmpty) {
+      return Center(
+        child: Text(
+          'no_provider_found'.tr,
+          style: robotoRegular.copyWith(
+            fontSize: Dimensions.fontSizeSmall,
+            color: Theme.of(context).hintColor,
+          ),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      shrinkWrap: !cartController.isBookingProviderSheetExpanded,
+      physics: cartController.isBookingProviderSheetExpanded
+          ? const AlwaysScrollableScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
+      itemCount: providers.length,
+      itemBuilder: (context, index) => ProviderCartItemView(
+        providerData: providers[index],
+        index: index,
+        compact: true,
+      ),
+    );
+  }
+}
+
+class _ProviderChoiceCard extends StatelessWidget {
+  final bool isSelected;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ProviderChoiceCard({
+    required this.isSelected,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
+        padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).hintColor.withValues(alpha: 0.3),
+            width: isSelected ? 1.5 : 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            const UnselectedProductWidget(),
+            const SizedBox(width: Dimensions.paddingSizeDefault),
+            Expanded(
+              child: Text(
+                label,
+                style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault),
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactSegmentButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CompactSegmentButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? primary.withValues(alpha: 0.1) : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+            border: Border.all(
+              color: isSelected ? primary : Theme.of(context).hintColor.withValues(alpha: 0.25),
+              width: isSelected ? 1 : 0.5,
+            ),
+          ),
+          child: Text(
+            label,
+            style: robotoMedium.copyWith(
+              fontSize: Dimensions.fontSizeExtraSmall,
+              color: isSelected ? primary : Theme.of(context).textTheme.bodyMedium?.color,
+            ),
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProviderSortButton extends StatelessWidget {
+  final BookingProviderSortBy sortBy;
+  final ValueChanged<BookingProviderSortBy> onSelected;
+
+  const _ProviderSortButton({
+    required this.sortBy,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return SizedBox(
+      height: 36,
+      width: 36,
+      child: PopupMenuButton<BookingProviderSortBy>(
+        padding: EdgeInsets.zero,
+        tooltip: 'sort_by'.tr,
+        icon: Icon(Icons.sort, size: 20, color: primary),
+        onSelected: onSelected,
+        itemBuilder: (context) => [
+          _sortMenuItem(context, BookingProviderSortBy.rating, 'rating'.tr),
+          _sortMenuItem(context, BookingProviderSortBy.distance, 'distance'.tr),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<BookingProviderSortBy> _sortMenuItem(
+    BuildContext context,
+    BookingProviderSortBy value,
+    String label,
+  ) {
+    final isSelected = sortBy == value;
+    return PopupMenuItem(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18,
+            child: isSelected ? Icon(Icons.check, size: 16, color: Theme.of(context).colorScheme.primary) : null,
+          ),
+          Text(
+            label,
+            style: robotoRegular.copyWith(
+              fontSize: Dimensions.fontSizeSmall,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -700,6 +986,7 @@ class _BookingNavButtons extends StatelessWidget {
   final VoidCallback onNext;
   final bool isLoading;
   final bool nextEnabled;
+  final bool compact;
 
   const _BookingNavButtons({
     required this.backLabel,
@@ -708,6 +995,7 @@ class _BookingNavButtons extends StatelessWidget {
     required this.onNext,
     this.isLoading = false,
     this.nextEnabled = true,
+    this.compact = false,
   });
 
   @override
@@ -715,6 +1003,7 @@ class _BookingNavButtons extends StatelessWidget {
     final backText = backLabel.isNotEmpty
         ? '${backLabel[0].toUpperCase()}${backLabel.substring(1)}'
         : backLabel;
+    final buttonHeight = compact ? 40.0 : null;
 
     return Row(
       children: [
@@ -723,6 +1012,7 @@ class _BookingNavButtons extends StatelessWidget {
             onPressed: onBack,
             buttonText: backText,
             backgroundColor: Theme.of(context).disabledColor,
+            height: buttonHeight,
           ),
         ),
         const SizedBox(width: Dimensions.paddingSizeSmall),
@@ -731,6 +1021,7 @@ class _BookingNavButtons extends StatelessWidget {
             onPressed: (isLoading || !nextEnabled) ? null : onNext,
             isLoading: isLoading,
             buttonText: nextLabel,
+            height: buttonHeight,
           ),
         ),
       ],
