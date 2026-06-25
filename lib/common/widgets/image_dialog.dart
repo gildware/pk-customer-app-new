@@ -39,7 +39,7 @@ class ImageDialog extends StatelessWidget {
                   Container(
                    // width: Get.width * 0.6,
                     constraints: BoxConstraints(maxHeight: 300, maxWidth: ResponsiveHelper.isDesktop(context) ? 600 : Get.width * 0.7),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: Theme.of(context).primaryColor.withValues(alpha: 0.20)),
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: context.adaptivePrimaryColor.withValues(alpha: 0.20)),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: CustomImage(image: imageUrl),

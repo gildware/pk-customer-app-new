@@ -183,6 +183,8 @@ class AppConstants {
   static const String referredBottomSheet = 'referred_bottom_sheet';
   static const String lastIncompleteOfflineBookingId = 'last_incomplete_offline_booking_id';
 
+  /// When false, language selection is hidden and the app stays on English.
+  static const bool enableLanguageSelection = false;
 
   static Map<String, String> configHeader = {
     'Content-Type': 'application/json; charset=UTF-8',

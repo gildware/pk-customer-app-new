@@ -77,17 +77,17 @@ class _CouponScreenState extends State<CouponScreen> with TickerProviderStateMix
 
                         TabBar(
                           controller: _couponTabController,
-                          indicatorColor: Theme.of(context).primaryColor,
+                          indicatorColor: context.tabIndicatorColor,
                           indicatorWeight: 3,
                           indicator: BoxDecoration(
                             border: Border(
                               bottom: BorderSide(
-                                color: Get.isDarkMode?Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .5):Theme.of(context).primaryColor,
+                                color: context.tabSelectedColor,
                                 width: 2,
                               ),
                             ),
                           ),
-                          labelColor: Get.isDarkMode?Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .8):Theme.of(context).primaryColor,
+                          labelColor: context.tabSelectedColor,
                           unselectedLabelColor: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: .5),
                           unselectedLabelStyle: robotoMedium.copyWith(
                             color: Theme.of(context).hintColor, fontSize: Dimensions.fontSizeLarge,
@@ -95,7 +95,7 @@ class _CouponScreenState extends State<CouponScreen> with TickerProviderStateMix
 
                           labelStyle: robotoRegular.copyWith(
                             fontSize: Dimensions.fontSizeLarge,
-                            color: Theme.of(context).primaryColor,
+                            color: context.adaptivePrimaryColor,
                           ),
                           tabs: [
                             Padding(

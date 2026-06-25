@@ -189,7 +189,7 @@ class VerificationScreenState extends State<VerificationScreen> {
                               child: authController.isResendLoading ? Row(children: [
                                 Text('resending'.tr, style: robotoRegular.copyWith(
                                   fontSize: Dimensions.fontSizeDefault,
-                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                                  color: context.adaptivePrimaryColor.withValues(alpha: 0.8),
                                 )),
                                 const SizedBox(width: Dimensions.paddingSizeSmall,),
 
@@ -198,14 +198,14 @@ class VerificationScreenState extends State<VerificationScreen> {
                                   width: Dimensions.fontSizeDefault,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Theme.of(context).primaryColor.withValues(alpha: 0.8),
+                                    color: context.adaptivePrimaryColor.withValues(alpha: 0.8),
                                   ),
                                 ),
                               ]) : Text(
                                 '${'resend'.tr}${_seconds! > 0 ? ' ($_seconds)' : ''}',
                                 style: robotoRegular.copyWith(
                                   fontSize: Dimensions.fontSizeDefault,
-                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.9),
+                                  color: context.adaptivePrimaryColor.withValues(alpha: 0.9),
                                 ),
                               ),
                             ),

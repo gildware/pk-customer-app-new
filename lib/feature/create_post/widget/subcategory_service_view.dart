@@ -89,8 +89,8 @@ class _SubcategoryServiceViewState extends State<SubcategoryServiceView>  with S
                             controller: tabController,
                             unselectedLabelColor: Colors.grey,
                             isScrollable: true,
-                            indicatorColor: Theme.of(context).primaryColor,
-                            labelColor:  Get.isDarkMode ? Theme.of(context).textTheme.bodyMedium?.color :  Theme.of(context).colorScheme.primary,
+                            indicatorColor: context.tabIndicatorColor,
+                            labelColor: context.tabSelectedColor,
                             labelStyle: robotoMedium,
                             tabs: categoryController.subCategoryList!.map((e) {
                               return Tab(text: e.name);

@@ -212,13 +212,13 @@ class _WebLandingSearchSectionState extends State<WebLandingSearchSection> {
                                                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(10),bottomLeft: Radius.circular(10)),
                                                 borderSide: BorderSide(
                                                     strokeAlign: 10,
-                                                    color: Theme.of(context).primaryColor.withValues(alpha: 0.3), width: 1),
+                                                    color: context.adaptivePrimaryColor.withValues(alpha: 0.3), width: 1),
 
                                               ),
 
                                               enabledBorder: OutlineInputBorder(
                                                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(10),bottomLeft: Radius.circular(10)),
-                                                borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), width: 1),
+                                                borderSide: BorderSide(color: context.adaptivePrimaryColor.withValues(alpha: 0.3), width: 1),
                                               ),
                                               hintStyle: robotoMedium.copyWith(
                                                 color: Theme.of(context).disabledColor,

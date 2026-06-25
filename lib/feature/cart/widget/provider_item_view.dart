@@ -230,7 +230,7 @@ class ProviderCartItemView extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: Dimensions.paddingSizeExtraSmall),
                       child: Icon(
                         Icons.check_circle_rounded,
-                        color: Get.isDarkMode ? Colors.white60 : Theme.of(context).primaryColor,
+                        color: Get.isDarkMode ? Colors.white60 : context.tabSelectedColor,
                       ),
                     ),
                   if (hasDistance)

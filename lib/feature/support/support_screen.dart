@@ -118,7 +118,7 @@ class SupportContactCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withValues(alpha: .04),
+            color: context.adaptivePrimaryColor.withValues(alpha: .04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -128,10 +128,10 @@ class SupportContactCard extends StatelessWidget {
         Container(
           width: 40, height: 40,
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withValues(alpha: .08),
+            color: context.adaptivePrimaryColor.withValues(alpha: .08),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+          child: Icon(icon, color: context.adaptivePrimaryColor, size: 20),
         ),
         const SizedBox(width: Dimensions.paddingSizeSmall),
 
@@ -168,7 +168,7 @@ class SupportContactCard extends StatelessWidget {
               child: Container(
                 width: 25, height: 25,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color: context.adaptivePrimaryColor,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: Theme.of(context).cardColor, size: 14),

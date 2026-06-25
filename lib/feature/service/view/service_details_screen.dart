@@ -58,7 +58,10 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                 child: SizedBox(
                   width: Dimensions.webMaxWidth,
                   height: ResponsiveHelper.isDesktop(context) ? 280:150,
-                  child: CustomImage(image: service.coverImageFullPath ?? ""),
+                  child: CustomImage(
+                    image: service.coverImageFullPath ?? "",
+                    placeholder: Images.servicePlaceholder,
+                  ),
                 ),
               ),
               Center(
@@ -175,7 +178,7 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                       padding: const EdgeInsets.only(top: Dimensions.paddingSizeMini),
                       unselectedLabelColor: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.4),
                       controller: serviceTabController.controller,
-                      labelColor:Get.isDarkMode? Colors.white : Theme.of(context).primaryColor,
+                      labelColor: context.tabSelectedColor,
                       labelStyle: robotoBold.copyWith(
                         fontSize: Dimensions.fontSizeSmall,
                       ),
@@ -292,7 +295,7 @@ class _ServiceDetailsTabBarDelegate extends SliverPersistentHeaderDelegate {
           padding: const EdgeInsets.only(top: Dimensions.paddingSizeMini),
           unselectedLabelColor: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.4),
           controller: tabController,
-          labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).primaryColor,
+          labelColor: context.tabSelectedColor,
           labelStyle: robotoBold.copyWith(fontSize: Dimensions.fontSizeSmall),
           indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorPadding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall),

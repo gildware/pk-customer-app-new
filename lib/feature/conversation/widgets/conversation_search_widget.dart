@@ -32,20 +32,20 @@ class ConversationSearchWidget extends StatelessWidget {
               fillColor: Theme.of(context).cardColor,
               border:  OutlineInputBorder(
                 borderRadius: const BorderRadius.horizontal(right: Radius.circular(10,),left: Radius.circular(10)),
-                borderSide: BorderSide( width: 0.5, color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+                borderSide: BorderSide( width: 0.5, color: context.adaptivePrimaryColor.withValues(alpha: 0.5)),
               ),
               errorBorder:  OutlineInputBorder(
                 borderRadius: const BorderRadius.horizontal(right: Radius.circular(10,),left: Radius.circular(10)),
-                borderSide: BorderSide( width: 0.5, color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+                borderSide: BorderSide( width: 0.5, color: context.adaptivePrimaryColor.withValues(alpha: 0.5)),
               ),
 
               focusedBorder:  OutlineInputBorder(
                 borderRadius: const BorderRadius.horizontal(right: Radius.circular(10,),left: Radius.circular(10)),
-                borderSide: BorderSide( width: 0.5, color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+                borderSide: BorderSide( width: 0.5, color: context.adaptivePrimaryColor.withValues(alpha: 0.5)),
               ),
               enabledBorder :  OutlineInputBorder(
                 borderRadius: const BorderRadius.horizontal(right: Radius.circular(10,),left: Radius.circular(10)),
-                borderSide: BorderSide( width: 0.5, color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+                borderSide: BorderSide( width: 0.5, color: context.adaptivePrimaryColor.withValues(alpha: 0.5)),
               ),
 
               isDense: true,

@@ -473,7 +473,13 @@ class _ServiceThumbnail extends StatelessWidget {
     final child = ClipRRect(
       borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
       child: thumbnail != null && thumbnail!.isNotEmpty
-          ? CustomImage(image: thumbnail!, height: 72, width: 72, fit: BoxFit.cover)
+          ? CustomImage(
+              image: thumbnail!,
+              height: 72,
+              width: 72,
+              fit: BoxFit.cover,
+              placeholder: Images.servicePlaceholder,
+            )
           : Container(
               height: 72,
               width: 72,

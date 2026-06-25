@@ -88,7 +88,7 @@ class _LocationSearchDialogState extends State<LocationSearchDialog> {
                   Icon(
                     Icons.location_on,
                     size: 25,
-                    color: Theme.of(context).primaryColor,
+                    color: context.adaptivePrimaryColor,
                   ),
                   const SizedBox(width: Dimensions.paddingSizeSmall),
                   Expanded(

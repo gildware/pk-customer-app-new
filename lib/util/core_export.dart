@@ -6,6 +6,7 @@ export 'package:demandium/feature/splash/controller/splash_controller.dart';
 export 'package:flutter/material.dart';
 export 'package:flutter/services.dart';
 export 'package:demandium/helper/route_helper.dart';
+export 'package:demandium/helper/extension_helper.dart';
 export 'package:demandium/helper/provider_app_launcher.dart';
 export 'package:demandium/util/dimensions.dart';
 export 'package:demandium/feature/location/controller/location_controller.dart';
@@ -82,6 +83,7 @@ export 'package:flutter_typeahead/flutter_typeahead.dart';
 export 'package:google_maps_flutter/google_maps_flutter.dart';
 export 'package:demandium/common/widgets/service_shimmer.dart';
 export 'package:demandium/common/widgets/custom_image.dart';
+export 'package:demandium/common/widgets/media_placeholder.dart';
 export 'package:demandium/common/widgets/custom_button.dart';
 export 'package:demandium/common/widgets/show_custom_time_picker.dart';
 export 'package:demandium/common/widgets/time_picker_widget.dart';
@@ -461,6 +463,7 @@ export 'package:phone_numbers_parser/phone_numbers_parser.dart';
 export 'package:demandium/api/remote/api_checker.dart';
 export 'package:demandium/feature/html/model/pages_model.dart';
 export 'package:demandium/theme/custom_theme_colors.dart';
+export 'package:demandium/theme/theme_palette.dart';
 
 
 

@@ -155,7 +155,7 @@ class ChannelItem extends StatelessWidget {
                         const SizedBox(width: Dimensions.paddingSizeSmall,),
 
                         channelData.lastMessageSentUser == userName ? Icon(Icons.done_all,
-                          color: isSeen ==1  && isRead == 1 ? Theme.of(context).primaryColor : Theme.of(context).hintColor.withValues(alpha: 0.7),
+                          color: isSeen ==1  && isRead == 1 ? context.tabSelectedColor : Theme.of(context).hintColor.withValues(alpha: 0.7),
                           size: 20,
                         ) : const SizedBox()
                       ],

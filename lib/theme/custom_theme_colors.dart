@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:demandium/theme/theme_palette.dart';
 
 class CustomThemeColors extends ThemeExtension<CustomThemeColors> {
   final Map<String, Color> buttonBackgroundColorMap;
@@ -73,7 +74,7 @@ class CustomThemeColors extends ThemeExtension<CustomThemeColors> {
     warning: Color(0xffFFBB38),
     cardColor: Color(0xffF5F5F5),
     searchBarBorder: Color(0xffEFF1F4),
-    textColor: Color(0xff000000),
+    textColor: ThemePalette.lightText,
   );
 
   factory CustomThemeColors.dark() => const CustomThemeColors(
@@ -123,9 +124,9 @@ class CustomThemeColors extends ThemeExtension<CustomThemeColors> {
     success: Color(0xff019463),
     info: Color(0xff245BD1),
     warning: Color(0xffE6A832),
-    cardColor: Color(0xFF35444C),
-    searchBarBorder: Color(0xff363e47),
-    textColor: Color(0xff000000),
+    cardColor: ThemePalette.darkMutedSurface,
+    searchBarBorder: ThemePalette.darkBorder,
+    textColor: ThemePalette.darkText,
   );
 
   @override

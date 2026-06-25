@@ -46,13 +46,13 @@ class _ServiceScheduleState extends State<ServiceSchedule> {
             padding:  const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeSmall),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(Dimensions.radiusSeven),
-              border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), width: 0.5),
+              border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.3), width: 0.5),
               color: Theme.of(context).cardColor,
             ),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(Dimensions.radiusSeven),
-                border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), width: 0.5),
+                border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.3), width: 0.5),
                 color: Theme.of(context).hoverColor.withValues(alpha: 0.5),
               ),
               padding:  const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault, vertical: Dimensions.paddingSizeSmall),

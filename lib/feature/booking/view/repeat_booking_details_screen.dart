@@ -188,7 +188,7 @@ class RepeatBookingTabBar extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.0),
-            border: Border(bottom: BorderSide(color: Theme.of(context).primaryColor, width: 0.5),),
+            border: Border(bottom: BorderSide(color: context.adaptivePrimaryColor, width: 0.5),),
           ),
           child: Row(
             children: [
@@ -196,7 +196,7 @@ class RepeatBookingTabBar extends StatelessWidget {
                 child: TabBar(
                   unselectedLabelColor: Colors.grey,
                   indicatorColor: Theme.of(context).colorScheme.primary,
-                  labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).colorScheme.primary,
+                  labelColor: context.tabSelectedColor,
                   controller: tabController,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                   tabs: [

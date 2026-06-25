@@ -2,6 +2,8 @@ class Images {
   static String get logo => 'logo'.png;
   static String get webAppbarLogo => 'webAppbarLogo'.png;
   static String get placeholder => 'placeholder'.jpg;
+  static String get categoryPlaceholder => 'placeholder'.png;
+  static String get servicePlaceholder => categoryPlaceholder;
   static String get emptyService => 'empty_service'.png;
   static String get emptyProvider => 'empty_provider'.png;
   static String get emptySearchService => 'empty_search_service'.png;

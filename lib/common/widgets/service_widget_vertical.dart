@@ -112,7 +112,7 @@ class ServiceWidgetVertical extends StatelessWidget {
                                     style: robotoMedium.copyWith(
                                       fontSize: Dimensions.fontSizeSmall,
                                       height: 1.1,
-                                      color: Get.isDarkMode ? Theme.of(context).primaryColorLight : Theme.of(context).primaryColor,
+                                      color: Get.isDarkMode ? Theme.of(context).primaryColorLight : context.tabSelectedColor,
                                     ),
                                   ),
                                 ) :
@@ -125,7 +125,7 @@ class ServiceWidgetVertical extends StatelessWidget {
                                     style: robotoMedium.copyWith(
                                       fontSize: Dimensions.fontSizeSmall,
                                       height: 1.1,
-                                      color: Get.isDarkMode ? Theme.of(context).primaryColorLight : Theme.of(context).primaryColor,
+                                      color: Get.isDarkMode ? Theme.of(context).primaryColorLight : context.tabSelectedColor,
                                     ),
                                   ),
                                 ),
@@ -159,6 +159,7 @@ class ServiceWidgetVertical extends StatelessWidget {
         fit: BoxFit.cover,
         width: double.maxFinite,
         height: double.infinity,
+        placeholder: Images.servicePlaceholder,
       ),
 
       discountModel.discountAmount! > 0 ? Align(alignment: Alignment.topLeft,

@@ -153,7 +153,7 @@ class BookingPaymentMethodDetails extends StatelessWidget {
                   bookingTitle: 'payment_info'.tr,
                   bookingType: bookingDetails.offlinePaymentMethodName ?? "",
                   children: [
-                    Divider(height: 1, thickness: 1, color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+                    Divider(height: 1, thickness: 1, color: context.adaptivePrimaryColor.withValues(alpha: 0.2)),
                     SizedBox(
                       width: Get.width,
                       child: Column(

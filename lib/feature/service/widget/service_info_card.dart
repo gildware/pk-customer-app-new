@@ -38,7 +38,7 @@ class ServiceInformationCard extends StatelessWidget {
                           child: CustomImage(
                             image: service.thumbnailFullPath ?? "",
                             fit: BoxFit.cover,
-                            placeholder: Images.placeholder,
+                            placeholder: Images.servicePlaceholder,
                             height:ResponsiveHelper.isMobile(context) ? Dimensions.imageSizeLarge :Dimensions.imageSizeButton,
                             width:ResponsiveHelper.isMobile(context) ? Dimensions.imageSizeButton: Dimensions.imageSizeButton,
                           ),

@@ -177,7 +177,7 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                            borderSide: BorderSide(color: context.adaptivePrimaryColor),
                           ),
                         ),
                       ),
@@ -375,7 +375,7 @@ class _AmountOptionTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
           border: Border.all(
             color: isSelected
-                ? Theme.of(context).primaryColor
+                 ? context.tabSelectedColor
                 : Theme.of(context).hintColor.withValues(alpha: 0.25),
           ),
         ),
@@ -383,7 +383,7 @@ class _AmountOptionTile extends StatelessWidget {
           children: [
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).hintColor,
+              color: isSelected ? context.tabSelectedColor : Theme.of(context).hintColor,
             ),
             const SizedBox(width: Dimensions.paddingSizeSmall),
             Expanded(
@@ -405,7 +405,7 @@ class _AmountOptionTile extends StatelessWidget {
             if (amount != null)
               Text(
                 PriceConverter.convertPrice(amount!, isShowLongPrice: true),
-                style: robotoBold.copyWith(color: Theme.of(context).primaryColor),
+                style: robotoBold.copyWith(color: context.adaptivePrimaryColor),
               ),
           ],
         ),

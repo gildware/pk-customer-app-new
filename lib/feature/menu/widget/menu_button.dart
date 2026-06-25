@@ -22,7 +22,7 @@ class MenuButton extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(Dimensions.paddingSizeExtraSmall)),
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              color: context.adaptivePrimaryColor.withValues(alpha: 0.1),
             ),
             height: boxSize,
             padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
@@ -37,7 +37,7 @@ class MenuButton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Dimensions.paddingSizeEight),
-          Text(menu.title!, style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall), textAlign: TextAlign.center),
+          Text(menu.title!, style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall, color: context.onSurfaceText), textAlign: TextAlign.center),
         ]),
         Positioned.fill(child: RippleButton(onTap: () async {
           if(menu.isLogout) {

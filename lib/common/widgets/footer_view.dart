@@ -142,21 +142,21 @@ class _FooterViewState extends State<FooterView> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50),
                         borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor.withValues(alpha:.5),
+                          color: context.adaptivePrimaryColor.withValues(alpha:.5),
                           width:  0.5,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50),
                         borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor.withValues(alpha:.5),
+                          color: context.adaptivePrimaryColor.withValues(alpha:.5),
                           width:  0.5,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50),
                         borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor.withValues(alpha:.5),
+                          color: context.adaptivePrimaryColor.withValues(alpha:.5),
                           width:  0.5,
                         ),
                       ),

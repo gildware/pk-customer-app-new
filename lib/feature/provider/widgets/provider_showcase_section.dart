@@ -91,7 +91,7 @@ class _ShowcaseTile extends StatelessWidget {
                     ? Stack(
                         fit: StackFit.expand,
                         children: [
-                          Container(color: Theme.of(context).primaryColor.withValues(alpha: 0.08)),
+                          Container(color: context.adaptivePrimaryColor.withValues(alpha: 0.08)),
                           Center(
                             child: Icon(
                               Icons.play_circle_fill,
@@ -104,7 +104,7 @@ class _ShowcaseTile extends StatelessWidget {
                     : CustomImage(
                         image: item.mediaFullPath ?? '',
                         fit: BoxFit.cover,
-                        placeholder: Images.placeholder,
+                        placeholder: Images.servicePlaceholder,
                       ),
               ),
             ),
@@ -144,30 +144,42 @@ class _ShowcaseTile extends StatelessWidget {
     if (item.isVideo && item.mediaFullPath != null) {
       Get.dialog(
         Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: () => Get.back(),
-                    icon: const Icon(Icons.close),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: Get.height * 0.85),
+            child: Padding(
+              padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.close),
+                    ),
                   ),
-                ),
-                SizedBox(
-                  height: 220,
-                  width: Get.width * 0.85,
-                  child: _ShowcaseVideoPlayer(url: item.mediaFullPath!),
-                ),
-                if (item.title?.isNotEmpty == true) ...[
-                  const SizedBox(height: Dimensions.paddingSizeSmall),
-                  Text(item.title!, style: robotoBold),
+                  SizedBox(
+                    height: 220,
+                    width: Get.width * 0.85,
+                    child: _ShowcaseVideoPlayer(url: item.mediaFullPath!),
+                  ),
+                  if (item.title?.isNotEmpty == true || item.description?.isNotEmpty == true)
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (item.title?.isNotEmpty == true)
+                              Text(item.title!, style: robotoBold),
+                            if (item.description?.isNotEmpty == true)
+                              Text(item.description!, style: robotoRegular),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
-                if (item.description?.isNotEmpty == true)
-                  Text(item.description!, style: robotoRegular),
-              ],
+              ),
             ),
           ),
         ),
@@ -184,7 +196,8 @@ class _ShowcaseTile extends StatelessWidget {
       Get.to(() => ImageDetailScreen(
             imageList: imageUrls,
             index: imageIndex,
-            appbarTitle: item.title ?? 'work_showcase'.tr,
+            appbarTitle: item.title?.isNotEmpty == true ? item.title : 'work_showcase'.tr,
+            subTitle: item.description?.isNotEmpty == true ? item.description : null,
           ));
     }
   }
@@ -201,6 +214,7 @@ class _ShowcaseVideoPlayer extends StatefulWidget {
 class _ShowcaseVideoPlayerState extends State<_ShowcaseVideoPlayer> {
   late VideoPlayerController _controller;
   ChewieController? _chewieController;
+  bool _loadFailed = false;
 
   @override
   void initState() {
@@ -212,7 +226,13 @@ class _ShowcaseVideoPlayerState extends State<_ShowcaseVideoPlayer> {
           autoInitialize: true,
           aspectRatio: _controller.value.aspectRatio,
         );
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
+      }).catchError((_) {
+        if (mounted) {
+          setState(() => _loadFailed = true);
+        }
       });
   }
 
@@ -225,6 +245,9 @@ class _ShowcaseVideoPlayerState extends State<_ShowcaseVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadFailed) {
+      return MediaPlaceholder.video();
+    }
     if (_chewieController == null) {
       return const Center(child: CircularProgressIndicator());
     }

@@ -12,13 +12,13 @@ class BookingPhotoEvidence extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
         const SizedBox(height: Dimensions.paddingSizeDefault,),
-        Text('completed_service_picture'.tr,  style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color: Theme.of(context).primaryColor),),
+        Text('completed_service_picture'.tr,  style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault, color: context.adaptivePrimaryColor),),
         const SizedBox(height: Dimensions.paddingSizeSmall),
 
         Container(
           height: 90,
           padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
-          decoration: BoxDecoration(color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+          decoration: BoxDecoration(color: context.adaptivePrimaryColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
           ),
           child: ListView.builder(

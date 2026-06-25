@@ -6,6 +6,7 @@ import 'package:demandium/feature/coupon/model/coupon_model.dart';
 import 'package:demandium/feature/coupon/widgets/custom_coupon_snackber.dart';
 import 'package:demandium/feature/coupon/widgets/voucher.dart';
 import 'package:demandium/feature/splash/controller/theme_controller.dart';
+import 'package:demandium/helper/extension_helper.dart';
 import 'package:demandium/helper/price_converter.dart';
 import 'package:demandium/helper/responsive_helper.dart';
 import 'package:demandium/util/dimensions.dart';
@@ -149,7 +150,7 @@ class _CouponBottomSheetWidgetState extends State<CouponBottomSheetWidget> {
                         },
 
                           child: Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
-                            child: Container(decoration: BoxDecoration(color: Theme.of(context).primaryColor,
+                            child: Container(decoration: BoxDecoration(color: context.adaptivePrimaryColor,
                               borderRadius: const BorderRadius.all( Radius.circular(Dimensions.paddingSizeExtraSmall))),
                               width: 80,
                               child: Center(
@@ -173,13 +174,13 @@ class _CouponBottomSheetWidgetState extends State<CouponBottomSheetWidget> {
                         hintStyle: robotoRegular.copyWith(color: Theme.of(context).hintColor),
                         alignLabelWithHint: true,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha:.125),
+                            borderSide: BorderSide(color: context.adaptivePrimaryColor.withValues(alpha:.125),
                               width:  0.125)),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Theme.of(context).primaryColor, width:  0.125)),
+                            borderSide: BorderSide(color: context.adaptivePrimaryColor, width:  0.125)),
 
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha:.125), width:  0.125)))))),
+                            borderSide: BorderSide(color: context.adaptivePrimaryColor.withValues(alpha:.125), width:  0.125)))))),
                 ]))),
 
             Padding(padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),

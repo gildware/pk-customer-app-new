@@ -26,7 +26,7 @@ class WebMenuBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Center(child: Container( width: Dimensions.webMaxWidth,
       decoration: BoxDecoration(
-        boxShadow: [BoxShadow(offset: const Offset(1, 1), blurRadius: 8, color: Theme.of(context).primaryColor.withValues(alpha: 0.15),)],
+        boxShadow: [BoxShadow(offset: const Offset(1, 1), blurRadius: 8, color: context.adaptivePrimaryColor.withValues(alpha: 0.15),)],
         color: Theme.of(context).cardColor, borderRadius: const BorderRadius.only(
           bottomRight: Radius.circular(Dimensions.radiusDefault),
           bottomLeft: Radius.circular(Dimensions.radiusDefault),

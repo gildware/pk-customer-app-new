@@ -102,7 +102,7 @@ class SplashScreenState extends State<SplashScreen> {
           Get.offAllNamed(RouteHelper.getMaintenanceRoute());
         } else if (notificationBody != null) {
           _notificationRoute(notificationBody);
-        } else if (Get.find<SplashController>().isShowInitialLanguageScreen()) {
+        } else if (AppConstants.enableLanguageSelection && Get.find<SplashController>().isShowInitialLanguageScreen()) {
           Get.offAllNamed(RouteHelper.getLanguageScreen('fromOthers'));
         } else if (Get.find<SplashController>().isShowOnboardingScreen()) {
           Get.offAllNamed(RouteHelper.onBoardScreen);

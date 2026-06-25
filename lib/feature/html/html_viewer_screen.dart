@@ -102,7 +102,7 @@ class _HtmlViewerScreenState extends State<HtmlViewerScreen> {
                           boxShadow:  [ BoxShadow(
                             offset: const Offset(1, 1),
                             blurRadius: 5,
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+                            color: context.adaptivePrimaryColor.withValues(alpha: 0.12),
                           )],
                         ),
                         child: Column(

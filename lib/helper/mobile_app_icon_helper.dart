@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:demandium/helper/extension_helper.dart';
 import 'package:demandium/feature/splash/controller/splash_controller.dart';
 import 'package:demandium/common/widgets/custom_image.dart';
 import 'package:demandium/util/app_constants.dart';
@@ -29,7 +30,14 @@ class MobileAppIconHelper {
     return base;
   }
 
-  /// Align icon URLs with [AppConstants.baseUrl] (fixes APP_URL vs local API host mismatch).
+  static bool _isLocalDevHost(String host) {
+    final normalized = host.toLowerCase();
+    return normalized == 'localhost' ||
+        normalized == '127.0.0.1' ||
+        normalized.endsWith('.local');
+  }
+
+  /// Align same-origin `/storage` URLs with [AppConstants.baseUrl]. External CDN URLs (R2, S3) are left unchanged.
   static String? normalizeMediaUrl(String? url) {
     if (url == null) {
       return null;
@@ -51,19 +59,23 @@ class MobileAppIconHelper {
 
     try {
       final parsed = Uri.parse(trimmed);
+      if (!parsed.hasScheme || !parsed.hasAuthority) {
+        return trimmed;
+      }
+
       var path = parsed.path;
       if (path.startsWith('/public/storage/')) {
         path = path.replaceFirst('/public/storage/', '/storage/');
       }
-      if (path.startsWith('/storage/')) {
+      if (path.startsWith('/storage/') || path.startsWith('/assets/')) {
         return '$_apiBase$path';
       }
+
       final base = Uri.parse(AppConstants.baseUrl);
       final host = parsed.host.toLowerCase();
-      if (host == 'localhost' ||
-          host == '127.0.0.1' ||
-          parsed.host != base.host ||
-          parsed.port != base.port) {
+
+      // Rewrite only local dev hosts (e.g. artisan serve) to the configured API base.
+      if (_isLocalDevHost(host)) {
         return Uri(
           scheme: base.scheme,
           host: base.host,
@@ -71,6 +83,23 @@ class MobileAppIconHelper {
           path: path.isNotEmpty ? path : parsed.path,
         ).toString();
       }
+
+      // Same API host — normalize port if needed, otherwise keep URL.
+      if (host == base.host.toLowerCase()) {
+        if (parsed.port != base.port) {
+          return Uri(
+            scheme: base.scheme,
+            host: base.host,
+            port: base.hasPort ? base.port : null,
+            path: parsed.path,
+            query: parsed.query.isEmpty ? null : parsed.query,
+          ).toString();
+        }
+        return trimmed;
+      }
+
+      // External CDN / object storage (R2, S3, CloudFront, etc.).
+      return trimmed;
     } catch (_) {
       //
     }
@@ -277,7 +306,7 @@ class _NetworkOrAssetImage extends StatelessWidget {
               height: width * 0.35,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+                color: context.adaptivePrimaryColor.withValues(alpha: 0.4),
               ),
             ),
           ),

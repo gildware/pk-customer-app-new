@@ -52,10 +52,32 @@ class LocalizationController extends GetxController implements GetxService {
   }
 
   void loadCurrentLanguage() async {
+    if (!AppConstants.enableLanguageSelection) {
+      _applyEnglishOnly();
+      update();
+      return;
+    }
     _localLanguages = [];
     _localLanguages.addAll(AppConstants.languages);
     filterLanguage(isInitial: true);
     update();
+  }
+
+  void _applyEnglishOnly() {
+    final english = AppConstants.languages.first;
+    _localLanguages = [english];
+    _selectedIndex = 0;
+    _locale = Locale(english.languageCode!, english.countryCode);
+    _isLtr = true;
+    Get.updateLocale(_locale);
+    sharedPreferences.setString(AppConstants.languageCode, english.languageCode!);
+    sharedPreferences.setString(AppConstants.countryCode, english.countryCode!);
+    apiClient.updateHeader(
+      SecureTokenStorage.cachedToken().isEmpty ? null : SecureTokenStorage.cachedToken(),
+      null,
+      english.languageCode,
+      Get.isRegistered<SplashController>() ? Get.find<SplashController>().getGuestId() : '',
+    );
   }
 
   void saveLanguage(Locale locale) async {
@@ -74,6 +96,13 @@ class LocalizationController extends GetxController implements GetxService {
   }
 
   void filterLanguage({bool shouldUpdate = true, bool isChooseLanguage = false, bool isInitial = false, String? fromPage = ""}) {
+    if (!AppConstants.enableLanguageSelection) {
+      _applyEnglishOnly();
+      if (shouldUpdate) {
+        update();
+      }
+      return;
+    }
 
     List<Language>  adminLanguageList = isInitial ? [] : Get.find<SplashController>().configModel.content?.languageList ?? [];
 

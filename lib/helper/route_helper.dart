@@ -270,8 +270,25 @@ class RouteHelper {
     String imageListString = base64Encode(utf8.encode(jsonEncode(imageList)));
     return '$customImageListScreen?imageList=$imageListString&imagePath=$imagePath&index=$index&appBarTitle=$appBarTitle&createdAt=$createdAt';
   }
-  static String getZoomImageScreen({required String image, required String imagePath, String? createdAt}) =>
-      '$zoomImage?image=$image&imagePath=$imagePath&createdAt=$createdAt';
+  static String getZoomImageScreen({
+    required String image,
+    required String imagePath,
+    String? createdAt,
+    String? appBarTitle,
+    String? subTitle,
+  }) {
+    var route = '$zoomImage?image=${Uri.encodeComponent(image)}&imagePath=${Uri.encodeComponent(imagePath)}';
+    if (createdAt != null && createdAt.isNotEmpty && createdAt != 'null') {
+      route += '&createdAt=${Uri.encodeComponent(createdAt)}';
+    }
+    if (appBarTitle != null && appBarTitle.isNotEmpty) {
+      route += '&appBarTitle=${Uri.encodeComponent(appBarTitle)}';
+    }
+    if (subTitle != null && subTitle.isNotEmpty) {
+      route += '&subTitle=${Uri.encodeComponent(subTitle)}';
+    }
+    return route;
+  }
   static String getMyFavoriteScreen() => favorite;
   static String getMaintenanceRoute() => maintenance;
   static String getUpdateProfileRoute({String? phone, String? email, String? tempToken, String? userName, String? redirectUrl}) {
@@ -754,6 +771,8 @@ class RouteHelper {
           image: Get.parameters['image']!,
           imagePath: Get.parameters['imagePath']!,
           createdAt: Get.parameters['createdAt'],
+          appBarTitle: Get.parameters['appBarTitle'],
+          subTitle: Get.parameters['subTitle'],
         );
       },
     ),

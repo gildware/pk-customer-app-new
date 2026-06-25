@@ -128,7 +128,7 @@ class _ProductBottomSheetState extends State<ProviderFilterView> {
                           children: [
                             Expanded(
                               child: CustomButton(buttonText: 'reset'.tr,backgroundColor: Theme.of(context).hintColor.withValues(alpha: 0.5),
-                                textColor: Colors.black,
+                                textColor: Theme.of(context).textTheme.bodyLarge?.color,
                                 onPressed: ()async{
                                   providerBookingController.resetProviderFilterData(shouldUpdate: true);
                                 },

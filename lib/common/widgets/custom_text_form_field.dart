@@ -1,4 +1,5 @@
 import 'package:demandium/util/dimensions.dart';
+import 'package:demandium/helper/extension_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -94,7 +95,7 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10.0),
           borderSide: BorderSide(width: 0.5,
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+            color: context.adaptivePrimaryColor.withValues(alpha: 0.4),
           ),
         ),
         enabledBorder: getBorder(),

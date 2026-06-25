@@ -80,6 +80,7 @@ class FavoriteServiceItemView extends StatelessWidget {
                         child: CustomImage(
                           image: '${service?.thumbnailFullPath}',
                           height: 90, width: 100, fit: BoxFit.cover,
+                          placeholder: Images.servicePlaceholder,
                         ),
                       ),
 
@@ -151,7 +152,7 @@ class FavoriteServiceItemView extends StatelessWidget {
                               child: Text(PriceConverter.convertPrice(lowestPrice),
                                 style: robotoBold.copyWith(
                                   fontSize: Dimensions.fontSizeLarge,
-                                  color: Get.isDarkMode? Theme.of(context).primaryColorLight: Theme.of(context).primaryColor,
+                                  color: Get.isDarkMode? Theme.of(context).primaryColorLight: context.tabSelectedColor,
                                 ),
                               ),
                             ),
@@ -190,7 +191,7 @@ class FavoriteServiceItemView extends StatelessWidget {
                     },
                     child: Icon(
                       Icons.add,size: Dimensions.paddingSizeExtraLarge,
-                      color: Get.isDarkMode? Theme.of(context).primaryColorLight: Theme.of(context).primaryColor,
+                      color: Get.isDarkMode? Theme.of(context).primaryColorLight: context.tabSelectedColor,
                     ),
                   ),
                 ),

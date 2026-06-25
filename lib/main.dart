@@ -8,6 +8,9 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb && GetPlatform.isMobile) {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
   if (!kIsWeb && AppConstants.sslPinSha256.isNotEmpty) {
     HttpOverrides.global = CertificatePinningHttpOverrides(
       expectedPinSha256: AppConstants.sslPinSha256,

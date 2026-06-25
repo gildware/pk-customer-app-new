@@ -50,6 +50,7 @@ class ServiceWidgetHorizontal extends StatelessWidget {
                         child: CustomImage(
                           image: '${serviceList[index].thumbnailFullPath}',
                           height: 100, width: 100, fit: BoxFit.cover,
+                          placeholder: Images.servicePlaceholder,
                         ),
                       ),
 

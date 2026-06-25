@@ -212,7 +212,7 @@ class BottomButton extends StatelessWidget {
             child: Icon(Icons.location_pin, color: Get.isDarkMode? Colors.white: Theme.of(context).primaryColor),
           ),
           Text('set_from_map'.tr, textAlign: TextAlign.center, style: robotoMedium.copyWith(
-            color:Get.isDarkMode? Colors.white: Theme.of(context).primaryColor,
+            color:Get.isDarkMode? Colors.white: context.tabSelectedColor,
             fontSize: Dimensions.fontSizeSmall,
           )),
         ]),

@@ -31,7 +31,7 @@ class BookingServiceLocation extends StatelessWidget {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                color: context.adaptivePrimaryColor.withValues(alpha: 0.05),
               ),
               padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: Dimensions.paddingSizeSmall, children: [

@@ -15,7 +15,7 @@ class HomeCreatePostView extends StatelessWidget {
         ),
         color: Theme.of(context).cardColor ,
         borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-        border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+        border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.3)),
       ),
       padding: const EdgeInsets.only(top: Dimensions.paddingSizeLarge),
 

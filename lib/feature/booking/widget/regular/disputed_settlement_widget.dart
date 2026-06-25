@@ -12,7 +12,7 @@ class DisputedSettlementWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final primaryColor = Theme.of(context).primaryColor;
+    final primaryColor = context.adaptivePrimaryColor;
     final customerPaid = settlement.customerPaidTotal ?? 0;
     final refundTotal = settlement.refundTotal ?? 0;
     final finalAmount = settlement.finalBookingAmount ?? settlement.retainedFromCustomer ?? 0;

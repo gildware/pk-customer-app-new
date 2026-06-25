@@ -7,10 +7,15 @@ class ImageDetailScreen extends StatefulWidget {
   final List<String> imageList;
   final int index;
   final String? appbarTitle;
+  final String? subTitle;
   final String? createdAt;
   const ImageDetailScreen({
-    super.key,required this.imageList,
-    required this.index, this.appbarTitle = "image_list", this.createdAt
+    super.key,
+    required this.imageList,
+    required this.index,
+    this.appbarTitle = "image_list",
+    this.subTitle,
+    this.createdAt,
   });
 
   @override
@@ -28,7 +33,9 @@ class _ImageDetailScreenState extends State<ImageDetailScreen> {
         Get.offNamed(RouteHelper.getZoomImageScreen(
           image: widget.imageList[0],
           imagePath: widget.imageList[0],
-           createdAt: widget.createdAt,
+          createdAt: widget.createdAt,
+          appBarTitle: widget.appbarTitle,
+          subTitle: widget.subTitle,
         ));
 
       });
@@ -52,55 +59,84 @@ class _ImageDetailScreenState extends State<ImageDetailScreen> {
         appBar: CustomAppBar(
           centerTitle: false,
           title: widget.appbarTitle,
-          subTitle: "${widget.imageList.length} ${'images'.tr} ${widget.createdAt != null ?  " • ${widget.createdAt}" : "" }",
+          subTitle: widget.subTitle == null
+              ? "${widget.imageList.length} ${'images'.tr}${widget.createdAt != null ? " • ${widget.createdAt}" : ""}"
+              : null,
         ),
         body: FooterBaseView(
           child: Center(
             child: SizedBox(
               width: Dimensions.webMaxWidth,
-              child: widget.imageList.length>1? ListView.builder(
-                controller: scrollController,
-                padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
-                itemCount: widget.imageList.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemBuilder: (BuildContext context, index){
-      
-                  String imageUrl =  widget.imageList[index];
-      
-                  return InkWell(
-                    onDoubleTap: (){
-      
-                      Get.toNamed(RouteHelper.getZoomImageScreen(
-                        image: widget.imageList[index],
-                        imagePath: imageUrl,
-                        createdAt: widget.createdAt
-                      ));
-      
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-      
-                      ),
-                      padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
-                      margin: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
-                      child: AutoScrollTag(
-                        controller: scrollController!,
-                        key: ValueKey(index),
-                        index: index,
-                        child: Hero(
-                          tag: widget.imageList[index],
-                          child: CustomImage(
-                            image: imageUrl,
-                            fit: BoxFit.fitWidth,
+              child: widget.imageList.length > 1
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (widget.subTitle?.isNotEmpty == true)
+                          Container(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.28,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: Dimensions.paddingSizeDefault,
+                              vertical: Dimensions.paddingSizeSmall,
+                            ),
+                            child: SingleChildScrollView(
+                              child: Text(
+                                widget.subTitle!,
+                                style: robotoRegular.copyWith(
+                                  fontSize: Dimensions.fontSizeDefault,
+                                  color: Theme.of(context).hintColor,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: ListView.builder(
+                            controller: scrollController,
+                            padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
+                            itemCount: widget.imageList.length,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemBuilder: (BuildContext context, index) {
+                              String imageUrl = widget.imageList[index];
+
+                              return InkWell(
+                                onDoubleTap: () {
+                                  Get.toNamed(RouteHelper.getZoomImageScreen(
+                                    image: widget.imageList[index],
+                                    imagePath: imageUrl,
+                                    createdAt: widget.createdAt,
+                                    appBarTitle: widget.appbarTitle,
+                                    subTitle: widget.subTitle,
+                                  ));
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: context.adaptivePrimaryColor.withValues(alpha: 0.2),
+                                  ),
+                                  padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                                  margin: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
+                                  child: AutoScrollTag(
+                                    controller: scrollController!,
+                                    key: ValueKey(index),
+                                    index: index,
+                                    child: Hero(
+                                      tag: widget.imageList[index],
+                                      child: CustomImage(
+                                        image: imageUrl,
+                                        fit: BoxFit.fitWidth,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      ),
-                    ),
-                  ) ;
-                },
-              ) : const SizedBox(),
+                      ],
+                    )
+                  : const SizedBox(),
             ),
           ),
         ),

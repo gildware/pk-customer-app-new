@@ -1,6 +1,180 @@
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
+double _highlightCardWidth(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  return width < 400 ? width * 0.74 : width * 0.68;
+}
+
+double _highlightMediaHeight(double cardWidth) => cardWidth / 2;
+
+double _highlightVideoRowHeight(BuildContext context) {
+  final cardWidth = _highlightCardWidth(context);
+  return _highlightMediaHeight(cardWidth) + 56;
+}
+
+double _highlightProfileRowHeight(BuildContext context) {
+  final cardWidth = _highlightCardWidth(context);
+  return _highlightMediaHeight(cardWidth) + 68;
+}
+
+class _HighlightAdvertisementList extends StatelessWidget {
+  final List<Advertisement> items;
+  final bool isVideo;
+
+  const _HighlightAdvertisementList({
+    required this.items,
+    required this.isVideo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rowHeight = isVideo
+        ? _highlightVideoRowHeight(context)
+        : _highlightProfileRowHeight(context);
+
+    return SizedBox(
+      height: rowHeight,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: Dimensions.paddingSizeSmall),
+        itemBuilder: (context, index) => SizedBox(
+          width: _highlightCardWidth(context),
+          child: isVideo
+              ? AdvertisementVideoPromotionWidget(
+                  advertisement: items[index],
+                  compact: true,
+                )
+              : AdvertisementProfilePromotionWidget(
+                  advertisement: items[index],
+                  index: index,
+                  compact: true,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class HighlightProviderSection extends StatelessWidget {
+  final List<Advertisement> items;
+  final String title;
+  final String subtitle;
+  final bool isVideo;
+
+  const HighlightProviderSection({
+    super.key,
+    required this.items,
+    required this.title,
+    required this.subtitle,
+    required this.isVideo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SizedBox();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: Get.isDarkMode ? 0.2 : 0.1),
+      ),
+      child: Stack(
+        alignment: Get.find<LocalizationController>().isLtr ? Alignment.topRight : Alignment.topLeft,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+                  child: Text(
+                    title,
+                    style: robotoBold.copyWith(fontSize: Dimensions.fontSizeLarge),
+                  ),
+                ),
+                const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+                  child: Text(
+                    subtitle,
+                    style: robotoRegular.copyWith(
+                      fontSize: Dimensions.fontSizeSmall,
+                      color: Theme.of(context).hintColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: Dimensions.paddingSizeSmall),
+                _HighlightAdvertisementList(items: items, isVideo: isVideo),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+            child: Image.asset(Images.highlightProvider, width: 50),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class HighlightProviderSections extends StatelessWidget {
+  final String? videoTitleOverride;
+
+  const HighlightProviderSections({super.key, this.videoTitleOverride});
+
+  @override
+  Widget build(BuildContext context) {
+    return GetBuilder<AdvertisementController>(builder: (advertisementController) {
+      final list = advertisementController.advertisementList;
+      if (list == null) {
+        return const AdvertisementShimmer(isVideo: true);
+      }
+
+      final videos = list.where((ad) => ad.type == 'video_promotion').toList();
+      final profiles = list.where((ad) => ad.type == 'profile_promotion').toList();
+      if (videos.isEmpty && profiles.isEmpty) {
+        return const SizedBox();
+      }
+
+      final videoTitle = (videoTitleOverride != null && videoTitleOverride!.trim().isNotEmpty)
+          ? videoTitleOverride!.trim()
+          : 'expert_videos'.tr;
+      final profileTitle = 'profile_promotions'.tr;
+
+      return Column(
+        children: [
+          if (videos.isNotEmpty)
+            HighlightProviderSection(
+              items: videos,
+              title: videoTitle,
+              subtitle: 'see_our_most_popular_providers_and_service'.tr,
+              isVideo: true,
+            ),
+          if (videos.isNotEmpty && profiles.isNotEmpty)
+            const SizedBox(height: Dimensions.paddingSizeDefault),
+          if (profiles.isNotEmpty)
+            HighlightProviderSection(
+              items: profiles,
+              title: profileTitle,
+              subtitle: 'see_our_most_popular_providers_and_service'.tr,
+              isVideo: false,
+            ),
+        ],
+      );
+    });
+  }
+}
+
 
 class HighlightProviderWidget extends StatelessWidget {
   final String? titleOverride;
@@ -8,82 +182,7 @@ class HighlightProviderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    var width = MediaQuery.of(context).size.width;
-    if (kDebugMode) {
-      print("Width : $width");
-    }
-    final title = (titleOverride != null && titleOverride!.trim().isNotEmpty)
-        ? titleOverride!.trim()
-        : 'highlight_for_you'.tr;
-    return GetBuilder<AdvertisementController>(builder: (advertisementController){
-      return advertisementController.advertisementList != null &&  advertisementController.advertisementList!.isNotEmpty ? Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: Get.isDarkMode ? 0.2 : 0.1),
-        ),
-        child: Stack( alignment: Get.find<LocalizationController>().isLtr ? Alignment.topRight : Alignment.topLeft,children: [
-          Padding(padding: const EdgeInsets.symmetric(vertical : Dimensions.paddingSizeDefault),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [
-
-              const SizedBox(height: Dimensions.paddingSizeDefault,),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                child: Text(title, style: robotoBold.copyWith(
-                  fontSize: Dimensions.fontSizeLarge,
-                ),),
-              ),
-
-              const SizedBox(height: Dimensions.paddingSizeSmall,),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                child: Text('see_our_most_popular_providers_and_service'.tr, style: robotoRegular.copyWith(
-                    fontSize: Dimensions.fontSizeSmall, color: Theme.of(context).hintColor
-                ),),
-              ),
-
-             const SizedBox(height: Dimensions.paddingSizeDefault ,),
-
-              CarouselSlider.builder(
-                options: CarouselOptions(
-                  enableInfiniteScroll:advertisementController.advertisementList!.length > 1,
-                  autoPlay: advertisementController.autoPlay,
-                  enlargeCenterPage: false,
-                  aspectRatio: width < 400 ? 10.3 / 9 : width < 420 ? 11 / 9
-                      : ResponsiveHelper.isTab(context) ? 13/9 : 11.5 / 9,
-                  viewportFraction: 1,
-                  disableCenter: true,
-                  onPageChanged: (index, reason) {
-
-                    advertisementController.setCurrentIndex(index, true);
-
-                    if(advertisementController.advertisementList?[index].type == "video_promotion"){
-                      advertisementController.updateAutoPlayStatus(status: false);
-                    }else{
-                      advertisementController.updateAutoPlayStatus(status: true);
-                    }
-                  },
-                ),
-                itemCount: advertisementController.advertisementList?.length,
-                itemBuilder: (context, index, _) {
-                  return  advertisementController.advertisementList?[index].type == "video_promotion" ? AdvertisementVideoPromotionWidget(
-                    advertisement :advertisementController.advertisementList![index],
-                  ) : AdvertisementProfilePromotionWidget(advertisement : advertisementController.advertisementList![index],index: index,);
-                },
-              ),
-
-              const AdvertisementIndicator(),
-
-              const SizedBox(height: Dimensions.paddingSizeExtraSmall,),
-
-            ],),
-          ),
-
-          Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-            child: Image.asset(Images.highlightProvider, width: 50,),
-          ),
-        ],),
-      ): advertisementController.advertisementList == null ?
-      const AdvertisementShimmer() : const SizedBox();
-    });
+    return HighlightProviderSections(videoTitleOverride: titleOverride);
   }
 }
 
@@ -92,84 +191,21 @@ class WebHighlightProviderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<AdvertisementController>(builder: (advertisementController){
-      return advertisementController.advertisementList != null &&  advertisementController.advertisementList!.isNotEmpty ? Expanded(
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: Get.isDarkMode ? 0.2 : 0.1),
-          ),
-          margin:  EdgeInsets.only(top:  Dimensions.paddingSizeLarge * 1.5,
-            right: Get.find<LocalizationController>().isLtr? Dimensions.paddingSizeLarge : 0,
-            left: Get.find<LocalizationController>().isLtr? 0: Dimensions.paddingSizeLarge,
-          ),
-          child: Stack(alignment: Get.find<LocalizationController>().isLtr ? Alignment.topRight : Alignment.topLeft, children: [
-            Padding(padding: const EdgeInsets.symmetric(vertical : Dimensions.paddingSizeDefault),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [
-
-                const SizedBox(height: Dimensions.paddingSizeEight,),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                  child: Text('highlight_for_you'.tr, style: robotoBold.copyWith(
-                    fontSize: Dimensions.fontSizeLarge,
-                  ),),
-                ),
-
-                const SizedBox(height: Dimensions.paddingSizeSmall,),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                  child: Text('see_our_most_popular_providers_and_service'.tr, style: robotoRegular.copyWith(
-                      fontSize: Dimensions.fontSizeSmall, color: Theme.of(context).hintColor
-                  ),),
-                ),
-
-                const SizedBox(height: Dimensions.paddingSizeDefault * 1.5  ,),
-
-                CarouselSlider.builder(
-                  options: CarouselOptions(
-                    enableInfiniteScroll:advertisementController.advertisementList!.length > 1,
-                    autoPlay: advertisementController.autoPlay,
-                    enlargeCenterPage: false,
-                    aspectRatio: 12/9,
-                    viewportFraction: 1,
-                    disableCenter: true,
-                    onPageChanged: (index, reason) {
-
-                      if(advertisementController.advertisementList?[index].type == "video_promotion"){
-                        advertisementController.updateAutoPlayStatus(status: false);
-                      }else{
-                        advertisementController.updateAutoPlayStatus(status: true);
-                      }
-                      advertisementController.setCurrentIndex(index, true);
-                    },
-                  ),
-                  itemCount: advertisementController.advertisementList?.length,
-                  itemBuilder: (context, index, _) {
-                    return  advertisementController.advertisementList?[index].type == "video_promotion" ? AdvertisementVideoPromotionWidget(
-                      advertisement :advertisementController.advertisementList![index],
-                    ) : AdvertisementProfilePromotionWidget(advertisement : advertisementController.advertisementList![index], index: index,);
-                  },
-                ),
-
-                const AdvertisementIndicator(),
-
-
-              ],),
-            ),
-
-            Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-              child: Image.asset(Images.highlightProvider, width: 50,),
-            ),
-          ],),
-        ),
-      ): advertisementController.advertisementList == null ?
-      const Expanded(child: Center(child: AdvertisementShimmer(),)) : const SizedBox();
-    });
+    return const Expanded(
+      child: HighlightProviderSections(),
+    );
   }
 }
 
 
 class AdvertisementVideoPromotionWidget extends StatefulWidget {
   final Advertisement advertisement;
-  const AdvertisementVideoPromotionWidget({super.key, required this.advertisement});
+  final bool compact;
+  const AdvertisementVideoPromotionWidget({
+    super.key,
+    required this.advertisement,
+    this.compact = false,
+  });
 
   @override
   State<AdvertisementVideoPromotionWidget> createState() => _AdvertisementVideoPromotionWidgetState();
@@ -179,6 +215,7 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   bool _disposed = false;
+  bool _loadFailed = false;
 
   @override
   void initState() {
@@ -199,6 +236,9 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
   Future<void> _initializePlayer() async {
     final url = widget.advertisement.promotionalVideoFullPath?.trim() ?? '';
     if (url.isEmpty) {
+      if (mounted) {
+        setState(() => _loadFailed = true);
+      }
       return;
     }
 
@@ -212,7 +252,10 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
       if (!_disposed) {
         await controller.dispose();
         if (mounted) {
-          setState(() => _videoPlayerController = null);
+          setState(() {
+            _videoPlayerController = null;
+            _loadFailed = true;
+          });
         }
       }
       return;
@@ -225,9 +268,9 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
 
     _chewieController = ChewieController(
       videoPlayerController: controller,
-      autoPlay: true,
+      autoPlay: false,
       aspectRatio: controller.value.aspectRatio,
-    )..setVolume(0);
+    );
     setState(() {});
   }
 
@@ -257,17 +300,20 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
     subcategories = subcategories.replaceAll(']', '');
     subcategories = subcategories.replaceAll('&', ' and ');
 
-    return Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: widget.compact ? 0 : Dimensions.paddingSizeDefault,
+      ),
       child: Column(
         children: [
           Center(
             child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(Dimensions.radiusLarge),
-                topRight : Radius.circular(Dimensions.radiusLarge),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
+                topRight: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
               ),
               child: AspectRatio(
-                aspectRatio:  16/9,
+                aspectRatio: widget.compact ? 2 : 16 / 9,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -275,13 +321,13 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
                     Positioned.fill(child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(colors: [
-                          Get.isDarkMode ? Colors.grey.shade700 : Colors.white, // Color at the beginning
-                          Get.isDarkMode ? Theme.of(context).cardColor : Colors.cyan.shade50, // Color in the middle
+                          Get.isDarkMode ? Colors.grey.shade700 : Colors.white,
+                          Get.isDarkMode ? Theme.of(context).cardColor : Colors.cyan.shade50,
                           Get.isDarkMode ? Colors.grey.shade800 : Colors.white,
                         ]),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(Dimensions.radiusLarge),
-                          topRight : Radius.circular(Dimensions.radiusLarge),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
+                          topRight: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
                         ),
                       ),
 
@@ -289,7 +335,9 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
                     _chewieController != null &&
                             _chewieController!.videoPlayerController.value.isInitialized
                         ? Chewie(controller: _chewieController!)
-                        : const CircularProgressIndicator(),
+                        : _loadFailed
+                            ? MediaPlaceholder.video(fit: BoxFit.cover)
+                            : const CircularProgressIndicator(),
 
                   ],
                 ),
@@ -298,15 +346,19 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
           ),
           Container(
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(Dimensions.radiusLarge),
-                bottomRight: Radius.circular(Dimensions.radiusLarge),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
+                bottomRight: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
               ),
               color: Theme.of(context).cardColor,
               boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
             ),
-            height: ResponsiveHelper.isDesktop(context) ? 110 : 100,
-            padding: const EdgeInsets.symmetric( horizontal : Dimensions.paddingSizeLarge),
+            height: widget.compact
+                ? 56
+                : (ResponsiveHelper.isDesktop(context) ? 110 : 100),
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.compact ? Dimensions.paddingSizeDefault : Dimensions.paddingSizeLarge,
+            ),
             child: Column(mainAxisAlignment: MainAxisAlignment.center,children: [
               Row( children: [
 
@@ -314,33 +366,44 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
                   child: Column( crossAxisAlignment: CrossAxisAlignment.start, children: [
 
                     Text(widget.advertisement.title ?? "",
-                      style: robotoBold.copyWith(fontSize: Dimensions.fontSizeLarge),
+                      style: robotoBold.copyWith(
+                        fontSize: widget.compact ? Dimensions.fontSizeDefault : Dimensions.fontSizeLarge,
+                      ),
                       maxLines: 1, overflow: TextOverflow.ellipsis,
                     ),
 
-                    const SizedBox(height: Dimensions.paddingSizeSmall,),
+                    SizedBox(height: widget.compact ? 2 : Dimensions.paddingSizeSmall),
                     Text(
                       widget.advertisement.description ?? "",
                       style: robotoRegular.copyWith(
-                          color: Theme.of(context).hintColor
+                        color: Theme.of(context).hintColor,
+                        fontSize: widget.compact ? Dimensions.fontSizeSmall : null,
                       ),
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      maxLines: widget.compact ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ]),
                 ),
 
-                const SizedBox(width: Dimensions.paddingSizeLarge,),
+                SizedBox(width: widget.compact ? Dimensions.paddingSizeSmall : Dimensions.paddingSizeLarge),
 
                 InkWell(
                   onTap: () => Get.toNamed(RouteHelper.getProviderDetails( widget.advertisement.providerId! )),
                   child: Container(
                     margin: const EdgeInsets.only(top: Dimensions.paddingSizeExtraSmall),
-                    padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall + 5, vertical: Dimensions.paddingSizeSmall),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: widget.compact ? Dimensions.paddingSizeSmall : Dimensions.paddingSizeSmall + 5,
+                      vertical: Dimensions.paddingSizeExtraSmall,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                       color: Theme.of(context).colorScheme.primary,
                     ),
-                    child:  Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white.withValues(alpha: 0.8),),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: widget.compact ? 16 : 20,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
                   ),
                 )
               ],)
@@ -355,13 +418,22 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
 class AdvertisementProfilePromotionWidget extends StatelessWidget {
   final Advertisement advertisement;
   final int index;
-  const AdvertisementProfilePromotionWidget({super.key, required this.advertisement, required this.index});
+  final bool compact;
+  const AdvertisementProfilePromotionWidget({
+    super.key,
+    required this.advertisement,
+    required this.index,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
 
 
-    return Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 0 : Dimensions.paddingSizeDefault,
+      ),
       child: GetBuilder<AdvertisementController>(builder: (advertisementController){
 
         return InkWell(
@@ -370,11 +442,11 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
             Column(
               children: [
                 AspectRatio(
-                  aspectRatio: 16/9,
+                  aspectRatio: compact ? 2 : 16 / 9,
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(Dimensions.radiusLarge),
-                      topRight: Radius.circular(Dimensions.radiusLarge),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
+                      topRight: Radius.circular(compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
                     ),
                     child: CustomImage(
                       height: double.infinity, width: double.infinity,
@@ -384,17 +456,22 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
                 ),
                 Container(
                   constraints: BoxConstraints(
-                    minHeight: ResponsiveHelper.isDesktop(context) ? 110 : 100,
+                    minHeight: compact
+                        ? 68
+                        : (ResponsiveHelper.isDesktop(context) ? 110 : 100),
                   ),
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(Dimensions.radiusLarge),
-                      bottomRight: Radius.circular(Dimensions.radiusLarge),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
+                      bottomRight: Radius.circular(compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
                     ),
                     color: Theme.of(context).cardColor,
                     boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeLarge, vertical: Dimensions.paddingSizeSmall),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? Dimensions.paddingSizeDefault : Dimensions.paddingSizeLarge,
+                    vertical: Dimensions.paddingSizeExtraSmall,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -404,28 +481,34 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(50),
                       child: CustomImage(
                         image:  advertisement.providerProfileImageFullPath ??"",
-                        height: 60, width: 60,
+                        height: compact ? 36 : 60,
+                        width: compact ? 36 : 60,
                       ),
                     ),
 
-                    const SizedBox(width: Dimensions.paddingSizeDefault,),
+                    SizedBox(width: compact ? Dimensions.paddingSizeSmall : Dimensions.paddingSizeDefault),
 
                     Expanded(
                       child: Column( crossAxisAlignment: CrossAxisAlignment.start,mainAxisAlignment: MainAxisAlignment.center, children: [
 
                         Text(advertisement.title ?? "",
-                          style: robotoBold.copyWith(fontSize: Dimensions.fontSizeLarge),
+                          style: robotoBold.copyWith(
+                            fontSize: compact ? Dimensions.fontSizeDefault : Dimensions.fontSizeLarge,
+                          ),
                           maxLines: 1, overflow: TextOverflow.ellipsis,
                         ),
 
                         const SizedBox(height: 2,),
                         Text(advertisement.description ?? "",
                           style: robotoRegular.copyWith(
-                            color: Theme.of(context).hintColor,fontSize: Dimensions.fontSizeSmall,
+                            color: Theme.of(context).hintColor,
+                            fontSize: Dimensions.fontSizeSmall,
                           ),
-                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                          maxLines: compact ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
 
+                        if (!compact) ...[
                         const SizedBox(height: 2,),
                         Row(children: [
                           if(advertisement.providerRating == '1')
@@ -447,7 +530,7 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
                             width: 1,height: 10,
                             margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+                              color: context.adaptivePrimaryColor.withValues(alpha: 0.5),
                             ),
                           ),
 
@@ -456,10 +539,11 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
                               color: Theme.of(context).hintColor, fontSize: Dimensions.fontSizeSmall
                           )),
                         ])
+                        ],
                       ]),
                     ),
 
-                    const SizedBox(width: Dimensions.paddingSizeLarge,),
+                    const SizedBox(width: Dimensions.paddingSizeSmall,),
 
                     Align(
                       alignment: favButtonAlignment(),
@@ -470,7 +554,7 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
                     ),
                       ]),
 
-                      if (advertisement.providerShowcase == '1' && (advertisement.showcaseItems?.isNotEmpty ?? false)) ...[
+                      if (!compact && advertisement.providerShowcase == '1' && (advertisement.showcaseItems?.isNotEmpty ?? false)) ...[
                         const SizedBox(height: Dimensions.paddingSizeSmall),
                         SizedBox(
                           height: 44,
@@ -487,7 +571,7 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
                                         width: 44,
                                         height: 44,
                                         color: Theme.of(context).hintColor.withValues(alpha: 0.1),
-                                        child: Icon(Icons.play_circle_outline, color: Theme.of(context).primaryColor, size: 22),
+                                        child: Icon(Icons.play_circle_outline, color: context.adaptivePrimaryColor, size: 22),
                                       )
                                     : CustomImage(
                                         image: item.mediaFullPath,
@@ -515,7 +599,8 @@ class AdvertisementProfilePromotionWidget extends StatelessWidget {
 
 
 class AdvertisementShimmer extends StatelessWidget {
-  const AdvertisementShimmer({super.key});
+  final bool isVideo;
+  const AdvertisementShimmer({super.key, this.isVideo = true});
 
   @override
   Widget build(BuildContext context) {
@@ -554,105 +639,130 @@ class AdvertisementShimmer extends StatelessWidget {
                   color: Theme.of(context).shadowColor,
               ),),
       
-              const SizedBox(height: Dimensions.paddingSizeDefault * 2,),
-      
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Padding(padding: const EdgeInsets.only(bottom: 0, left: 10, right: 10),
-                    child: AspectRatio(
-                      aspectRatio: 16/9,
-                      child: Container(
+              const SizedBox(height: Dimensions.paddingSizeDefault),
+
+              SizedBox(
+                height: isVideo ? _highlightVideoRowHeight(context) : _highlightProfileRowHeight(context),
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+                  itemCount: 2,
+                  separatorBuilder: (_, __) => const SizedBox(width: Dimensions.paddingSizeSmall),
+                  itemBuilder: (context, index) {
+                    final cardWidth = _highlightCardWidth(context);
+                    if (isVideo) {
+                      return Container(
+                        width: cardWidth,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(Dimensions.radiusLarge),
+                          borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                           color: Theme.of(context).shadowColor,
-                          border: Border.all(color: Theme.of(context).hintColor.withValues(alpha: 0.2),),
                         ),
-                        padding: const EdgeInsets.only(bottom: 25),
-                        child: const Center(child: Icon(Icons.play_circle, color: Colors.white,size: 45,),),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(Dimensions.radiusDefault),
+                                  ),
+                                  color: Theme.of(context).shadowColor,
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.play_circle, color: Colors.white, size: 36),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              height: 56,
+                              padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                              decoration: BoxDecoration(
+                                borderRadius: const BorderRadius.vertical(
+                                  bottom: Radius.circular(Dimensions.radiusDefault),
+                                ),
+                                color: Theme.of(context).cardColor,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(height: 12, width: double.infinity, color: Theme.of(context).shadowColor),
+                                        const SizedBox(height: 6),
+                                        Container(height: 10, width: 100, color: Theme.of(context).shadowColor),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    height: 28,
+                                    width: 28,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                                      color: Theme.of(context).shadowColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      width: cardWidth,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+                        color: Theme.of(context).cardColor,
                       ),
-                    ),
-                  ),
-      
-                  Positioned( bottom: -20,left: 0,right: 0, child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Dimensions.radiusLarge),
-                      color: Theme.of(context).cardColor,
-                      boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
-                      border: Border.all(color: Theme.of(context).shadowColor)
-                    ),
-                    padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-                    margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
-                    child: Column(children: [
-                      Row( children: [
-      
-                        Expanded(
-                          child: Column( crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Container(
-                              height: 17, width: double.infinity,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Container(
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(Dimensions.radiusDefault),
+                                ),
                                 color: Theme.of(context).shadowColor,
                               ),
                             ),
-      
-                            const SizedBox(height: Dimensions.paddingSizeSmall,),
-                            Container(
-                              height: 17, width: 150,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                                color: Theme.of(context).shadowColor,
-                              ),
-                            ),
-      
-                            const SizedBox(height: Dimensions.paddingSizeExtraSmall,),
-      
-                            Container(
-                              height: 17, width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                                color: Theme.of(context).shadowColor,
-                              ),
-                            )
-                          ]),
-                        ),
-      
-                        const SizedBox(width: Dimensions.paddingSizeLarge,),
-      
-                        InkWell(
-                          onTap: () => Get.back(),
-                          child: Container(
-                            margin: const EdgeInsets.only(top: Dimensions.paddingSizeExtraSmall),
-                            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall + 5, vertical: Dimensions.paddingSizeSmall),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                              color: Theme.of(context).shadowColor,
-                            ),
-                            child:  Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white.withValues(alpha: 0.8),),
                           ),
-                        )
-                      ],)
-                    ],),
-                  ))
-                ],
-              ),
-      
-              const SizedBox(height: Dimensions.paddingSizeLarge * 2,),
-      
-              Align(
-                alignment: Alignment.center,
-                child: AnimatedSmoothIndicator(
-                  activeIndex: 0,
-                  count: 3,
-                  effect: ExpandingDotsEffect(
-                    dotHeight: 7,
-                    dotWidth: 7,
-                    spacing: 5,
-                    activeDotColor: Theme.of(context).disabledColor,
-                    dotColor: Theme.of(context).hintColor.withValues(alpha: 0.6),
-                  ),
+                          Container(
+                            height: 68,
+                            padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
+                            child: Row(
+                              children: [
+                                Container(
+                                  height: 36,
+                                  width: 36,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Theme.of(context).shadowColor,
+                                  ),
+                                ),
+                                const SizedBox(width: Dimensions.paddingSizeSmall),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(height: 12, width: double.infinity, color: Theme.of(context).shadowColor),
+                                      const SizedBox(height: 6),
+                                      Container(height: 10, width: 120, color: Theme.of(context).shadowColor),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
+
               const SizedBox(height: Dimensions.paddingSizeExtraSmall,),
             ],
           ),
@@ -673,7 +783,7 @@ class AdvertisementIndicator extends StatelessWidget {
         return advertisementController.advertisementList != null && advertisementController.advertisementList!.length > 2?
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(height: 7, width: 7,
-            decoration:  BoxDecoration(color: Theme.of(context).colorScheme.primary,
+            decoration:  BoxDecoration(color: context.tabSelectedColor,
               shape: BoxShape.circle,
             ),
           ),
@@ -684,7 +794,7 @@ class AdvertisementIndicator extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 3),
                 margin: const EdgeInsets.symmetric(horizontal: 6.0),
                 decoration: BoxDecoration(
-                    color:  Theme.of(context).primaryColor ,
+                    color: context.tabSelectedColor,
                     borderRadius: BorderRadius.circular(50)),
                 child:  Text("${index+1}/ ${advertisementController.advertisementList!.length}",
                   style: const TextStyle(color: Colors.white,fontSize: 12),),
@@ -693,7 +803,7 @@ class AdvertisementIndicator extends StatelessWidget {
           ),
           Container(height: 7, width: 7,
 
-            decoration:  BoxDecoration(color: Theme.of(context).colorScheme.primary,
+            decoration:  BoxDecoration(color: context.tabSelectedColor,
               shape: BoxShape.circle,
             ),
           )

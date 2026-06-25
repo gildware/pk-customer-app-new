@@ -115,7 +115,7 @@ class _PaymentMethodState extends State<PaymentMethod> {
                                 margin: const EdgeInsets.symmetric(horizontal: 7),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10),
-                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                  color: context.adaptivePrimaryColor.withValues(alpha: 0.15),
                                 ),
                               ),
 

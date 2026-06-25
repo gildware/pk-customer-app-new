@@ -107,6 +107,7 @@ class _HomeSubCategoryViewState extends State<HomeSubCategoryView> {
                                           height: metrics.imageSize,
                                           image: category.imageFullPath ?? '',
                                           fit: BoxFit.cover,
+                                          placeholder: Images.categoryPlaceholder,
                                         ),
                                       ),
                                     ),

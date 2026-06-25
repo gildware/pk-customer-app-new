@@ -38,7 +38,7 @@ class _FeatheredCategoryViewState extends State<FeatheredCategoryView> {
 
           return  Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+              color: context.adaptivePrimaryColor.withValues(alpha: 0.05),
             ),
             margin: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeExtraSmall),
             padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall,horizontal: 0),

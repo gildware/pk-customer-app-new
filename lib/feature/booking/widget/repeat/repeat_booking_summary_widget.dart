@@ -49,7 +49,7 @@ class RepeatBookingSummeryWidget extends StatelessWidget{
           const SizedBox(height: Dimensions.paddingSizeSmall),
 
           Container(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+            color: context.adaptivePrimaryColor.withValues(alpha: 0.05),
             padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
             height: 40,
             child:  Row(

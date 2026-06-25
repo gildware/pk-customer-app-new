@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:demandium/helper/responsive_helper.dart';
+import 'package:demandium/helper/extension_helper.dart';
 import 'package:demandium/util/dimensions.dart';
 
 class WebShadowWrap extends StatelessWidget {
@@ -29,7 +31,7 @@ class WebShadowWrap extends StatelessWidget {
           boxShadow:  shadow ?? (backgroundColor == null ? [ BoxShadow(
             offset: const Offset(1, 1),
             blurRadius: 5,
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+            color: context.adaptivePrimaryColor.withValues(alpha: 0.12),
           )] : null),
         ) : null,
         width: width,

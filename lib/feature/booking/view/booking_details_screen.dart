@@ -290,7 +290,7 @@ class BookingTabBar extends StatelessWidget {
                   tabAlignment: TabAlignment.start,
                   unselectedLabelColor: Colors.grey,
                   indicatorColor: Theme.of(context).colorScheme.primary,
-                  labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).colorScheme.primary,
+                  labelColor: context.tabSelectedColor,
                   controller: tabController,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                   labelPadding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),

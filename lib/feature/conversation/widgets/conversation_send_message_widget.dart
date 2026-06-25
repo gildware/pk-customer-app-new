@@ -246,14 +246,14 @@ class ConversationSendMessageWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                   color: Theme.of(context).cardColor,
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+                    color: context.adaptivePrimaryColor.withValues(alpha: 0.4),
                   ),
                 ),
                 child:  Center(child: conversationController.isLoading ? SizedBox(
                   height: Dimensions.paddingSizeExtraLarge,
                   width: Dimensions.paddingSizeExtraLarge,
                   child: CircularProgressIndicator(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+                    color: context.adaptivePrimaryColor.withValues(alpha: 0.5),
                     backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   ),
                 ): Image(image: AssetImage(Images.sendIcon),

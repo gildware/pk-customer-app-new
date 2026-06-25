@@ -21,8 +21,8 @@ class ReferHintView extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.2), width: 2),
+              color: context.adaptivePrimaryColor.withValues(alpha: 0.1),
+              border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.2), width: 2),
               borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(20), topLeft: Radius.circular(20),
               ),

@@ -84,7 +84,7 @@ class ConvertLoyaltyPointDialog extends StatelessWidget {
 
               const SizedBox(height: Dimensions.paddingSizeDefault,),
 
-              Container(decoration: BoxDecoration(color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              Container(decoration: BoxDecoration(color: context.adaptivePrimaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(Dimensions.radiusDefault)),
                 padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [

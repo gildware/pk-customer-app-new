@@ -53,6 +53,7 @@ class _WebFeatheredCategoryViewState extends State<WebFeatheredCategoryView> {
                           child: CustomImage(
                             image: serviceController.categoryList?[categoryIndex].imageFullPath ?? "",
                             height: 70, width: 70,
+                            placeholder: Images.categoryPlaceholder,
                           ),
                         ),
                         const SizedBox(height: Dimensions.paddingSizeDefault,),

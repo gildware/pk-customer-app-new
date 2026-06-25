@@ -37,7 +37,7 @@ class ConversationListTabview extends StatelessWidget {
                           conversationController.isActiveSuffixIcon && conversationController.isSearchComplete  && conversationController.searchedProviderChannelList!.isNotEmpty?
                           Container(height: 15 , width: 15,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle, color: Theme.of(context).primaryColor,
+                              shape: BoxShape.circle, color: context.adaptivePrimaryColor,
                             ),
                             margin: const EdgeInsets.symmetric(horizontal: 5),
                             padding: const EdgeInsets.all(2),
@@ -60,7 +60,7 @@ class ConversationListTabview extends StatelessWidget {
                           conversationController.isActiveSuffixIcon && conversationController.isSearchComplete  && conversationController.searchedServicemanChannelList!.isNotEmpty?
                           Container(height: 15 , width: 15,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle, color: Theme.of(context).primaryColor,
+                              shape: BoxShape.circle, color: context.adaptivePrimaryColor,
                             ),
                             margin: const EdgeInsets.symmetric(horizontal: 5),
                             padding: const EdgeInsets.all(2),

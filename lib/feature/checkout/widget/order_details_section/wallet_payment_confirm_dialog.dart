@@ -43,13 +43,13 @@ class WalletPaymentConfirmDialog extends StatelessWidget {
               Image.asset(Images.walletMenu, height: 40,),
               const SizedBox(height: Dimensions.paddingSizeSmall),
 
-              Text(PriceConverter.convertPrice(walletBalance),style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge,color: Theme.of(context).primaryColor),),
+              Text(PriceConverter.convertPrice(walletBalance),style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge,color: context.adaptivePrimaryColor),),
             ],):
 
             Row(mainAxisAlignment: MainAxisAlignment.center ,children: [
               Image.asset(Images.walletMenu, height: 40,),
               const SizedBox(width : Dimensions.paddingSizeSmall),
-              Text(PriceConverter.convertPrice(bookingAmount),style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge,color: Theme.of(context).primaryColor),),
+              Text(PriceConverter.convertPrice(bookingAmount),style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge,color: context.adaptivePrimaryColor),),
               const SizedBox(width : Dimensions.paddingSizeSmall),
               Text('booking_amount'.tr, style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeDefault,color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8)), textAlign: TextAlign.center),
 

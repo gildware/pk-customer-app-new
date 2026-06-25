@@ -26,10 +26,11 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
       Get.back();
       Get.toNamed(RouteHelper.getInboxScreenRoute());
     }),
-    Menu(iconKey: 'language', icon: Images.translate, title: 'language'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getLanguageScreen('menuDrawer'));
-    }),
+    if (AppConstants.enableLanguageSelection)
+      Menu(iconKey: 'language', icon: Images.translate, title: 'language'.tr, onTap: () {
+        Get.back();
+        Get.toNamed(RouteHelper.getLanguageScreen('menuDrawer'));
+      }),
     Menu(iconKey: 'settings', icon: Images.settings, title: 'settings'.tr, onTap: () {
       Get.back();
       Get.toNamed(RouteHelper.getSettingRoute());
@@ -199,7 +200,7 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
             margin: const EdgeInsets.only(right: 30),
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.only(bottomRight: Radius.circular(Dimensions.radiusExtraLarge)),
-              color: Theme.of(context).primaryColor,
+              color: context.adaptivePrimaryColor,
             ),
             alignment: Alignment.centerLeft,
             child: Text('menu'.tr, style: robotoBold.copyWith(fontSize: 20, color: Colors.white)),
@@ -240,7 +241,7 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
                           height: 60, width: 60, alignment: Alignment.center,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(Dimensions.radiusExtraLarge),
-                            color: Theme.of(context).primaryColor,
+                            color: context.adaptivePrimaryColor,
                           ),
                           child: MobileAppIconHelper.icon(
                             iconKey: menuList[index].iconKey ?? '',

@@ -18,14 +18,14 @@ class FavoriteTabBarView extends StatelessWidget {
         child: Container(
           height: 40,
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Theme.of(context).primaryColor, width: 0.5),),
+            border: Border(bottom: BorderSide(color: context.adaptivePrimaryColor, width: 0.5),),
           ),
           child: TabBar(
             tabAlignment: TabAlignment.center,
             isScrollable: true,
             unselectedLabelColor: Colors.grey,
             indicatorColor: Theme.of(context).colorScheme.primary,
-            labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).colorScheme.primary,
+            labelColor: context.tabSelectedColor,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             controller: tabController,
             tabs: [
@@ -43,13 +43,13 @@ class FavoriteTabBarView extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.0),
-          border: Border(bottom: BorderSide(color: Theme.of(context).primaryColor, width: 0.5),),
+          border: Border(bottom: BorderSide(color: context.adaptivePrimaryColor, width: 0.5),),
         ),
         child: TabBar(
           unselectedLabelColor: Colors.grey,
           physics: const NeverScrollableScrollPhysics(),
           indicatorColor: Theme.of(context).colorScheme.primary,
-          labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).colorScheme.primary,
+          labelColor: context.tabSelectedColor,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           controller: tabController,
           tabs: [

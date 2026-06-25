@@ -640,7 +640,7 @@ class AddressActionButtons extends StatelessWidget {
           child: CustomButton(
             buttonText: 'use_current_location'.tr,
             icon: Icons.gps_fixed,
-            iconColor: Theme.of(context).primaryColor,
+            iconColor: context.adaptivePrimaryColor,
             textStyle: robotoMedium.copyWith(
               fontSize: Dimensions.fontSizeDefault,
               color: Theme.of(context).textTheme.titleLarge?.color,

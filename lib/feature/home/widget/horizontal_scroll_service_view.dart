@@ -29,7 +29,7 @@ class HorizontalScrollServiceView extends GetView<ServiceController> {
               child: Container(
                 width: double.infinity,
                 height: 200,
-                color: Theme.of(context).primaryColor,
+                color: context.adaptivePrimaryColor,
               ),
             ): const SizedBox(),
 

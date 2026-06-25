@@ -202,16 +202,16 @@ class _PaymentAmountOptionTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.08) : Theme.of(context).cardColor,
+          color: isSelected ? context.tabSelectedColor.withValues(alpha: 0.08) : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
           border: Border.all(
-            color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).hintColor.withValues(alpha: 0.25),
+            color: isSelected ? context.tabSelectedColor : Theme.of(context).hintColor.withValues(alpha: 0.25),
           ),
         ),
         child: Row(children: [
           Icon(
             isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-            color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).hintColor,
+            color: isSelected ? context.tabSelectedColor : Theme.of(context).hintColor,
           ),
           const SizedBox(width: Dimensions.paddingSizeSmall),
           Expanded(
@@ -221,7 +221,7 @@ class _PaymentAmountOptionTile extends StatelessWidget {
               Text(subtitle, style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeSmall, color: Theme.of(context).hintColor)),
             ]),
           ),
-          Text(PriceConverter.convertPrice(amount), style: robotoBold.copyWith(color: Theme.of(context).primaryColor)),
+          Text(PriceConverter.convertPrice(amount), style: robotoBold.copyWith(color: context.adaptivePrimaryColor)),
         ]),
       ),
     );

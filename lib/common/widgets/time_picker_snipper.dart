@@ -1,4 +1,6 @@
 import 'package:demandium/util/core_export.dart';
+import 'package:demandium/theme/theme_palette.dart';
+import 'package:get/get.dart';
 import 'dart:math';
 
 class ItemScrollPhysics extends ScrollPhysics {
@@ -121,10 +123,14 @@ class TimePickerSpinnerState extends State<TimePickerSpinner> {
   bool isSecondsScrolling = false;
   bool isAPScrolling = false;
 
-  TextStyle defaultHighlightTextStyle =
-  const TextStyle(fontSize: 32, color: Colors.black);
-  TextStyle defaultNormalTextStyle =
-  const TextStyle(fontSize: 32, color: Colors.black54);
+  TextStyle get defaultHighlightTextStyle => TextStyle(
+    fontSize: 32,
+    color: ThemePalette.text(Get.isDarkMode),
+  );
+  TextStyle get defaultNormalTextStyle => TextStyle(
+    fontSize: 32,
+    color: ThemePalette.textSecondary(Get.isDarkMode),
+  );
   double defaultItemHeight = 60;
   double defaultItemWidth = 45;
   double defaultSpacing = 20;

@@ -56,7 +56,7 @@ class ProviderAvailabilityWidget extends StatelessWidget {
                           width: 1,height: 10,
                           margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+                            color: context.adaptivePrimaryColor.withValues(alpha: 0.5),
                           ),
                         ),
                         InkWell(

@@ -57,7 +57,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         tabBar: TabBar(
                           unselectedLabelColor: Colors.grey,
                           indicatorColor: Theme.of(context).colorScheme.primary,
-                          labelColor: Get.isDarkMode ? Colors.white : Theme.of(context).primaryColor,
+                          labelColor: context.tabSelectedColor,
                           labelStyle: robotoMedium,
       
                           tabs: [

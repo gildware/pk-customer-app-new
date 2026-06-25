@@ -25,7 +25,7 @@ class _DemoResetDialogWidgetState extends State<DemoResetDialogWidget> {
         width: 500,
         padding: const EdgeInsets.all(Dimensions.paddingSizeLarge),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.error_outline, color: Theme.of(context).primaryColor, size: 55),
+          Icon(Icons.error_outline, color: context.adaptivePrimaryColor, size: 55),
           const SizedBox(height: Dimensions.paddingSizeLarge),
 
           Text('session_time_out'.tr, style: robotoBold.copyWith(fontSize: Dimensions.fontSizeExtraLarge)),

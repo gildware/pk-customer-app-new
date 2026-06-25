@@ -66,6 +66,7 @@ class CategoryView extends StatelessWidget {
                                   height: imageSize,
                                   image: category.imageFullPath ?? '',
                                   fit: BoxFit.cover,
+                                  placeholder: Images.categoryPlaceholder,
                                 ),
                               )),
                             ),

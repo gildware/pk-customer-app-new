@@ -83,6 +83,7 @@ class AllCategoryScreen extends StatelessWidget {
                                       height: imageSize,
                                       image: categoryController.categoryList?[index].imageFullPath ?? "",
                                       fit: BoxFit.cover,
+                                      placeholder: Images.categoryPlaceholder,
                                     ),
                                   )),
                                 ),

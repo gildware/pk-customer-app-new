@@ -106,8 +106,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           TextFieldTitle(title: "service".tr,requiredMark: false),
                           Container(
                             decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-                              border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+                              color: context.adaptivePrimaryColor.withValues(alpha: 0.05),
+                              border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.3)),
                               borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                             ),
                             padding: const EdgeInsets.all(Dimensions.paddingSizeExtraSmall),
@@ -215,7 +215,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             ),),
                           const SizedBox(width: Dimensions.paddingSizeExtraSmall),
                           Container(
-                              color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                              color: context.adaptivePrimaryColor.withValues(alpha: 0.2),
                               child: Icon(Icons.add,color: Get.isDarkMode ? Theme.of(context).textTheme.bodyMedium?.color : Theme.of(context).colorScheme.primary,size: 20,)),
                         ],),
                       ),

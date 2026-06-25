@@ -25,7 +25,7 @@ class ProviderDetailsCard extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault,vertical: 2),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-            border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), width: 0.5),
+            border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.3), width: 0.5),
             color: Theme.of(context).hoverColor.withValues(alpha: 0.5),
           ),
           child: Column(

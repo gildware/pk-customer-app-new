@@ -101,6 +101,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                   borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
                                   child: CustomImage(height: 50, width: 50, fit: BoxFit.cover,
                                     image: '${categoryList[index].imageFullPath}',
+                                    placeholder: Images.categoryPlaceholder,
                                   ),
                                 ),
                                 const SizedBox(height: Dimensions.paddingSizeExtraSmall),

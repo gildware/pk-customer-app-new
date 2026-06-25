@@ -17,7 +17,7 @@ class PostDetailsExpandableContent extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
             decoration: BoxDecoration(color: Theme.of(context).cardColor,
-              border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.2), width: 1),
+              border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.2), width: 1),
               borderRadius: const BorderRadius.only(
                 topRight: Radius.circular(20), topLeft: Radius.circular(20),
               ),
@@ -118,7 +118,7 @@ class PostDetailsExpandableContent extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(150),topRight: Radius.circular(150)),
-              border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+              border: Border.all(color: context.adaptivePrimaryColor.withValues(alpha: 0.2)),
             ),
             child: Icon(Icons.keyboard_arrow_up,color: Theme.of(context).colorScheme.primary,),
           ),

@@ -179,7 +179,7 @@ class AddressMapSection extends StatelessWidget {
                         ),
                         child: Icon(
                           Icons.my_location,
-                          color: Theme.of(context).primaryColor,
+                          color: context.adaptivePrimaryColor,
                           size: 20,
                         ),
                       ),

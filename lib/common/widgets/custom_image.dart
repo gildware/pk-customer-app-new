@@ -23,20 +23,11 @@ class CustomImage extends StatelessWidget {
     return url.toLowerCase().endsWith('.gif');
   }
 
-  bool _usesNeutralPlaceholder(String? asset) {
-    return asset == null || asset == Images.placeholder;
-  }
+  String get _placeholderAsset => placeholder ?? Images.placeholder;
 
   Widget _placeholderWidget(BuildContext context) {
-    if (_usesNeutralPlaceholder(placeholder)) {
-      return Container(
-        height: height,
-        width: width,
-        color: Theme.of(context).shadowColor.withValues(alpha: 0.12),
-      );
-    }
     return Image.asset(
-      placeholder!,
+      _placeholderAsset,
       height: height,
       width: width,
       fit: placeHolderBoxFit ?? fit,

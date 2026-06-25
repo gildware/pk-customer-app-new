@@ -26,7 +26,8 @@ class _MenuScreenState extends State<MenuScreen> {
     final List<MenuModel> menuList = [
       MenuModel(iconKey: 'profile', icon: Images.profileIcon, title: 'profile'.tr, route: RouteHelper.getProfileRoute()),
       MenuModel(iconKey: 'inbox', icon: Images.chatImage, title: 'inbox'.tr, route:RouteHelper.getInboxScreenRoute()),
-      MenuModel(iconKey: 'language', icon: Images.translate, title: 'language'.tr, route: RouteHelper.getLanguageScreen('fromSettingsPage')),
+      if (AppConstants.enableLanguageSelection)
+        MenuModel(iconKey: 'language', icon: Images.translate, title: 'language'.tr, route: RouteHelper.getLanguageScreen('fromSettingsPage')),
       MenuModel(iconKey: 'settings', icon: Images.settings, title: 'settings'.tr, route: RouteHelper.getSettingRoute()),
 
       // Bidding/post menu — hidden unless enabled via admin (Mobile App Management → App Features).
@@ -93,7 +94,7 @@ class _MenuScreenState extends State<MenuScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               InkWell(
                 onTap: () => Get.back(),
-                child: Icon(Icons.keyboard_arrow_down_rounded, size: 30,color: Theme.of(context).colorScheme.primary),
+                child: Icon(Icons.keyboard_arrow_down_rounded, size: 30, color: context.adaptivePrimaryColor),
               ),
               const SizedBox(height: Dimensions.paddingSizeExtraSmall),
 

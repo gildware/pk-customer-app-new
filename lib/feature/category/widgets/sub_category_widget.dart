@@ -37,6 +37,7 @@ class SubCategoryWidget extends GetView<ServiceController> {
                 child: CustomImage(
                   image: categoryModel?.imageFullPath ?? "",
                   height: 70, width: 70, fit: BoxFit.cover, placeHolderBoxFit: BoxFit.cover,
+                  placeholder: Images.categoryPlaceholder,
                 ),
               ),
               const SizedBox(width: Dimensions.paddingSizeSmall),

@@ -1,3 +1,4 @@
+import 'package:demandium/helper/extension_helper.dart';
 import 'package:demandium/util/dimensions.dart';
 import 'package:demandium/util/styles.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,7 @@ class LandingCard extends StatelessWidget {
       padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
+        color: context.adaptivePrimaryColor.withValues(alpha: 0.05),
       ),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
 

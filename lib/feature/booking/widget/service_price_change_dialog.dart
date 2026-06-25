@@ -92,7 +92,7 @@ class ServicePriceItemWidget extends StatelessWidget {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         const SizedBox(width: Dimensions.paddingSizeDefault),
         Container(
-          decoration: BoxDecoration( border: Border.all(color: Theme.of(context).primaryColor), shape: BoxShape.circle),
+          decoration: BoxDecoration( border: Border.all(color: context.adaptivePrimaryColor), shape: BoxShape.circle),
           padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
           child: Text(index.toString(), style: robotoRegular.copyWith(color: Theme.of(context).colorScheme.primary)),
         ),

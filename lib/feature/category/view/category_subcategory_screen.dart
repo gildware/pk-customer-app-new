@@ -139,6 +139,7 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
                                                     height: double.infinity,
                                                     width: double.infinity,
                                                     image: '${categoryController.categoryList![index].imageFullPath}',
+                                                    placeholder: Images.categoryPlaceholder,
                                                   ),
                                                 ),
                                               ),
@@ -155,7 +156,9 @@ class _CategorySubCategoryScreenState extends State<CategorySubCategoryScreen> {
                                                   categoryController.categoryList![index].name!,
                                                   style: robotoMedium.copyWith(
                                                     fontSize: Dimensions.fontSizeExtraSmall,
-                                                    color: isSelected ? Colors.white : Colors.black,
+                                                    color: isSelected
+                                                        ? context.adaptiveWhite
+                                                        : context.adaptiveBlack,
                                                   ),
                                                   maxLines: 2,
                                                   textAlign: TextAlign.center,

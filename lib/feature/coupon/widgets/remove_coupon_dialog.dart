@@ -89,7 +89,7 @@ class _ProductBottomSheetState extends State<RemoveCouponWidget> {
                       buttonText: 'cancel'.tr,
                       backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                       onPressed: () => Get.back(),
-                      textColor: Colors.black,
+                      textColor: Theme.of(context).textTheme.bodyLarge?.color,
                     )),
                     const SizedBox(width: Dimensions.paddingSizeDefault),
 

@@ -35,7 +35,7 @@ class SettingScreen extends StatelessWidget {
                 });
               }),
               const SizedBox(height: Dimensions.paddingSizeDefault,),
-              Text(Get.isDarkMode ? "light_mode".tr:"dark_mode".tr ,style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeLarge),),
+              Text(Get.isDarkMode ? "light_mode".tr:"dark_mode".tr ,style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeLarge, color: context.onSurfaceText),),
             ],
           ),
         ),),
@@ -66,7 +66,7 @@ class SettingScreen extends StatelessWidget {
               const SizedBox(height: Dimensions.paddingSizeDefault,),
               Text(
                 'notification_sound'.tr,
-                style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeLarge),
+                style: robotoRegular.copyWith(fontSize: Dimensions.fontSizeLarge, color: context.onSurfaceText),
                 textAlign: TextAlign.center,
 
               ),
