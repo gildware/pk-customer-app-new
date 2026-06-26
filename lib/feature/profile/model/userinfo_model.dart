@@ -17,6 +17,8 @@ class UserInfoModel {
   int? isEmailVerified;
   int? isPhoneVerified;
   double? walletBalance;
+  double? receivedAvgRating;
+  int? receivedRatingCount;
   BookingDetailsContent? lastIncompleteOfflineBooking;
 
 
@@ -37,6 +39,8 @@ class UserInfoModel {
         this.isEmailVerified,
         this.isPhoneVerified,
         this.walletBalance,
+        this.receivedAvgRating,
+        this.receivedRatingCount,
         this.lastIncompleteOfflineBooking,
       });
 
@@ -55,6 +59,8 @@ class UserInfoModel {
     isEmailVerified =  int.tryParse(json['is_email_verified'].toString());
     isPhoneVerified =  int.tryParse(json['is_phone_verified'].toString());
     walletBalance =  double.tryParse(json['wallet_balance'].toString());
+    receivedAvgRating = double.tryParse(json['received_avg_rating'].toString());
+    receivedRatingCount = int.tryParse(json['received_rating_count'].toString());
     lastIncompleteOfflineBooking = json['last_incomplete_offline_booking'] != null
         ? BookingDetailsContent.fromJson(json['last_incomplete_offline_booking'])
         : null;

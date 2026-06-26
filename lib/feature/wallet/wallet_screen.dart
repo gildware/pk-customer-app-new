@@ -14,6 +14,7 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
 
   final tooltipController = JustTheController();
+  bool _featureRedirectScheduled = false;
 
   @override
   void initState() {
@@ -39,17 +40,24 @@ class _WalletScreenState extends State<WalletScreen> {
     });
 
   }
+
+  void _redirectIfFeatureDisabled(SplashController splashController) {
+    if (_featureRedirectScheduled) {
+      return;
+    }
+    if (splashController.currentDataSource == DataSourceEnum.client &&
+        splashController.configModel.content?.walletStatus == 0) {
+      _featureRedirectScheduled = true;
+      runAfterFrame(() => Get.offAllNamed(RouteHelper.getMainRoute("home")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ScrollController scrollController = ScrollController();
     return GetBuilder<SplashController>(
       builder: (splashController) {
-        if(splashController.currentDataSource == DataSourceEnum.client && splashController.configModel.content?.walletStatus == 0){
-          Future.delayed(const Duration(microseconds: 100)).then((value) {
-            Get.offAllNamed(RouteHelper.getMainRoute("home"));
-
-          });
-        }
+        _redirectIfFeatureDisabled(splashController);
         return Scaffold(
           drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
 

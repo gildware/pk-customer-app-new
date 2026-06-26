@@ -61,7 +61,7 @@ class PaymentRedirectHandler {
       if (closeCurrentRoute) {
         Get.back();
       }
-      Get.offNamed(
+      Get.offAllNamed(
         RouteHelper.getCheckoutRoute(
           RouteHelper.checkout,
           'complete',

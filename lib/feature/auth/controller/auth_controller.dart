@@ -858,6 +858,7 @@ class AuthController extends GetxController implements GetxService {
     if (clearAddress) {
       authRepo.clearSharedAddress();
     }
+    AddressSessionHelper.clearAddressServiceabilityCache();
     if (Get.isRegistered<LocationController>()) {
       Get.find<LocationController>().clearSessionData();
     }

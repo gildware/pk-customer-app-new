@@ -84,6 +84,7 @@ class _AddressStepState extends State<_AddressStep> {
   @override
   void initState() {
     super.initState();
+    Get.find<CartController>().syncPendingBookingAddress();
     _loadAddressesAndAutoSelect();
   }
 
@@ -96,7 +97,7 @@ class _AddressStepState extends State<_AddressStep> {
       }
     }
     _loadingAddresses = false;
-    cartController.tryAutoSelectSingleBookingAddress();
+    cartController.syncPendingBookingAddress();
     if (mounted) setState(() {});
   }
 
@@ -104,7 +105,7 @@ class _AddressStepState extends State<_AddressStep> {
     final locationController = Get.find<LocationController>();
     final cartController = Get.find<CartController>();
     await locationController.getAddressList();
-    cartController.tryAutoSelectSingleBookingAddress();
+    cartController.syncPendingBookingAddress();
     if (mounted) setState(() {});
   }
 
@@ -583,6 +584,7 @@ class _ProviderStepState extends State<_ProviderStep> {
             Row(
               children: [
                 _CompactSegmentButton(
+                  icon: Icons.auto_awesome_rounded,
                   label: '${'let'.tr} ${AppConstants.appName} ${'choose_for_you'.tr}',
                   isSelected: !isManual,
                   onTap: () {
@@ -592,6 +594,7 @@ class _ProviderStepState extends State<_ProviderStep> {
                 ),
                 const SizedBox(width: Dimensions.paddingSizeExtraSmall),
                 _CompactSegmentButton(
+                  icon: Icons.person_search_rounded,
                   label: 'choose_yourself'.tr,
                   isSelected: isManual,
                   onTap: () => cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.manual),
@@ -601,6 +604,7 @@ class _ProviderStepState extends State<_ProviderStep> {
           else ...[
             _ProviderChoiceCard(
               isSelected: true,
+              icon: Icons.auto_awesome_rounded,
               label: '${'let'.tr} ${AppConstants.appName} ${'choose_for_you'.tr}',
               onTap: () {
                 _searchController.clear();
@@ -609,6 +613,7 @@ class _ProviderStepState extends State<_ProviderStep> {
             ),
             _ProviderChoiceCard(
               isSelected: false,
+              icon: Icons.person_search_rounded,
               label: 'choose_yourself'.tr,
               onTap: () => cartController.setBookingProviderSelectionMode(BookingProviderSelectionMode.manual),
             ),
@@ -738,13 +743,40 @@ class _ProviderStepState extends State<_ProviderStep> {
   }
 }
 
+class _ProviderChoiceIcon extends StatelessWidget {
+  final IconData icon;
+  final bool isSelected;
+
+  const _ProviderChoiceIcon({required this.icon, required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      height: 48,
+      width: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+        color: isSelected ? primary : primary.withValues(alpha: 0.12),
+      ),
+      child: Icon(
+        icon,
+        color: isSelected ? Colors.white : primary,
+        size: 24,
+      ),
+    );
+  }
+}
+
 class _ProviderChoiceCard extends StatelessWidget {
   final bool isSelected;
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
 
   const _ProviderChoiceCard({
     required this.isSelected,
+    required this.icon,
     required this.label,
     required this.onTap,
   });
@@ -768,7 +800,7 @@ class _ProviderChoiceCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const UnselectedProductWidget(),
+            _ProviderChoiceIcon(icon: icon, isSelected: isSelected),
             const SizedBox(width: Dimensions.paddingSizeDefault),
             Expanded(
               child: Text(
@@ -786,11 +818,13 @@ class _ProviderChoiceCard extends StatelessWidget {
 }
 
 class _CompactSegmentButton extends StatelessWidget {
+  final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _CompactSegmentButton({
+    required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
@@ -815,15 +849,36 @@ class _CompactSegmentButton extends StatelessWidget {
               width: isSelected ? 1 : 0.5,
             ),
           ),
-          child: Text(
-            label,
-            style: robotoMedium.copyWith(
-              fontSize: Dimensions.fontSizeExtraSmall,
-              color: isSelected ? primary : Theme.of(context).textTheme.bodyMedium?.color,
-            ),
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                height: 22,
+                width: 22,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                  color: isSelected ? primary : primary.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 14,
+                  color: isSelected ? Colors.white : primary,
+                ),
+              ),
+              const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+              Flexible(
+                child: Text(
+                  label,
+                  style: robotoMedium.copyWith(
+                    fontSize: Dimensions.fontSizeExtraSmall,
+                    color: isSelected ? primary : Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       ),

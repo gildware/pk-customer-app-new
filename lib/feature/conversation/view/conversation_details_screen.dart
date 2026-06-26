@@ -54,9 +54,10 @@ class _ConversationDetailsScreenState extends State<ConversationDetailsScreen> {
   Widget build(BuildContext context) {
     return CustomPopWidget(
       isNavigationOnOnPop: true,
-      onPopInvoked: () async {
-        await Future.delayed(Duration(microseconds: 100));
-        Get.offAllNamed(RouteHelper.getInboxScreenRoute(fromNotification: widget.formNotification));
+      onPopInvoked: () {
+        runAfterFrame(() => Get.offAllNamed(
+          RouteHelper.getInboxScreenRoute(fromNotification: widget.formNotification),
+        ));
       },
       child: Scaffold(
 

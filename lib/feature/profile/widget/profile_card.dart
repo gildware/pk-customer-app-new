@@ -3,12 +3,12 @@ import 'package:demandium/util/core_export.dart';
 
 
 class ProfileCardItem extends StatelessWidget {
-  final String leadingIcon;
+  final String iconKey;
   final bool? isDarkItem;
   final String title;
   final IconData? trailingIcon;
   final Function()? onTap;
-  const ProfileCardItem({super.key,this.trailingIcon=Icons.arrow_forward_ios,required this.title,required this.leadingIcon,this.onTap,this.isDarkItem=false}) ;
+  const ProfileCardItem({super.key,this.trailingIcon=Icons.arrow_forward_ios,required this.title,required this.iconKey,this.onTap,this.isDarkItem=false}) ;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,11 @@ class ProfileCardItem extends StatelessWidget {
           child: ListTile(
             title: Row(
               children: [
-                Image.asset(leadingIcon,width: Dimensions.profileImageSize,),
+                MobileAppIconHelper.profileMenuIcon(
+                  iconKey: iconKey,
+                  size: Dimensions.profileImageSize,
+                  color: context.adaptivePrimaryColor,
+                ),
                 const SizedBox(width: Dimensions.paddingSizeDefault,),
                 Text(title),
               ],

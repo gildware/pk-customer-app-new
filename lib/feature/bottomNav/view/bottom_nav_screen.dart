@@ -252,12 +252,9 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
             isCenterFab
                 ? const SizedBox(width: 20, height: 20)
-                : MobileAppIconHelper.icon(
+                : MobileAppIconHelper.bottomNavIcon(
                     iconKey: _iconKeyFor(bnbItem),
-                    fallbackAsset: icon,
-                    width: 18,
-                    height: 18,
-                    color: isSelected ? Colors.white : Colors.white60,
+                    isSelected: isSelected,
                   ),
             const SizedBox(height: Dimensions.paddingSizeExtraSmall),
             if (!isCenterFab)

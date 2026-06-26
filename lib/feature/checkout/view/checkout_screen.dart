@@ -78,30 +78,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: ()  => _exitApp(),
-      child: GetBuilder<CheckOutController>(builder: (checkoutController){
-        return Scaffold(
+    return GetBuilder<CheckOutController>(builder: (checkoutController) {
+      final isCompletePage = widget.pageState == 'complete' ||
+          checkoutController.currentPageState == PageState.complete;
+      final isPaymentPage = widget.pageState == 'payment' ||
+          checkoutController.currentPageState == PageState.payment;
+
+      return PopScope(
+        canPop: !isCompletePage && !isPaymentPage,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (isCompletePage) {
+            Get.offAllNamed(RouteHelper.getMainRoute('home'));
+            return;
+          }
+          if (isPaymentPage) {
+            checkoutController.ensureDefaultDigitalPaymentSelected();
+            checkoutController.updateState(PageState.orderDetails);
+            checkoutController.getPaymentMethodList(shouldUpdate: true);
+            checkoutController.ensureDefaultDigitalPaymentSelected(shouldUpdate: true);
+            if (ResponsiveHelper.isWeb()) {
+              Get.toNamed(
+                RouteHelper.getCheckoutRoute('cart', 'orderDetails', 'null', reload: false),
+              );
+            }
+          }
+        },
+        child: Scaffold(
           resizeToAvoidBottomInset: false,
           drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
 
           endDrawer: ResponsiveHelper.isDesktop(context) ? const MenuDrawer() : null,
           appBar: CustomAppBar( title: 'checkout'.tr,
-            onBackPressed: () {
+            onBackPressed: isCompletePage ? () {
+              Get.offAllNamed(RouteHelper.getMainRoute('home'));
+            } : () {
               if(widget.pageState == 'payment' || checkoutController.currentPageState == PageState.payment) {
                 checkoutController.ensureDefaultDigitalPaymentSelected();
                 checkoutController.updateState(PageState.orderDetails);
                 if(ResponsiveHelper.isWeb()) {
                   Get.toNamed(RouteHelper.getCheckoutRoute('cart','orderDetails','null'));
                 }
-              } else if(widget.pageState == 'complete' || Get.find<CheckOutController>().currentPageState == PageState.complete){
-                Get.offAllNamed(RouteHelper.getMainRoute('home'));
-                return false;
               } else {
                 checkoutController.updateState(PageState.orderDetails);
                 Get.back();
               }
-            }
+            },
+            isBackButtonExist: !isCompletePage,
           ),
           body: SafeArea(child: _isHydratingCart && widget.pageState == 'orderDetails'
               ? const Center(child: CustomLoader())
@@ -129,28 +152,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: (checkoutController.currentPageState == PageState.complete || widget.pageState == 'complete') ?
             const SizedBox() : ProceedToCheckoutButtonWidget(pageState: widget.pageState,addressId: widget.addressId,),
           )): const SizedBox(),
-        );
-      }),
-    );
-  }
-
-
-  Future<bool> _exitApp() async {
-    if(widget.pageState == 'payment' || Get.find<CheckOutController>().currentPageState == PageState.payment) {
-      Get.find<CheckOutController>().ensureDefaultDigitalPaymentSelected();
-      Get.find<CheckOutController>().updateState(PageState.orderDetails);
-      Get.find<CheckOutController>().getPaymentMethodList(shouldUpdate: true);
-      Get.find<CheckOutController>().ensureDefaultDigitalPaymentSelected(shouldUpdate: true);
-      if(ResponsiveHelper.isWeb()) {
-        Get.toNamed(RouteHelper.getCheckoutRoute('cart','orderDetails','null',reload: false));
-      }
-      return false;
-    } else if(widget.pageState == 'complete' || Get.find<CheckOutController>().currentPageState == PageState.complete){
-      Get.offAllNamed(RouteHelper.getMainRoute('home'));
-      return false;
-    }else {
-      return true;
-    }
+        ),
+      );
+    });
   }
 }
 

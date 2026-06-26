@@ -2,10 +2,28 @@ import 'package:demandium/feature/checkout/model/placed_booking_summary.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
-class CompletePage extends StatelessWidget {
+class CompletePage extends StatefulWidget {
   final String? token;
 
   const CompletePage({super.key, this.token});
+
+  @override
+  State<CompletePage> createState() => _CompletePageState();
+}
+
+class _CompletePageState extends State<CompletePage> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.token != null &&
+        widget.token!.isNotEmpty &&
+        widget.token != 'null') {
+      return;
+    }
+    runAfterFrame(() {
+      Get.find<CheckOutController>().ensurePlacedBookingSummaries();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,27 +63,14 @@ class CompletePage extends StatelessWidget {
                   if (controller.isPlacedOrderSuccessfully && summaries.isNotEmpty) ...[
                     const SizedBox(height: Dimensions.paddingSizeLarge),
                     ...summaries.map(
-                      (summary) => _PlacedBookingSummaryTile(summary: summary),
+                      (summary) => _PlacedBookingSummaryCard(summary: summary),
                     ),
                   ],
                   const SizedBox(height: Dimensions.paddingSizeExtraMoreLarge),
                   CustomButton(
-                    buttonText: 'explore_more_service'.tr,
+                    buttonText: 'back_to_home'.tr,
                     width: 280,
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    textStyle: robotoRegular.copyWith(
-                      fontSize: Dimensions.fontSizeDefault,
-                      color: Theme.of(context)
-                          .textTheme
-                          .bodyLarge
-                          ?.color
-                          ?.withValues(alpha: 0.8),
-                    ),
-                    onPressed: () {
-                      Get.find<CheckOutController>().updateState(PageState.orderDetails);
-                      Get.offAllNamed(RouteHelper.getMainRoute('home'));
-                    },
+                    onPressed: _goHome,
                   ),
                 ],
               );
@@ -75,32 +80,104 @@ class CompletePage extends StatelessWidget {
       ),
     );
   }
+
+  void _goHome() {
+    Get.find<CheckOutController>().updateState(PageState.orderDetails);
+    Get.offAllNamed(RouteHelper.getMainRoute('home'));
+  }
 }
 
-class _PlacedBookingSummaryTile extends StatelessWidget {
+class _PlacedBookingSummaryCard extends StatelessWidget {
   final PlacedBookingSummary summary;
 
-  const _PlacedBookingSummaryTile({required this.summary});
+  const _PlacedBookingSummaryCard({required this.summary});
 
   @override
   Widget build(BuildContext context) {
+    final canViewBooking =
+        summary.bookingId != null && summary.bookingId!.isNotEmpty;
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
-      padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Dimensions.paddingSizeDefault,
+        vertical: Dimensions.paddingSizeSmall,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
         border: Border.all(
           color: Theme.of(context).dividerColor.withValues(alpha: 0.25),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Text(
-        '${summary.serviceName} - ${summary.readableId}',
-        style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeDefault),
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  summary.serviceName,
+                  style: robotoMedium.copyWith(
+                    fontSize: Dimensions.fontSizeSmall,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: Dimensions.paddingSizeExtraSmall),
+                Text(
+                  '${'booking_id'.tr}: ${summary.readableId}',
+                  style: robotoRegular.copyWith(
+                    fontSize: Dimensions.fontSizeSmall,
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.color
+                        ?.withValues(alpha: 0.75),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: Dimensions.paddingSizeSmall),
+          TextButton(
+            onPressed: canViewBooking
+                ? () {
+                    Get.toNamed(
+                      RouteHelper.getBookingDetailsScreen(
+                        bookingID: summary.bookingId,
+                        fromPage: 'checkout',
+                      ),
+                    );
+                  }
+                : null,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimensions.paddingSizeSmall,
+                vertical: Dimensions.paddingSizeExtraSmall,
+              ),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'view_details'.tr,
+              style: robotoMedium.copyWith(
+                fontSize: Dimensions.fontSizeSmall,
+                color: canViewBooking
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).disabledColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

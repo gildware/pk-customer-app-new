@@ -19,51 +19,42 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
 
     return [
     Menu(iconKey: 'profile', icon: Images.profileIcon, title: 'profile'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getProfileRoute());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getProfileRoute()));
     }),
     Menu(iconKey: 'inbox', icon: Images.chatImage, title: 'inbox'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getInboxScreenRoute());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getInboxScreenRoute()));
     }),
     if (AppConstants.enableLanguageSelection)
       Menu(iconKey: 'language', icon: Images.translate, title: 'language'.tr, onTap: () {
-        Get.back();
-        Get.toNamed(RouteHelper.getLanguageScreen('menuDrawer'));
+        closeRouteThen(() => Get.toNamed(RouteHelper.getLanguageScreen('menuDrawer')));
       }),
     Menu(iconKey: 'settings', icon: Images.settings, title: 'settings'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getSettingRoute());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getSettingRoute()));
     }),
 
     // Bidding/post menu — hidden unless enabled via admin (Mobile App Management → App Features).
     if(config?.biddingStatus == 1)
     Menu(iconKey: 'custom_post', icon: Images.customPostIcon, title: 'my_posts'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getMyPostScreen());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getMyPostScreen()));
     }),
 
     Menu(iconKey: 'my_favorite', icon: Images.myFavorite, title: 'my_favorite'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getMyFavoriteScreen());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getMyFavoriteScreen()));
     }),
 
     if(config?.walletStatus != 0 && isLoggedIn)
     Menu(iconKey: 'wallet', icon: Images.walletMenu, title: 'my_wallet'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getMyWalletScreen());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getMyWalletScreen()));
     }),
     if(config?.loyaltyPointStatus != 0 && isLoggedIn)
     Menu(iconKey: 'loyalty_point', icon: Images.myPoint, title: 'loyalty_point'.tr, onTap: () {
-      Get.back();
-      Get.toNamed(RouteHelper.getLoyaltyPointScreen());
+      closeRouteThen(() => Get.toNamed(RouteHelper.getLoyaltyPointScreen()));
     }),
 
     if(config?.referEarnStatus == 1)
       Menu(
         title:'refer_and_earn'.tr, iconKey: 'refer_and_earn', icon: Images.shareIcon, onTap: (){
-          Get.back();
-          Get.toNamed(RouteHelper.getReferAndEarnScreen());
+          closeRouteThen(() => Get.toNamed(RouteHelper.getReferAndEarnScreen()));
       }),
 
     ...(config?.businessPages ?? [])
@@ -78,28 +69,26 @@ class _MenuDrawerState  extends State<MenuDrawer> with SingleTickerProviderState
           ? Images.cancellationPolicy : page.pageKey == HtmlType.refundPolicy.value ? Images.refundPolicy : Images.othersPageIcon,
       title: _getPageTitle(page),
       onTap: () {
-        Get.back();
-        Get.toNamed(_getPageRoute(page));
+        closeRouteThen(() => Get.toNamed(_getPageRoute(page)));
       },
     )),
 
     Menu(iconKey: 'help_support', icon: Images.helpIcon, title: 'help_&_support'.tr, onTap: () {
-      Get.back();
-      Get.toNamed( RouteHelper.getSupportRoute());
+      closeRouteThen(() => Get.toNamed( RouteHelper.getSupportRoute()));
     }),
 
     Menu(iconKey: 'service_area', icon: Images.areaMenuIcon, title: 'service_area'.tr, onTap: () {
-      Get.back();
-      Get.toNamed( RouteHelper.getServiceArea());
+      closeRouteThen(() => Get.toNamed( RouteHelper.getServiceArea()));
     }),
 
      Menu(iconKey: 'logout', icon: Images.logout, title: isLoggedIn ? 'logout'.tr : 'sign_in'.tr, onTap: () {
-       Get.back();
-       if(isLoggedIn) {
-         LogoutConfirmationDialog.show();
-       }else {
-         Get.toNamed(RouteHelper.getSignInRoute(redirectUrl: Get.currentRoute));
-       }
+       closeRouteThen(() {
+         if(isLoggedIn) {
+           LogoutConfirmationDialog.show();
+         }else {
+           Get.toNamed(RouteHelper.getSignInRoute(redirectUrl: Get.currentRoute));
+         }
+       });
       }),
     ];
   }

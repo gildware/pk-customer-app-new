@@ -271,9 +271,9 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
                                                     child: Container(
                                                       height: 30, width: 30,
                                                       margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
-                                                      decoration: BoxDecoration(shape: BoxShape.circle, color:  Theme.of(context).colorScheme.secondary),
+                                                      decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).primaryColor),
                                                       alignment: Alignment.center,
-                                                      child: Icon(Icons.remove , size: 15, color:Theme.of(context).cardColor,),
+                                                      child: Icon(Icons.remove , size: 15, color: Theme.of(context).primaryColorLight),
                                                     ),
                                                   ) : const SizedBox(),
 
@@ -290,13 +290,13 @@ class _ProductBottomSheetState extends State<ServiceCenterDialog> {
                                                       margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
                                                       decoration: BoxDecoration(
                                                           shape: BoxShape.circle,
-                                                          color:  Theme.of(context).colorScheme.secondary
+                                                          color: Theme.of(context).primaryColor
                                                       ),
                                                       alignment: Alignment.center,
                                                       child: Icon(
                                                         Icons.add ,
                                                         size: 15,
-                                                        color:Theme.of(context).cardColor,
+                                                        color: Theme.of(context).primaryColorLight,
                                                       ),
                                                     ),
                                                   )

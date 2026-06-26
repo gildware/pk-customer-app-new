@@ -179,6 +179,70 @@ class MobileAppIconHelper {
     );
   }
 
+  /// Bottom navigation uses Material icons in white only so icons stay crisp
+  /// on the primary bar (tinting colored PNGs breaks transparent cutouts).
+  static Widget bottomNavIcon({
+    required String iconKey,
+    required bool isSelected,
+    double size = 20,
+  }) {
+    final iconData = _bottomNavMaterialIcon(iconKey, isSelected);
+    return Icon(
+      iconData,
+      size: size,
+      color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6),
+    );
+  }
+
+  static IconData _bottomNavMaterialIcon(String iconKey, bool isSelected) {
+    switch (iconKey) {
+      case 'bottom_home':
+        return isSelected ? Icons.home_rounded : Icons.home_outlined;
+      case 'bookings':
+        return isSelected ? Icons.assignment_rounded : Icons.assignment_outlined;
+      case 'my_favorite':
+        return isSelected ? Icons.favorite_rounded : Icons.favorite_border_rounded;
+      case 'bottom_more':
+        return isSelected ? Icons.apps_rounded : Icons.apps_outlined;
+      case 'custom_post':
+        return isSelected ? Icons.post_add_rounded : Icons.post_add_outlined;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
+  /// Profile menu list icons — primary in light mode, white in dark mode.
+  static Widget profileMenuIcon({
+    required String iconKey,
+    required Color color,
+    double size = 20,
+  }) {
+    return Icon(
+      _profileMenuMaterialIcon(iconKey),
+      size: size,
+      color: color,
+    );
+  }
+
+  static IconData _profileMenuMaterialIcon(String iconKey) {
+    switch (iconKey) {
+      case 'my_address':
+        return Icons.location_on_outlined;
+      case 'notifications':
+        return Icons.notifications_outlined;
+      case 'suggest_new_service':
+        return Icons.post_add_outlined;
+      case 'delete_account':
+        return Icons.person_remove_outlined;
+      case 'logout':
+        return Icons.logout_rounded;
+      case 'sign_in':
+        return Icons.login_rounded;
+      default:
+        return Icons.circle_outlined;
+    }
+  }
+
   static String _networkImageUrl(String resolvedUrl) {
     return kIsWeb ? '${AppConstants.baseUrl}/image-proxy?url=$resolvedUrl' : resolvedUrl;
   }

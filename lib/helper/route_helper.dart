@@ -1,5 +1,6 @@
 import'dart:convert';
 import 'package:demandium/feature/auth/view/update_profile_screen.dart';
+import 'package:demandium/feature/profile/view/customer_received_rating_screen.dart';
 import 'package:demandium/feature/booking/view/repeat_booking_details_screen.dart';
 import 'package:demandium/feature/checkout/view/offline_payment_screen.dart';
 import 'package:demandium/feature/home/all_category_screen.dart';
@@ -26,6 +27,7 @@ class RouteHelper {
   static const String serviceDetails = '/service';
   static const String profile = '/profile';
   static const String profileEdit = '/profile-edit';
+  static const String customerReceivedRating = '/customer-received-rating';
   static const String notification = '/notification';
   static const String address = '/address';
   static const String orderSuccess = '/order-completed';
@@ -169,6 +171,7 @@ class RouteHelper {
   static String getServiceRoute(String slug, {String fromPage="others"}) =>'$serviceDetails/$slug?fromPage=$fromPage';
   static String getProfileRoute() => profile;
   static String getEditProfileRoute() => profileEdit;
+  static String getCustomerReceivedRatingRoute() => customerReceivedRating;
   static String getNotificationRoute() => notification;
   static String getAddressRoute(String fromPage) => '$address?fromProfileScreen=$fromPage';
   static String getOrderSuccessRoute( String status) => '$orderSuccess?flag=$status';
@@ -508,6 +511,10 @@ class RouteHelper {
 
     GetPage(name: profile, page: () => const ProfileScreen()),
     GetPage(name: profileEdit, page: () => getRoute(const EditProfileScreen())),
+    GetPage(
+      name: customerReceivedRating,
+      page: () => getRoute(const CustomerReceivedRatingScreen()),
+    ),
     GetPage(name: notification, page: () => getRoute(const NotificationScreen())),
 
     GetPage(

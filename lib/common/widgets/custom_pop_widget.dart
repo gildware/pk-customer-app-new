@@ -71,7 +71,7 @@ class _CustomPopWidgetState extends State<CustomPopWidget> {
   }
 
   void _goToInitialRoute(BuildContext context) {
-    Get.offAllNamed(RouteHelper.getInitialRoute());
+    runAfterFrame(() => Get.offAllNamed(RouteHelper.getInitialRoute()));
     // if( !Navigator.canPop(context) && Get.find<LocationController>().getUserAddress() !=null && context.mounted && onPopInvoked == null){
     //   Get.offAllNamed(RouteHelper.getInitialRoute());
     // }

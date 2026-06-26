@@ -1,3 +1,4 @@
+import 'package:demandium/feature/home/helper/advertisement_video_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 
@@ -270,10 +271,52 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
   bool _disposed = false;
   bool _loadFailed = false;
   bool _isInitializing = false;
+  bool _isPlaying = false;
+  bool? _videoUrlReachable;
+
+  bool get _showPlayButton =>
+      widget.advertisement.hasPlayableVideo &&
+      _videoUrlReachable == true &&
+      !_loadFailed &&
+      !_isPlaying;
+
+  @override
+  void initState() {
+    super.initState();
+    _verifyVideoUrl();
+  }
+
+  Future<void> _verifyVideoUrl() async {
+    if (!widget.advertisement.hasPlayableVideo) {
+      if (mounted) {
+        setState(() => _videoUrlReachable = false);
+      }
+      return;
+    }
+
+    final reachable = await AdvertisementVideoHelper.isUrlReachable(
+      widget.advertisement.promotionalVideoFullPath!,
+    );
+
+    if (!mounted || _disposed) {
+      return;
+    }
+
+    setState(() {
+      _videoUrlReachable = reachable;
+      if (!reachable) {
+        _loadFailed = true;
+      }
+    });
+  }
 
   void _onVideoTick() {
     final controller = _videoPlayerController;
     if (_disposed || !mounted || controller == null || !controller.value.isInitialized) {
+      return;
+    }
+    if (controller.value.hasError) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handlePlaybackFailure());
       return;
     }
     if (controller.value.duration == controller.value.position) {
@@ -281,101 +324,143 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
     }
   }
 
-  Future<void> _startPlayback() async {
-    if (_chewieController != null) {
-      await _chewieController!.play();
+  Future<void> _handlePlaybackFailure() async {
+    if (_disposed || !mounted) {
       return;
     }
-    if (_isInitializing || _loadFailed) {
+    await _disposePlayer();
+    if (mounted) {
+      setState(() {
+        _loadFailed = true;
+        _isInitializing = false;
+        _isPlaying = false;
+        _videoUrlReachable = false;
+      });
+    }
+  }
+
+  Future<void> _disposePlayer() async {
+    _chewieController?.dispose();
+    _chewieController = null;
+    final controller = _videoPlayerController;
+    if (controller != null) {
+      controller.removeListener(_onVideoTick);
+      await controller.dispose();
+      _videoPlayerController = null;
+    }
+  }
+
+  Future<void> _startPlayback() async {
+    if (!_showPlayButton || _isInitializing) {
       return;
     }
 
     setState(() => _isInitializing = true);
 
-    final url = widget.advertisement.promotionalVideoFullPath?.trim() ?? '';
-    if (url.isEmpty) {
+    try {
+      if (_chewieController != null) {
+        await _chewieController!.play();
+        if (mounted) {
+          setState(() {
+            _isInitializing = false;
+            _isPlaying = true;
+          });
+        }
+        return;
+      }
+
+      final url = widget.advertisement.promotionalVideoFullPath!.trim();
+      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      _videoPlayerController = controller;
+      controller.addListener(_onVideoTick);
+
+      final initialized = await Future.any<bool>([
+        controller.initialize().then((_) => true),
+        Future<bool>.delayed(const Duration(seconds: 10), () => false),
+      ]);
+
+      if (!initialized || controller.value.hasError || !controller.value.isInitialized) {
+        controller.removeListener(_onVideoTick);
+        await controller.dispose();
+        _videoPlayerController = null;
+        throw Exception('video_unavailable');
+      }
+
+      if (_disposed || !mounted) {
+        await controller.dispose();
+        return;
+      }
+
+      _chewieController = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: true,
+        aspectRatio: controller.value.aspectRatio,
+      );
+
       if (mounted) {
         setState(() {
           _isInitializing = false;
-          _loadFailed = true;
+          _isPlaying = true;
         });
       }
-      return;
-    }
-
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
-    _videoPlayerController = controller;
-    controller.addListener(_onVideoTick);
-
-    try {
-      await controller.initialize();
     } catch (_) {
-      if (!_disposed) {
-        await controller.dispose();
-        if (mounted) {
-          setState(() {
-            _videoPlayerController = null;
-            _isInitializing = false;
-            _loadFailed = true;
-          });
-        }
+      if (!_disposed && mounted) {
+        await _handlePlaybackFailure();
       }
-      return;
-    }
-
-    if (_disposed || !mounted) {
-      await controller.dispose();
-      return;
-    }
-
-    _chewieController = ChewieController(
-      videoPlayerController: controller,
-      autoPlay: true,
-      aspectRatio: controller.value.aspectRatio,
-    );
-    if (mounted) {
-      setState(() => _isInitializing = false);
+    } finally {
+      if (mounted && _isInitializing && !_isPlaying) {
+        setState(() => _isInitializing = false);
+      }
     }
   }
 
   Widget _buildVideoPoster() {
     final coverImage = widget.advertisement.providerCoverImageFullPath?.trim() ?? '';
-    if (coverImage.isNotEmpty) {
+    if (coverImage.isNotEmpty && !coverImage.contains('placeholder')) {
       return CustomImage(
         image: coverImage,
         height: double.infinity,
         width: double.infinity,
         fit: BoxFit.cover,
+        placeholder: Images.videoPlaceholderLight,
+        placeHolderBoxFit: BoxFit.cover,
       );
     }
-    return const VideoPlaceholder();
+    return const VideoPlaceholder(showPlayIcon: false);
   }
 
   Widget _buildPlayOverlay({bool showLoading = false}) {
+    if (showLoading) {
+      return ColoredBox(
+        color: Colors.black.withValues(alpha: 0.28),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
     return ColoredBox(
       color: Colors.black.withValues(alpha: 0.28),
       child: Center(
-        child: showLoading
-            ? const CircularProgressIndicator(color: Colors.white)
-            : Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.92),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.play_arrow_rounded,
-                  size: 36,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.92),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
+            ],
+          ),
+          child: Icon(
+            Icons.play_arrow_rounded,
+            size: 36,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
       ),
     );
   }
@@ -423,22 +508,24 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (_chewieController != null &&
+                    if (_isPlaying &&
+                        _chewieController != null &&
                         _chewieController!.videoPlayerController.value.isInitialized)
                       Chewie(controller: _chewieController!)
-                    else if (_loadFailed)
-                      const VideoPlaceholder()
-                    else
+                    else if (_showPlayButton || _isInitializing)
                       GestureDetector(
-                        onTap: _startPlayback,
+                        onTap: _isInitializing ? null : _startPlayback,
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
                             _buildVideoPoster(),
-                            _buildPlayOverlay(showLoading: _isInitializing),
+                            if (_showPlayButton || _isInitializing)
+                              _buildPlayOverlay(showLoading: _isInitializing),
                           ],
                         ),
-                      ),
+                      )
+                    else
+                      _buildVideoPoster(),
                   ],
                 ),
               ),

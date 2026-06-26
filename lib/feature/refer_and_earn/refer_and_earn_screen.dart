@@ -12,6 +12,18 @@ class ReferAndEarnScreen extends StatefulWidget {
 }
 
 class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
+  bool _featureRedirectScheduled = false;
+
+  void _redirectIfFeatureDisabled(SplashController splashController) {
+    if (_featureRedirectScheduled) {
+      return;
+    }
+    if (splashController.currentDataSource == DataSourceEnum.client &&
+        splashController.configModel.content?.referEarnStatus == 0) {
+      _featureRedirectScheduled = true;
+      runAfterFrame(() => Get.offAllNamed(RouteHelper.getMainRoute("home")));
+    }
+  }
 
   @override
   void initState() {
@@ -27,11 +39,7 @@ class _ReferAndEarnScreenState extends State<ReferAndEarnScreen> {
     return CustomPopWidget(
       child: GetBuilder<SplashController>(
         builder: (splashController) {
-          if(splashController.currentDataSource == DataSourceEnum.client && splashController.configModel.content?.referEarnStatus == 0){
-            Future.delayed(const Duration(microseconds: 100)).then((value) {
-              Get.offAllNamed(RouteHelper.getMainRoute("home"));
-            });
-          }
+          _redirectIfFeatureDisabled(splashController);
           return Scaffold(
             appBar:  CustomAppBar(title: 'refer_and_earn'.tr),
             drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,

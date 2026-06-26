@@ -145,8 +145,10 @@ class ConversationController extends GetxController with GetSingleTickerProvider
       }
     }else {
 
-      // Use FileValidationHelper for initial validation (extension and per-file size)
-      List<XFile> pickImages = await FileValidationHelper.validateAndPickMultipleImages();
+      List<XFile> pickImages =
+          await ImagePickCropHelper.pickMultipleCropAndValidate(
+        lockAspectRatio: false,
+      );
       _pickedImageFiles = [];
       _selectedImageList = [];
       objFile = [];
@@ -322,7 +324,7 @@ class ConversationController extends GetxController with GetSingleTickerProvider
     if(response.statusCode == 200){
       if(fromBookingDetailsPage){
         Get.back();
-        Get.toNamed(RouteHelper.getChatScreenRoute(response.body['content']['id'],name,image,phone,userType));
+        runAfterFrame(() => Get.toNamed(RouteHelper.getChatScreenRoute(response.body['content']['id'],name,image,phone,userType)));
       } else {
         Get.toNamed(RouteHelper.getChatScreenRoute(response.body['content']['id'],name,image,phone,userType));
       }

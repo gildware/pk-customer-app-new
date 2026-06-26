@@ -1,3 +1,4 @@
+import 'package:demandium/feature/home/helper/advertisement_video_helper.dart';
 import 'package:demandium/feature/provider/model/provider_model.dart';
 import 'package:demandium/feature/provider/model/provider_showcase_model.dart';
 
@@ -154,6 +155,9 @@ class Advertisement {
     }
     providerData = json['provider'] != null ? ProviderData.fromJson(json['provider']) : null;
   }
+
+  /// True only when a real remote video URL is available (not null/placeholder).
+  bool get hasPlayableVideo => AdvertisementVideoHelper.hasVideoUrl(promotionalVideoFullPath);
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};

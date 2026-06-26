@@ -72,6 +72,7 @@ class AppConstants {
   static const String addressUri = '/api/v1/customer/address';
   static const String zoneUri = '/api/v1/customer/config/get-zone-id';
   static const String customerInfoUri = '/api/v1/customer/info';
+  static const String customerReceivedRatingUri = '/api/v1/customer/received-rating';
   static const String couponUri = '/api/v1/customer/coupon?limit=100&offset=1';
   static const String applyCoupon = '/api/v1/customer/coupon/apply';
   static const String removeCoupon = '/api/v1/customer/coupon/remove';

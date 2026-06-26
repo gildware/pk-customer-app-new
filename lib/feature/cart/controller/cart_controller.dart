@@ -800,19 +800,54 @@ class CartController extends GetxController implements GetxService {
       scheduleController.updateSelectedBookingType(type: ServiceType.regular);
       _pendingBookingSchedule = scheduleController.scheduleTime;
     } else if (step == ServiceBookingStep.address) {
-      tryAutoSelectSingleBookingAddress(shouldUpdate: false);
+      syncPendingBookingAddress(shouldUpdate: false);
     }
     update();
   }
 
-  void tryAutoSelectSingleBookingAddress({bool shouldUpdate = true}) {
+  /// Pre-selects a booking address to match what [AddressListContent] shows as selected.
+  void syncPendingBookingAddress({bool shouldUpdate = true}) {
     if (_pendingBookingAddress != null) return;
 
+    final locationController = Get.find<LocationController>();
+    final sessionZone = AddressSessionHelper.sessionZoneId();
     final addresses = AddressSessionHelper.filterAddressesForSessionZone(
-      Get.find<LocationController>().addressList ?? [],
+      locationController.addressList ?? [],
     );
-    if (addresses.length == 1) {
-      _pendingBookingAddress = addresses.first;
+
+    AddressModel? candidate;
+
+    final savedUserAddress = locationController.getUserAddress();
+    if (savedUserAddress?.id != null && addresses.isNotEmpty) {
+      for (final address in addresses) {
+        if (address.id == savedUserAddress!.id) {
+          candidate = address;
+          break;
+        }
+      }
+    }
+
+    if (candidate == null &&
+        locationController.selectedAddress != null &&
+        AddressSessionHelper.zoneIdsMatch(
+          locationController.selectedAddress?.zoneId,
+          sessionZone,
+        )) {
+      candidate = locationController.selectedAddress;
+    }
+
+    if (candidate == null && addresses.isNotEmpty) {
+      candidate = addresses.first;
+    }
+
+    if (candidate == null &&
+        savedUserAddress != null &&
+        AddressSessionHelper.zoneIdsMatch(savedUserAddress.zoneId, sessionZone)) {
+      candidate = savedUserAddress;
+    }
+
+    if (candidate != null) {
+      _pendingBookingAddress = candidate;
       if (shouldUpdate) update();
     }
   }
@@ -906,32 +941,7 @@ class CartController extends GetxController implements GetxService {
   }
 
   void _syncPendingBookingAddress() {
-    if (_pendingBookingAddress != null) return;
-
-    final locationController = Get.find<LocationController>();
-    final sessionZone = AddressSessionHelper.sessionZoneId();
-    final addresses = AddressSessionHelper.filterAddressesForSessionZone(
-      locationController.addressList ?? [],
-    );
-
-    if (locationController.selectedAddress != null &&
-        AddressSessionHelper.zoneIdsMatch(
-          locationController.selectedAddress?.zoneId,
-          sessionZone,
-        )) {
-      _pendingBookingAddress = locationController.selectedAddress;
-      return;
-    }
-
-    if (addresses.isNotEmpty) {
-      _pendingBookingAddress = addresses.first;
-      return;
-    }
-
-    final saved = locationController.getUserAddress();
-    if (saved != null && AddressSessionHelper.zoneIdsMatch(saved.zoneId, sessionZone)) {
-      _pendingBookingAddress = saved;
-    }
+    syncPendingBookingAddress(shouldUpdate: false);
   }
 
   void _syncPendingBookingScheduleFromController() {

@@ -1,6 +1,5 @@
 import 'package:demandium/api/local/cache_response.dart';
 import 'package:demandium/helper/data_sync_helper.dart';
-import 'package:demandium/helper/file_validation_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -106,8 +105,11 @@ class UserController extends GetxController implements GetxService {
 
 
   void pickProfileImage() async {
-    _pickedProfileImageFile = await FileValidationHelper.validateAndPickImage(
+    _pickedProfileImageFile = await ImagePickCropHelper.pickCropAndValidate(
       source: ImageSource.gallery,
+      lockAspectRatio: true,
+      ratioX: 1,
+      ratioY: 1,
     );
     update();
   }

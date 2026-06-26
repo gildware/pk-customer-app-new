@@ -314,11 +314,24 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
       if (!AddressSessionHelper.hasUsableSessionAddress()) {
         if (!AddressSessionHelper.hasValidActiveAddress()) {
+          final isLoggedIn = Get.find<AuthController>().isLoggedIn();
+          final hasSavedAddresses = locationController.addressList?.isNotEmpty ?? false;
+          if (isLoggedIn && hasSavedAddresses) {
+            if (!Get.isBottomSheetOpen! &&
+                !AddressSessionHelper.isPostAuthAddressPickerScheduled) {
+              await AddressSessionHelper.openAddressPicker(mandatory: true);
+            }
+            return;
+          }
+
           AddressSessionHelper.redirectToAddressSetup();
           return;
         }
 
-        await AddressSessionHelper.openAddressPicker(mandatory: true);
+        if (!Get.isBottomSheetOpen! &&
+            !AddressSessionHelper.isPostAuthAddressPickerScheduled) {
+          await AddressSessionHelper.openAddressPicker(mandatory: true);
+        }
         if (!mounted) return;
 
         if (!AddressSessionHelper.hasUsableSessionAddress()) {

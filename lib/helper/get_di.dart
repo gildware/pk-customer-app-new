@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:demandium/api/local/cache_response.dart';
+import 'package:demandium/feature/profile/controller/customer_received_rating_controller.dart';
 import 'package:demandium/common/repo/data_sync_repo.dart';
 import 'package:demandium/feature/home/repository/home_bundle_repo.dart';
 import 'package:demandium/feature/auth/controller/facebook_login_controller.dart';
@@ -60,6 +61,7 @@ Future<Map<String, Map<String, String>>> init() async {
   Get.lazyPut(() => AuthController(authRepo: Get.find()));
   Get.lazyPut(() => LocalizationController(sharedPreferences: Get.find(), apiClient: Get.find()));
   Get.lazyPut(() => UserController(userRepo: Get.find()));
+  Get.lazyPut(() => CustomerReceivedRatingController(userRepo: Get.find()));
   Get.lazyPut(() => BottomNavController());
   // Get.lazyPut(() => AiChatController());
   Get.lazyPut(() => LanguageController());

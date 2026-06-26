@@ -3,19 +3,33 @@ import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
 
-class LoyaltyPointScreen extends StatelessWidget {
+class LoyaltyPointScreen extends StatefulWidget {
   final String? fromNotification;
   const LoyaltyPointScreen({super.key, this.fromNotification}) ;
+
+  @override
+  State<LoyaltyPointScreen> createState() => _LoyaltyPointScreenState();
+}
+
+class _LoyaltyPointScreenState extends State<LoyaltyPointScreen> {
+  bool _featureRedirectScheduled = false;
+
+  void _redirectIfFeatureDisabled(SplashController splashController) {
+    if (_featureRedirectScheduled) {
+      return;
+    }
+    if (splashController.currentDataSource == DataSourceEnum.client &&
+        splashController.configModel.content?.loyaltyPointStatus == 0) {
+      _featureRedirectScheduled = true;
+      runAfterFrame(() => Get.offAllNamed(RouteHelper.getMainRoute("home")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<SplashController>(
       builder: (splashController) {
-        if(splashController.currentDataSource == DataSourceEnum.client && splashController.configModel.content?.loyaltyPointStatus == 0){
-          Future.delayed(const Duration(microseconds: 100)).then((value) {
-            Get.offAllNamed(RouteHelper.getMainRoute("home"));
-          });
-        }
+        _redirectIfFeatureDisabled(splashController);
         return CustomPopWidget(
           child: Scaffold(
             drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
@@ -52,7 +66,7 @@ class LoyaltyPointScreen extends StatelessWidget {
               ),
             ),
               onBackPressed: (){
-                if(fromNotification == "fromNotification"){
+                if(widget.fromNotification == "fromNotification"){
                   Get.offAllNamed(RouteHelper.getMainRoute("home"));
                 }else{
                   Get.back();

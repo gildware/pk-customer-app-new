@@ -7,6 +7,7 @@ import 'package:demandium/feature/home/controller/campaign_controller.dart';
 import 'package:demandium/feature/provider/controller/nearby_provider_controller.dart';
 import 'package:demandium/feature/provider/controller/provider_booking_controller.dart';
 import 'package:demandium/helper/db_helper.dart';
+import 'package:demandium/helper/navigation_helper.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:uuid/uuid.dart';
@@ -15,6 +16,9 @@ import 'package:uuid/uuid.dart';
 class AddressSessionHelper {
   static bool _homeRefreshPending = false;
   static bool _homeRefreshInFlight = false;
+  static bool _postAuthAddressPickerScheduled = false;
+
+  static bool get isPostAuthAddressPickerScheduled => _postAuthAddressPickerScheduled;
 
   static bool get isHomeRefreshPending => _homeRefreshPending;
 
@@ -341,6 +345,10 @@ class AddressSessionHelper {
     bool mandatory = false,
     String? redirectRoute,
   }) async {
+    if (Get.isBottomSheetOpen == true) {
+      return;
+    }
+
     final context = Get.context;
     if (context == null) {
       Get.offNamed(RouteHelper.getAccessLocationRoute('home'));
@@ -352,21 +360,35 @@ class AddressSessionHelper {
       return;
     }
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: !mandatory,
-      enableDrag: !mandatory,
-      backgroundColor: Colors.transparent,
-      useRootNavigator: true,
-      builder: (sheetContext) => PopScope(
+    await Get.bottomSheet<void>(
+      PopScope(
         canPop: !mandatory,
         child: AddressSelectionBottomSheet(
           mandatory: mandatory,
           redirectRoute: redirectRoute,
         ),
       ),
+      isScrollControlled: true,
+      isDismissible: !mandatory,
+      enableDrag: !mandatory,
+      backgroundColor: Colors.transparent,
     );
+  }
+
+  /// Leaves auth routes before showing the mandatory picker so touches are not blocked.
+  static Future<void> presentMandatoryAddressPickerAfterNavigation({
+    required String route,
+  }) async {
+    if (Get.isBottomSheetOpen == true) {
+      return;
+    }
+
+    _postAuthAddressPickerScheduled = true;
+    await Get.offAllNamed(route);
+    runAfterFrame(() {
+      _postAuthAddressPickerScheduled = false;
+      unawaited(openAddressPicker(mandatory: true, redirectRoute: route));
+    });
   }
 
   static Future<bool> isPointInsideServiceZones(LatLng point) async {
@@ -514,28 +536,32 @@ class AddressSessionHelper {
         savedAddresses != null &&
         savedAddresses.isNotEmpty) {
       if (savedAddresses.length == 1) {
-        await applySelectedAddress(
+        final applied = await applySelectedAddress(
           savedAddresses.first,
           redirectRoute: route,
           canRoute: true,
           closeOverlays: false,
         );
-        return true;
-      }
-
-      final preferred = pickPreferredSavedAddress(savedAddresses);
-      if (preferred != null && hasValidActiveAddress()) {
-        await applySelectedAddress(
-          preferred,
-          redirectRoute: route,
-          canRoute: true,
-          closeOverlays: false,
-        );
-        return true;
+        if (applied) {
+          return true;
+        }
+      } else {
+        final preferred = pickPreferredSavedAddress(savedAddresses);
+        if (preferred != null && hasValidActiveAddress()) {
+          final applied = await applySelectedAddress(
+            preferred,
+            redirectRoute: route,
+            canRoute: true,
+            closeOverlays: false,
+          );
+          if (applied) {
+            return true;
+          }
+        }
       }
     }
 
-    await openAddressPicker(mandatory: true, redirectRoute: route);
+    await presentMandatoryAddressPickerAfterNavigation(route: route);
     return true;
   }
 

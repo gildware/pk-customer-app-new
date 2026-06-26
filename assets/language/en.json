@@ -1356,5 +1356,7 @@
   "ai_chat_disabled": "Something went wrong with AI support. Please try again in a few minutes, or use Help & Support.",
   "work": "Work",
   "work_showcase": "Work Showcase",
-  "no_showcase_items": "No work samples to display yet"
+  "no_showcase_items": "No work samples to display yet",
+  "crop_image": "Crop image",
+  "crop_image_unavailable_using_original": "Crop unavailable; using the selected image"
 }

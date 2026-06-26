@@ -6,7 +6,7 @@ import 'package:demandium/common/widgets/custom_highlight_animation_widget.dart'
 import 'package:demandium/feature/location/widget/pickmap_dialog_widget.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class AddressSelectionBottomSheet extends StatelessWidget {
+class AddressSelectionBottomSheet extends StatefulWidget {
   final bool mandatory;
   final String? redirectRoute;
   const AddressSelectionBottomSheet({
@@ -16,12 +16,21 @@ class AddressSelectionBottomSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    bool isLoggedIn = Get.find<AuthController>().isLoggedIn();
-    
-    if (isLoggedIn) {
+  State<AddressSelectionBottomSheet> createState() => _AddressSelectionBottomSheetState();
+}
+
+class _AddressSelectionBottomSheetState extends State<AddressSelectionBottomSheet> {
+  @override
+  void initState() {
+    super.initState();
+    if (Get.find<AuthController>().isLoggedIn()) {
       Get.find<LocationController>().getAddressList();
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoggedIn = Get.find<AuthController>().isLoggedIn();
 
     return PointerInterceptor(
       child: GetBuilder<LocationController>(
@@ -107,7 +116,7 @@ class AddressSelectionBottomSheet extends StatelessWidget {
                             if (isLoggedIn && (locationController.addressList?.isNotEmpty ?? false))
                               AddressListContent(
                                 locationController: locationController,
-                                redirectRoute: redirectRoute,
+                                redirectRoute: widget.redirectRoute,
                               )
                             else
                               const EmptyAddressState(),
@@ -133,7 +142,7 @@ class AddressSelectionBottomSheet extends StatelessWidget {
                           AddressActionButtons(
                             locationController: locationController,
                             isLoggedIn: isLoggedIn,
-                            redirectRoute: redirectRoute,
+                            redirectRoute: widget.redirectRoute,
                           ),
                           SizedBox(height: MediaQuery.of(context).padding.bottom + Dimensions.paddingSizeDefault),
                         ],
@@ -398,7 +407,7 @@ class AddressListItem extends StatelessWidget {
                 Opacity(
                   opacity: isDisabled ? 0.55 : 1,
                   child: InkWell(
-                    onTap: isChecking ? null : onTap,
+                    onTap: onTap,
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(

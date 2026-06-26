@@ -27,34 +27,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool pickedAddress = AddressSessionHelper.hasValidActiveAddress();
 
     final profileCartModelList = [
-      ProfileCardItemModel( 'my_address'.tr, Images.address,RouteHelper.getAddressRoute('fromProfileScreen'),
+      ProfileCardItemModel(
+        'my_address'.tr,
+        'my_address',
+        RouteHelper.getAddressRoute('fromProfileScreen'),
       ),
       ProfileCardItemModel(
-        'notifications'.tr, Images.notification,
-        pickedAddress  ? RouteHelper.getNotificationRoute() : RouteHelper.getPickMapRoute( RouteHelper.notification , true, 'false', null, null),
+        'notifications'.tr,
+        'notifications',
+        pickedAddress
+            ? RouteHelper.getNotificationRoute()
+            : RouteHelper.getPickMapRoute(
+                RouteHelper.notification, true, 'false', null, null),
       ),
-      if(!Get.find<AuthController>().isLoggedIn() )
-      ProfileCardItemModel(
-        'sign_in'.tr, Images.logout, RouteHelper.getSignInRoute(redirectUrl : RouteHelper.profile),
-      ),
-
-
-      if(Get.find<AuthController>().isLoggedIn() )
+      if (!Get.find<AuthController>().isLoggedIn())
         ProfileCardItemModel(
-          'suggest_new_service'.tr, Images.suggestServiceIcon,
-          pickedAddress  ?  RouteHelper.getNewSuggestedServiceScreen() :  RouteHelper.getPickMapRoute( RouteHelper.suggestService , true, 'false', null, null) ,
+          'sign_in'.tr,
+          'sign_in',
+          RouteHelper.getSignInRoute(redirectUrl: RouteHelper.profile),
         ),
-
-      if(Get.find<AuthController>().isLoggedIn() )
+      if (Get.find<AuthController>().isLoggedIn())
         ProfileCardItemModel(
-          'delete_account'.tr, Images.accountDelete, 'delete_account',
+          'suggest_new_service'.tr,
+          'suggest_new_service',
+          pickedAddress
+              ? RouteHelper.getNewSuggestedServiceScreen()
+              : RouteHelper.getPickMapRoute(
+                  RouteHelper.suggestService, true, 'false', null, null),
         ),
-
-      if(Get.find<AuthController>().isLoggedIn() )
+      if (Get.find<AuthController>().isLoggedIn())
         ProfileCardItemModel(
-        'logout'.tr, Images.logout, 'sign_out',
-      ),
-
+          'delete_account'.tr,
+          'delete_account',
+          'delete_account',
+        ),
+      if (Get.find<AuthController>().isLoggedIn())
+        ProfileCardItemModel(
+          'logout'.tr,
+          'logout',
+          'sign_out',
+        ),
     ];
 
     return CustomPopWidget(
@@ -102,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       itemBuilder: (context, index) {
                         return ProfileCardItem(
                           title: profileCartModelList[index].title,
-                          leadingIcon: profileCartModelList[index].loadingIcon,
+                          iconKey: profileCartModelList[index].iconKey,
                           onTap: () {
                             if(profileCartModelList[index].routeName == 'sign_out'){
                               if(

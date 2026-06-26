@@ -309,18 +309,13 @@ class CheckOutController extends GetxController implements GetxService{
      if(response.statusCode == 200 && response.body["response_code"] == "booking_place_success_200"){
        _isPlacedOrderSuccessfully = true;
        final content = response.body['content'];
-       _bookingReadableIds = [];
-       if (content is Map && content['readable_ids'] is List) {
-         for (final id in content['readable_ids'] as List) {
-           final text = id?.toString().trim() ?? '';
-           if (text.isNotEmpty) _bookingReadableIds.add(text);
-         }
-       }
+       _bookingReadableIds = _parseReadableIdsFromContent(content);
        if (_bookingReadableIds.isEmpty && content is Map && content['readable_id'] != null) {
          final single = content['readable_id'].toString().trim();
          if (single.isNotEmpty) _bookingReadableIds.add(single);
        }
        _bookingReadableId = _bookingReadableIds.join(', ');
+       final bookingIds = _parseBookingIdsFromContent(content);
        _placedBookingSummaries = [];
        for (var i = 0; i < _bookingReadableIds.length; i++) {
          _placedBookingSummaries.add(PlacedBookingSummary(
@@ -328,16 +323,18 @@ class CheckOutController extends GetxController implements GetxService{
            serviceName: i < serviceNamesBeforePlace.length
                ? serviceNamesBeforePlace[i]
                : 'service'.tr,
+           bookingId: i < bookingIds.length ? bookingIds[i] : null,
          ));
        }
        String? token = content is Map ? content['token']?.toString() : null;
        Get.find<CartController>().getCartListFromServer();
 
       if(paymentMethod != "offline_payment"){
-        updateState(PageState.complete);
         if(ResponsiveHelper.isWeb()) {
           String token = base64Encode(utf8.encode("&&attribute_id=$_bookingReadableId"));
-          Get.toNamed(RouteHelper.getCheckoutRoute('cart',Get.find<CheckOutController>().currentPageState.name,"null", token: token));
+          Get.offAllNamed(RouteHelper.getCheckoutRoute('cart', 'complete', 'null', token: token));
+        } else {
+          Get.offAllNamed(RouteHelper.getCheckoutRoute('cart', 'complete', 'null'));
         }
 
         customSnackBar('${response.body['message']}'.tr,type : ToasterMessageType.success,margin: 55);
@@ -505,7 +502,7 @@ class CheckOutController extends GetxController implements GetxService{
        if(readableId !=null){
         token = base64Encode(utf8.encode("&&attribute_id=$readableId"));
        }
-       Get.toNamed(RouteHelper.getCheckoutRoute('cart',"complete","null", token: token ));
+       Get.offAllNamed(RouteHelper.getCheckoutRoute('cart',"complete","null", token: token ));
 
      } else if(fromPage == "custom-post"){
        Get.offNamed(RouteHelper.getOrderSuccessRoute('success'));
@@ -694,6 +691,7 @@ class CheckOutController extends GetxController implements GetxService{
   void parseToken(String token) async {
     try{
       _bookingReadableId = StringParser.parseString(utf8.decode(base64Url.decode(token)), "attribute_id");
+      _bookingReadableIds = _splitReadableIds(_bookingReadableId);
     }catch(e, stack){
       ErrorLogger.record(e, stack, reason: 'CheckOutController.parseToken.decode');
       customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
@@ -708,6 +706,7 @@ class CheckOutController extends GetxController implements GetxService{
         PaymentResponseModel? paymentResponse = await getDigitalPaymentResponse(transactionId: transactionId);
 
         if(paymentResponse !=null){
+          _applyPaymentResponseSummaries(paymentResponse);
 
           String? loginToken = paymentResponse.content?.loginToken;
           String? phone = paymentResponse.content?.newUserPhone;
@@ -722,13 +721,95 @@ class CheckOutController extends GetxController implements GetxService{
           customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
         }
       } else {
-        customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
+        await ensurePlacedBookingSummaries();
       }
     }catch(e, stack){
       ErrorLogger.record(e, stack, reason: 'CheckOutController.parseToken.verify');
       customSnackBar('payment_failed_try_again'.tr, type: ToasterMessageType.error);
     }
 
+  }
+
+  List<String> _splitReadableIds(String value) {
+    return value
+        .split(RegExp(r'[,\s]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _parseReadableIdsFromContent(dynamic content) {
+    final ids = <String>[];
+    if (content is Map && content['readable_ids'] is List) {
+      for (final id in content['readable_ids'] as List) {
+        final text = id?.toString().trim() ?? '';
+        if (text.isNotEmpty) ids.add(text);
+      }
+    }
+    return ids;
+  }
+
+  List<String> _parseBookingIdsFromContent(dynamic content) {
+    final ids = <String>[];
+    if (content is Map && content['booking_id'] is List) {
+      for (final id in content['booking_id'] as List) {
+        final text = id?.toString().trim() ?? '';
+        if (text.isNotEmpty) ids.add(text);
+      }
+    }
+    return ids;
+  }
+
+  void _applyPaymentResponseSummaries(PaymentResponseModel paymentResponse) {
+    final content = paymentResponse.content;
+    if (content == null) {
+      ensurePlacedBookingSummaries();
+      return;
+    }
+
+    final readableIds = content.readableIds.isNotEmpty
+        ? content.readableIds
+        : _bookingReadableIds;
+    final bookingIds = content.bookingIds;
+
+    if (readableIds.isNotEmpty) {
+      _bookingReadableIds = readableIds;
+      _bookingReadableId = readableIds.join(', ');
+    }
+
+    _placedBookingSummaries = [];
+    for (var i = 0; i < readableIds.length; i++) {
+      _placedBookingSummaries.add(PlacedBookingSummary(
+        readableId: readableIds[i],
+        serviceName: 'service'.tr,
+        bookingId: i < bookingIds.length ? bookingIds[i] : content.bookingId,
+      ));
+    }
+    _isPlacedOrderSuccessfully = true;
+    update();
+  }
+
+  Future<void> ensurePlacedBookingSummaries() async {
+    if (_placedBookingSummaries.isNotEmpty) {
+      return;
+    }
+
+    if (_bookingReadableIds.isEmpty && _bookingReadableId.isNotEmpty) {
+      _bookingReadableIds = _splitReadableIds(_bookingReadableId);
+    }
+
+    if (_bookingReadableIds.isEmpty) {
+      return;
+    }
+
+    _placedBookingSummaries = _bookingReadableIds
+        .map((readableId) => PlacedBookingSummary(
+              readableId: readableId,
+              serviceName: 'service'.tr,
+            ))
+        .toList();
+    _isPlacedOrderSuccessfully = true;
+    update();
   }
 
   void updateBookingPlaceStatus({bool status = true, bool shouldUpdate = false}){

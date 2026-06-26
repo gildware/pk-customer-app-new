@@ -42,13 +42,13 @@ class SplashController extends GetxController implements GetxService {
 
           if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 1
               && _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1 && source == DataSourceEnum.client  && !AppConstants.avoidMaintenanceMode && !kIsWeb ){
-            Get.offAllNamed(RouteHelper.getMaintenanceRoute());
+            runAfterFrame(() => Get.offAllNamed(RouteHelper.getMaintenanceRoute()));
           } else if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 1
               && _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 1 && source == DataSourceEnum.client  && !AppConstants.avoidMaintenanceMode && kIsWeb ){
-            Get.offAllNamed(RouteHelper.getMaintenanceRoute());
+            runAfterFrame(() => Get.offAllNamed(RouteHelper.getMaintenanceRoute()));
           }
           else if((Get.currentRoute.contains(RouteHelper.maintenance) &&  (isAppMaintenanceDisabled || isWebMaintenanceDisabled))) {
-            Get.offAllNamed(RouteHelper.getInitialRoute());
+            runAfterFrame(() => Get.offAllNamed(RouteHelper.getInitialRoute()));
           }
           else if(_configModel?.content?.maintenanceMode?.maintenanceStatus == 0){
             if((_configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.mobileApp == 1 && !kIsWeb) ||( _configModel?.content?.maintenanceMode?.selectedMaintenanceSystem?.webApp == 1 && kIsWeb)){

@@ -16,13 +16,13 @@ class QuantityButton extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
           decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: cartController.isCartLoading ? Theme.of(context).disabledColor : Theme.of(context).colorScheme.secondary
+              color: cartController.isCartLoading ? Theme.of(context).disabledColor : Theme.of(context).primaryColor
           ),
           alignment: Alignment.center,
           child: Icon(
             isIncrement ? Icons.add : Icons.remove,
             size: 15,
-            color:Theme.of(context).cardColor ,
+            color: Theme.of(context).primaryColorLight,
           ),
         ),
       );

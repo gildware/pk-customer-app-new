@@ -41,27 +41,39 @@ class MenuButton extends StatelessWidget {
         ]),
         Positioned.fill(child: RippleButton(onTap: () async {
           if(menu.isLogout) {
-            Get.back();
-            if(Get.find<AuthController>().isLoggedIn()) {
-              LogoutConfirmationDialog.show();
-            }else {
-              Get.toNamed(RouteHelper.getSignInRoute());
-            }
+            closeOverlayThen(() {
+              if(Get.find<AuthController>().isLoggedIn()) {
+                LogoutConfirmationDialog.show();
+              } else {
+                Get.toNamed(RouteHelper.getSignInRoute());
+              }
+            });
+            return;
           }
-          else if (menu.iconKey == 'become_provider') {
-            await ProviderAppLauncher.open();
+
+          if (menu.iconKey == 'become_provider') {
+            closeOverlayThen(() async {
+              await ProviderAppLauncher.open();
+            });
+            return;
           }
-          else if(menu.route!.startsWith('http')) {
-            if(await canLaunchUrlString(menu.route!)) {
-          launchUrlString(menu.route!, mode: LaunchMode.externalApplication);}
-          } else {
+
+          if(menu.route!.startsWith('http')) {
+            closeOverlayThen(() async {
+              if(await canLaunchUrlString(menu.route!)) {
+                launchUrlString(menu.route!, mode: LaunchMode.externalApplication);
+              }
+            });
+            return;
+          }
+
+          closeOverlayThen(() {
             if(menu.route!.contains('/language')){
-              Get.back();
               Get.bottomSheet(const ChooseLanguageBottomSheet(), backgroundColor: Colors.transparent, isScrollControlled: true);
             } else {
               Get.offNamed(menu.route!);
             }
-          }
+          });
         }))
       ],
     );

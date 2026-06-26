@@ -6,8 +6,14 @@ import 'package:get/get.dart';
 class VideoPlaceholder extends StatelessWidget {
   final double? height;
   final double? width;
+  final bool showPlayIcon;
 
-  const VideoPlaceholder({super.key, this.height, this.width});
+  const VideoPlaceholder({
+    super.key,
+    this.height,
+    this.width,
+    this.showPlayIcon = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,49 +22,51 @@ class VideoPlaceholder extends StatelessWidget {
     return SizedBox(
       height: height,
       width: width,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxSide = constraints.maxWidth.isFinite && constraints.maxHeight.isFinite
-              ? constraints.maxWidth < constraints.maxHeight
-                  ? constraints.maxWidth
-                  : constraints.maxHeight
-              : constraints.maxWidth.isFinite
-                  ? constraints.maxWidth
-                  : constraints.maxHeight.isFinite
-                      ? constraints.maxHeight
-                      : 120.0;
-          final iconSize = (maxSide * 0.22).clamp(40.0, 80.0);
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            Images.videoPlaceholder,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+          if (showPlayIcon)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final maxSide = constraints.maxWidth.isFinite && constraints.maxHeight.isFinite
+                    ? constraints.maxWidth < constraints.maxHeight
+                        ? constraints.maxWidth
+                        : constraints.maxHeight
+                    : constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : constraints.maxHeight.isFinite
+                            ? constraints.maxHeight
+                            : 120.0;
+                final iconSize = (maxSide * 0.22).clamp(40.0, 80.0);
 
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? const [Color(0xFF242424), Color(0xFF121212)]
-                    : const [Color(0xFFF0F3F7), Color(0xFFE2E8EF)],
-              ),
-            ),
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.all(iconSize * 0.35),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(iconSize * 0.2),
-                  border: Border.all(
-                    color: (isDark ? const Color(0xFF6B7280) : const Color(0xFF9AA8B8))
-                        .withValues(alpha: 0.55),
-                    width: 2,
+                return Center(
+                  child: Container(
+                    padding: EdgeInsets.all(iconSize * 0.35),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(iconSize * 0.2),
+                      border: Border.all(
+                        color: (isDark ? const Color(0xFF6B7280) : const Color(0xFF9AA8B8))
+                            .withValues(alpha: 0.55),
+                        width: 2,
+                      ),
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      size: iconSize,
+                      color: isDark ? const Color(0xFF6B7280) : const Color(0xFF9AA8B8),
+                    ),
                   ),
-                ),
-                child: Icon(
-                  Icons.play_arrow_rounded,
-                  size: iconSize,
-                  color: isDark ? const Color(0xFF6B7280) : const Color(0xFF9AA8B8),
-                ),
-              ),
+                );
+              },
             ),
-          );
-        },
+        ],
       ),
     );
   }

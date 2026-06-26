@@ -69,7 +69,6 @@ class LocalizationController extends GetxController implements GetxService {
     _selectedIndex = 0;
     _locale = Locale(english.languageCode!, english.countryCode);
     _isLtr = true;
-    Get.updateLocale(_locale);
     sharedPreferences.setString(AppConstants.languageCode, english.languageCode!);
     sharedPreferences.setString(AppConstants.countryCode, english.countryCode!);
     apiClient.updateHeader(
@@ -78,6 +77,20 @@ class LocalizationController extends GetxController implements GetxService {
       english.languageCode,
       Get.isRegistered<SplashController>() ? Get.find<SplashController>().getGuestId() : '',
     );
+    _scheduleLocaleUpdate(_locale);
+  }
+
+  void _scheduleLocaleUpdate(Locale locale) {
+    if (Get.locale?.languageCode == locale.languageCode &&
+        Get.locale?.countryCode == locale.countryCode) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.locale?.languageCode != locale.languageCode ||
+          Get.locale?.countryCode != locale.countryCode) {
+        Get.updateLocale(locale);
+      }
+    });
   }
 
   void saveLanguage(Locale locale) async {

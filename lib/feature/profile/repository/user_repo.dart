@@ -52,4 +52,10 @@ class UserRepo extends DataSyncRepo{
     return await apiClient.deleteData(AppConstants.customerRemove);
   }
 
+  Future<Response> getReceivedCustomerRatings(int offset) async {
+    return apiClient.getData(
+      '${AppConstants.customerReceivedRatingUri}?limit=10&offset=$offset',
+    );
+  }
+
 }

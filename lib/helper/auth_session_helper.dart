@@ -38,12 +38,12 @@ class AuthSessionHelper {
 
       if (onMainShell) {
         if (!AddressSessionHelper.hasValidActiveAddress()) {
-          AddressSessionHelper.redirectToAddressSetup();
+          runAfterFrame(() => AddressSessionHelper.redirectToAddressSetup());
         } else {
-          Get.offAllNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
+          runAfterFrame(() => Get.offAllNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home)));
         }
       } else if (route != RouteHelper.getInitialRoute()) {
-        Get.offAllNamed(RouteHelper.getInitialRoute());
+        runAfterFrame(() => Get.offAllNamed(RouteHelper.getInitialRoute()));
       }
 
       if (showSnackBar) {

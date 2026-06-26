@@ -10,7 +10,6 @@ class ColumnText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('=========> $isProfileTimeAgo');
     return SizedBox(
       width: ResponsiveHelper.isDesktop(context) ? Dimensions.webMaxWidth * .40 : Get.width * .40,
       child: Center(
@@ -34,19 +33,19 @@ class ColumnText extends StatelessWidget {
               replaceAll('years ago', 'years_ago'.tr)
                   : amount.toString(),
               style: robotoBold.copyWith(
-                fontSize: 16,
+                fontSize: Dimensions.fontSizeDefault,
                 color:  Get.isDarkMode ? Theme.of(context).textTheme.bodyLarge?.color : Theme.of(context).colorScheme.primary,
               ),
               textDirection: TextDirection.ltr,
             ),
             const SizedBox(
-              height: Dimensions.paddingSizeSmall,
+              height: Dimensions.paddingSizeExtraSmall,
             ),
             Text(
               title,
               textAlign: TextAlign.center,
               style: robotoMedium.copyWith(
-                fontSize: 12,
+                fontSize: Dimensions.fontSizeExtraSmall,
                 color: Theme.of(context).hintColor,
               ),
             ),

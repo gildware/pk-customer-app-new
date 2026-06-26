@@ -33,7 +33,7 @@ class ApiChecker {
     } else if (response.statusCode == 204) {
       if (Get.find<AuthController>().isLoggedIn()) {
         customSnackBar('information_not_found'.tr, showDefaultSnackBar: showDefaultToaster);
-        Get.offAllNamed(RouteHelper.getInitialRoute());
+        runAfterFrame(() => Get.offAllNamed(RouteHelper.getInitialRoute()));
       } else {
         _showFallbackMessage(response, showDefaultToaster: showDefaultToaster);
       }
