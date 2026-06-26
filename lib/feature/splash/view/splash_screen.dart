@@ -89,6 +89,17 @@ class SplashScreenState extends State<SplashScreen> {
         return;
       }
 
+      try {
+        await MobileAppIconHelper.ensureReady(context);
+      } catch (e, stack) {
+        ErrorLogger.record(e, stack, reason: 'splash precache mobile icons');
+      }
+
+      if (!mounted) {
+        _routeInFlight = false;
+        return;
+      }
+
       if (!ResponsiveHelper.isWeb()) {
         unawaited(DigitalPaymentLauncher.tryResumePendingVerification());
       }

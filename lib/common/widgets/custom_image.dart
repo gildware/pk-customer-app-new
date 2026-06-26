@@ -23,11 +23,11 @@ class CustomImage extends StatelessWidget {
     return url.toLowerCase().endsWith('.gif');
   }
 
-  String get _placeholderAsset => placeholder ?? Images.placeholder;
+  String _resolvePlaceholderAsset() => Images.resolvePlaceholder(placeholder);
 
   Widget _placeholderWidget(BuildContext context) {
     return Image.asset(
-      _placeholderAsset,
+      _resolvePlaceholderAsset(),
       height: height,
       width: width,
       fit: placeHolderBoxFit ?? fit,

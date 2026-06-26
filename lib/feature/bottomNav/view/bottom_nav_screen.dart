@@ -53,6 +53,12 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
       default:
         nav.changePage(BnbItem.homePage, shouldUpdate: false);
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(MobileAppIconHelper.ensureReady(context));
+      }
+    });
   }
 
   @override
@@ -189,9 +195,17 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
 
                 _bnbItem(
                   icon: Images.menu, bnbItem: BnbItem.more, context: context,
-                  onTap: () => Get.bottomSheet(const MenuScreen(),
-                    backgroundColor: Colors.transparent, isScrollControlled: true,
-                  ),
+                  onTap: () async {
+                    await MobileAppIconHelper.ensureReady(context);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    Get.bottomSheet(
+                      const MenuScreen(),
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                    );
+                  },
                 ),
               ]),
             ),

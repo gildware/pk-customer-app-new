@@ -180,18 +180,29 @@ class _ProviderProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetBuilder<ProviderBookingController>(
       builder: (providerBookingController) {
-        return Column(
+        if (ResponsiveHelper.isDesktop(context)) {
+          return ProviderDetailsTopCard(
+            providerId: providerId,
+            onReviewsTap: onReviewsTap,
+          );
+        }
+
+        return Stack(
+          clipBehavior: Clip.none,
           children: [
-            if(!ResponsiveHelper.isDesktop(context))
-              CustomImage(
-                image: providerBookingController.providerDetailsContent?.provider?.coverImageFullPath ?? '',
-                placeholder: Images.placeholder,
-                width: context.width,
-                height: context.width / 3,
+            CustomImage(
+              image: providerBookingController.providerDetailsContent?.provider?.coverImageFullPath ?? '',
+              placeholder: Images.placeholder,
+              width: context.width,
+              height: context.width / 3.5,
+              fit: BoxFit.cover,
+            ),
+            Padding(
+              padding: EdgeInsets.only(top: (context.width / 3.5) - 24),
+              child: ProviderDetailsTopCard(
+                providerId: providerId,
+                onReviewsTap: onReviewsTap,
               ),
-            ProviderDetailsTopCard(
-              providerId: providerId,
-              onReviewsTap: onReviewsTap,
             ),
           ],
         );

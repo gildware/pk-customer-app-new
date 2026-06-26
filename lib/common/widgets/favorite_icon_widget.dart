@@ -103,7 +103,13 @@ class _FavoriteIconWidgetState extends State<FavoriteIconWidget> with SingleTick
         padding: widget.iconPadding ?? const EdgeInsets.all(Dimensions.paddingSizeDefault),
         child: ScaleTransition(
           scale: Tween(begin: 0.5, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut)),
-          child: Image.asset(widget.value == 1 && Get.find<AuthController>().isLoggedIn() ? Images.favorite : Images.unFavorite, width: widget.iconSize ?? 23,),
+          child: Icon(
+            Icons.favorite,
+            size: widget.iconSize ?? 23,
+            color: widget.value == 1 && Get.find<AuthController>().isLoggedIn()
+                ? Theme.of(context).colorScheme.error
+                : (Get.isDarkMode ? Colors.white : Theme.of(context).hintColor),
+          ),
         ),
       ),
     );

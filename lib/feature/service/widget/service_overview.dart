@@ -19,7 +19,11 @@ class ServiceOverview extends StatelessWidget {
           ) : null,
           child: Container(
             padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-              color: ResponsiveHelper.isMobile(context) ?  Theme.of(context).cardColor:Colors.transparent,
+              color: ResponsiveHelper.isMobile(context)
+                  ? (Get.isDarkMode
+                      ? context.customThemeColors.cardColor
+                      : Theme.of(context).cardColor)
+                  : Colors.transparent,
               child: HtmlWidget(description)),
         ),
       ),

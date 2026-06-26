@@ -1,5 +1,4 @@
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
-import 'package:demandium/helper/extension_helper.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
@@ -11,9 +10,6 @@ class AllCategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Responsive sizing
     final bool isDesktop = ResponsiveHelper.isDesktop(context);
-    final double containerSize = isDesktop ? 80 : 65;
-    final double imageSize = isDesktop ? 50 : 40;
-    final double itemWidth = isDesktop ? 80 : 65;
     final double? pageSizeWidth = ResponsiveHelper.isDesktop(context) ? Dimensions.webMaxWidth * 0.6 : null;
 
     return CustomPopWidget(
@@ -54,6 +50,7 @@ class AllCategoryScreen extends StatelessWidget {
                           child: Container(
                             decoration: BoxDecoration(
                               color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
                               boxShadow: [
                                 BoxShadow(
                                   color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.05),
@@ -62,35 +59,28 @@ class AllCategoryScreen extends StatelessWidget {
                                 ),
                                 BoxShadow(
                                   color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.04),
-                                  // offset: const Offset(0, 2),
                                   blurRadius: 2,
                                 ),
-                              ]
+                              ],
                             ),
-                            child: Center(
-                              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
-                                Container(
-                                  height: containerSize,
-                                  width: containerSize,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.all(Radius.circular(Dimensions.radiusDefault)),
-                                    color: context.customThemeColors.searchBarBorder,
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: CustomImage(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    image: categoryController.categoryList?[index].imageFullPath ?? "",
+                                    fit: BoxFit.cover,
+                                    placeholder: Images.categoryPlaceholder,
                                   ),
-                                  child: Center(child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                                    child: CustomImage(
-                                      width: imageSize,
-                                      height: imageSize,
-                                      image: categoryController.categoryList?[index].imageFullPath ?? "",
-                                      fit: BoxFit.cover,
-                                      placeholder: Images.categoryPlaceholder,
-                                    ),
-                                  )),
                                 ),
-                                SizedBox(height: Dimensions.paddingSizeSmall),
-
-                                SizedBox(
-                                  width: itemWidth,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: Dimensions.paddingSizeExtraSmall,
+                                    vertical: Dimensions.paddingSizeSmall,
+                                  ),
                                   child: Text(
                                     categoryController.categoryList?[index].name ?? '',
                                     style: robotoRegular.copyWith(
@@ -105,8 +95,7 @@ class AllCategoryScreen extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-
-                              ]),
+                              ],
                             ),
                           ),
                         );

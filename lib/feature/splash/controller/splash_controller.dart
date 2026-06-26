@@ -73,6 +73,13 @@ class SplashController extends GetxController implements GetxService {
 
         update();
         update(['home_layout']);
+        if (source == DataSourceEnum.client) {
+          MobileAppIconHelper.invalidateCache();
+          final context = Get.context;
+          if (context != null && context.mounted) {
+            unawaited(MobileAppIconHelper.ensureReady(context));
+          }
+        }
       },
       suppressErrorWhenLocalSucceeded: true,
     );
@@ -98,6 +105,11 @@ class SplashController extends GetxController implements GetxService {
       _configModel = ConfigModel.fromJson(clientResponse.response?.body);
       update();
       update(['home_layout']);
+      MobileAppIconHelper.invalidateCache();
+      final context = Get.context;
+      if (context != null && context.mounted) {
+        unawaited(MobileAppIconHelper.ensureReady(context));
+      }
       if (Get.isRegistered<CompanyAvailabilityConfigWatcher>()) {
         await Get.find<CompanyAvailabilityConfigWatcher>().onConfigRefreshed();
       }

@@ -195,7 +195,9 @@ class ProgressCardWidget extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   Theme.of(Get.context!).colorScheme.primary
                 ),
-                backgroundColor: const Color(0xFFEAEAEA),
+                backgroundColor: Get.isDarkMode
+                    ? Theme.of(Get.context!).dividerColor
+                    : const Color(0xFFEAEAEA),
               ),
             ),
           ),
@@ -223,8 +225,13 @@ class ReviewCardWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
       decoration: transparent ? null : BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: Get.isDarkMode
+            ? context.customThemeColors.cardColor
+            : Theme.of(context).cardColor,
         borderRadius: const BorderRadius.all(Radius.circular(5)),
+        border: Get.isDarkMode
+            ? Border.all(color: Theme.of(context).dividerColor)
+            : null,
         boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
       ),
       child: Column(

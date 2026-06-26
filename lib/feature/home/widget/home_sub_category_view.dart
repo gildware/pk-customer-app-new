@@ -97,19 +97,13 @@ class _HomeSubCategoryViewState extends State<HomeSubCategoryView> {
                                       ),
                                       color: context.customThemeColors.searchBarBorder,
                                     ),
-                                    child: Center(
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                          Dimensions.radiusDefault,
-                                        ),
-                                        child: CustomImage(
-                                          width: metrics.imageSize,
-                                          height: metrics.imageSize,
-                                          image: category.imageFullPath ?? '',
-                                          fit: BoxFit.cover,
-                                          placeholder: Images.categoryPlaceholder,
-                                        ),
-                                      ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: CustomImage(
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      image: category.imageFullPath ?? '',
+                                      fit: BoxFit.cover,
+                                      placeholder: Images.categoryPlaceholder,
                                     ),
                                   ),
                                   const SizedBox(height: Dimensions.paddingSizeSmall),

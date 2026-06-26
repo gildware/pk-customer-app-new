@@ -1,6 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:demandium/helper/extension_helper.dart';
 import 'package:demandium/feature/splash/controller/splash_controller.dart';
 import 'package:demandium/common/widgets/custom_image.dart';
 import 'package:demandium/util/app_constants.dart';
@@ -112,7 +113,19 @@ class MobileAppIconHelper {
       return null;
     }
     final url = _isDark ? (entry['dark'] ?? entry['light']) : (entry['light'] ?? entry['dark']);
-    return normalizeMediaUrl(url);
+    final resolved = normalizeMediaUrl(url);
+    if (_isBundledDefaultIconPath(resolved)) {
+      return null;
+    }
+    return resolved;
+  }
+
+  /// API default icons live under `mobile-app-defaults` and are already bundled in the app.
+  static bool _isBundledDefaultIconPath(String? url) {
+    if (url == null || url.isEmpty) {
+      return false;
+    }
+    return url.contains('mobile-app-defaults/');
   }
 
   /// Admin mobile app logo → business logo → bundled asset.
@@ -164,6 +177,68 @@ class MobileAppIconHelper {
       fit: fit,
       color: color,
     );
+  }
+
+  static String _networkImageUrl(String resolvedUrl) {
+    return kIsWeb ? '${AppConstants.baseUrl}/image-proxy?url=$resolvedUrl' : resolvedUrl;
+  }
+
+  static Set<String> _allIconUrls() {
+    final urls = <String>{};
+    final icons = _icons;
+    if (icons != null) {
+      for (final entry in icons.values) {
+        for (final value in entry.values) {
+          final resolved = normalizeMediaUrl(value);
+          if (resolved != null &&
+              resolved.isNotEmpty &&
+              !_isBundledDefaultIconPath(resolved)) {
+            urls.add(_networkImageUrl(resolved));
+          }
+        }
+      }
+    }
+
+    final logo = appLogoUrl();
+    if (logo != null && logo.isNotEmpty) {
+      urls.add(_networkImageUrl(logo));
+    }
+
+    return urls;
+  }
+
+  /// Downloads menu / branding icons into the image cache so the More sheet opens without flicker.
+  static Future<void>? _readyFuture;
+
+  static void invalidateCache() {
+    _readyFuture = null;
+  }
+
+  static Future<void> ensureReady(BuildContext context) {
+    return _readyFuture ??= _downloadAll(context);
+  }
+
+  static Future<void> precacheAll() {
+    final context = Get.context;
+    if (context == null || !context.mounted) {
+      return Future.value();
+    }
+    return ensureReady(context);
+  }
+
+  static Future<void> _downloadAll(BuildContext context) async {
+    final urls = _allIconUrls();
+    if (urls.isEmpty) {
+      return;
+    }
+
+    await Future.wait(urls.map((url) async {
+      try {
+        await precacheImage(CachedNetworkImageProvider(url), context);
+      } catch (_) {
+        //
+      }
+    }));
   }
 }
 
@@ -277,15 +352,23 @@ class _NetworkOrAssetImage extends StatelessWidget {
       );
     }
 
-    return Image.network(
-      url!,
-      key: ValueKey(url),
+    final imageUrl = MobileAppIconHelper._networkImageUrl(url!);
+
+    return Image(
+      key: ValueKey(imageUrl),
+      image: CachedNetworkImageProvider(imageUrl),
       width: width,
       height: height,
       fit: fit,
       color: color,
       gaplessPlayback: true,
       filterQuality: FilterQuality.medium,
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded || frame != null) {
+          return child;
+        }
+        return SizedBox(width: width, height: height);
+      },
       errorBuilder: (_, error, stack) => Image.asset(
         fallbackAsset,
         width: width,
@@ -293,25 +376,6 @@ class _NetworkOrAssetImage extends StatelessWidget {
         fit: fit,
         color: color,
       ),
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) {
-          return child;
-        }
-        return SizedBox(
-          width: width,
-          height: height,
-          child: Center(
-            child: SizedBox(
-              width: width * 0.35,
-              height: width * 0.35,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: context.adaptivePrimaryColor.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

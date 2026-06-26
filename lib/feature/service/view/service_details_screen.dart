@@ -169,20 +169,22 @@ class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: .3),
+                        color: Get.isDarkMode
+                            ? Theme.of(context).dividerColor
+                            : Theme.of(context).colorScheme.primary.withValues(alpha: .3),
                         width: 1.0,
                       ),
                     ),
                   ),
                   tabBar: TabBar(
                       padding: const EdgeInsets.only(top: Dimensions.paddingSizeMini),
-                      unselectedLabelColor: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.4),
+                      unselectedLabelColor: context.tabUnselectedColor,
                       controller: serviceTabController.controller,
                       labelColor: context.tabSelectedColor,
                       labelStyle: robotoBold.copyWith(
                         fontSize: Dimensions.fontSizeSmall,
                       ),
-                      indicatorColor: Theme.of(context).colorScheme.primary,
+                      indicatorColor: context.tabIndicatorColor,
                       indicatorPadding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall),
                       labelPadding: const EdgeInsets.only(bottom: Dimensions.paddingSizeExtraSmall),
                       indicatorWeight: 2,
@@ -286,18 +288,20 @@ class _ServiceDetailsTabBarDelegate extends SliverPersistentHeaderDelegate {
           color: Get.isDarkMode ? Theme.of(context).scaffoldBackgroundColor : Theme.of(context).cardColor,
           border: Border(
             bottom: BorderSide(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: .3),
+              color: Get.isDarkMode
+                  ? Theme.of(context).dividerColor
+                  : Theme.of(context).colorScheme.primary.withValues(alpha: .3),
               width: 1.0,
             ),
           ),
         ),
         tabBar: TabBar(
           padding: const EdgeInsets.only(top: Dimensions.paddingSizeMini),
-          unselectedLabelColor: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.4),
+          unselectedLabelColor: context.tabUnselectedColor,
           controller: tabController,
           labelColor: context.tabSelectedColor,
           labelStyle: robotoBold.copyWith(fontSize: Dimensions.fontSizeSmall),
-          indicatorColor: Theme.of(context).colorScheme.primary,
+          indicatorColor: context.tabIndicatorColor,
           indicatorPadding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall),
           labelPadding: const EdgeInsets.only(bottom: Dimensions.paddingSizeExtraSmall),
           indicatorWeight: 2,

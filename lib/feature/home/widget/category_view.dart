@@ -15,7 +15,6 @@ class CategoryView extends StatelessWidget {
       // Responsive sizing
       final bool isDesktop = ResponsiveHelper.isDesktop(context);
       final double containerSize = isDesktop ? 80 : 65;
-      final double imageSize = isDesktop ? 50 : 40;
       final double itemWidth = isDesktop ? 80 : 65;
 
       return categoryList != null && categoryList.isEmpty ? const SizedBox() :
@@ -59,16 +58,14 @@ class CategoryView extends StatelessWidget {
                                 borderRadius: const BorderRadius.all(Radius.circular(Dimensions.radiusDefault)),
                                 color: context.customThemeColors.searchBarBorder,
                               ),
-                              child: Center(child: ClipRRect(
-                                borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-                                child: CustomImage(
-                                  width: imageSize,
-                                  height: imageSize,
-                                  image: category.imageFullPath ?? '',
-                                  fit: BoxFit.cover,
-                                  placeholder: Images.categoryPlaceholder,
-                                ),
-                              )),
+                              clipBehavior: Clip.antiAlias,
+                              child: CustomImage(
+                                width: double.infinity,
+                                height: double.infinity,
+                                image: category.imageFullPath ?? '',
+                                fit: BoxFit.cover,
+                                placeholder: Images.categoryPlaceholder,
+                              ),
                             ),
                             SizedBox(height: Dimensions.paddingSizeSmall),
 

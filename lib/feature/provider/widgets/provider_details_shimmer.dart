@@ -10,67 +10,20 @@ class ProviderDetailsShimmer extends StatelessWidget {
     return  SizedBox(
       width: Dimensions.webMaxWidth,
       child: Column(children: [
-        Shimmer(
-          child: Container(decoration: BoxDecoration(color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
-            border: Border.all(color: Theme.of(context).hintColor.withValues(alpha: 0.3)),
+        if (!ResponsiveHelper.isDesktop(context)) ...[
+          Shimmer(
+            child: Container(
+              width: screenWidth,
+              height: screenWidth / 3.5,
+              color: Theme.of(context).shadowColor,
+            ),
           ),
-            padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-            margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault,vertical: Dimensions.paddingSizeDefault),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.center,children: [
-              ClipRRect(borderRadius: BorderRadius.circular(Dimensions.radiusExtraMoreLarge),
-                child: CustomImage(height: 70, width: 70, fit: BoxFit.cover,
-                  image: "",
-                  placeholder: Images.userPlaceHolder,
-                ),
-              ),
-
-              const SizedBox(width: Dimensions.paddingSizeSmall,),
-              Expanded(
-                child: Column(mainAxisAlignment: MainAxisAlignment.center,crossAxisAlignment: CrossAxisAlignment.start,children: [
-                  Container(
-                    height: 22, width: screenWidth * 0.4,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                      color:  Theme.of(context).shadowColor,
-                    ),
-                  ),
-
-                  const SizedBox(height: Dimensions.paddingSizeEight),
-
-                  Container(
-                    height: 12, width: screenWidth * 0.6,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                      color:  Theme.of(context).shadowColor,
-                    ),
-                  ),
-
-                  const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-
-                  Container(
-                    height: 10, width: screenWidth * 0.5,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                      color:  Theme.of(context).shadowColor,
-                    ),
-                  ),
-
-                  const SizedBox(height: Dimensions.paddingSizeEight),
-
-                  Container(
-                    height: 15, width: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                      color:  Theme.of(context).shadowColor,
-                    ),
-                  ),
-
-                ],),
-              )
-            ],),
+          Transform.translate(
+            offset: const Offset(0, -16),
+            child: _buildProfileCardShimmer(context, screenWidth),
           ),
-        ),
+        ] else
+          _buildProfileCardShimmer(context, screenWidth),
 
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
@@ -116,6 +69,87 @@ class ProviderDetailsShimmer extends StatelessWidget {
           ),
         )
       ]),
+    );
+  }
+
+  Widget _buildProfileCardShimmer(BuildContext context, double screenWidth) {
+    return Shimmer(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+          border: Border.all(color: Theme.of(context).hintColor.withValues(alpha: 0.12)),
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+        padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 64,
+              width: 64,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(Dimensions.radiusExtraMoreLarge),
+                color: Theme.of(context).shadowColor,
+              ),
+            ),
+            const SizedBox(width: Dimensions.paddingSizeSmall),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 18,
+                    width: screenWidth * 0.4,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                      color: Theme.of(context).shadowColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 12,
+                    width: screenWidth * 0.55,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                      color: Theme.of(context).shadowColor,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                            color: Theme.of(context).shadowColor,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 12,
+                        margin: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall),
+                        color: Theme.of(context).hintColor.withValues(alpha: 0.12),
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                            color: Theme.of(context).shadowColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

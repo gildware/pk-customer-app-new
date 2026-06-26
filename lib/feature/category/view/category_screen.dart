@@ -91,30 +91,40 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
                         child: Container(
                           decoration: BoxDecoration(
-                              color: Theme.of(context).cardColor,
-                              borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                              boxShadow:Get.isDarkMode ? null: [BoxShadow(color: Colors.grey[Get.isDarkMode ? 800 : 200]!, blurRadius: 5, spreadRadius: 1)]),
-                          alignment: Alignment.center,
-                          child: Column(mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
-                                  child: CustomImage(height: 50, width: 50, fit: BoxFit.cover,
-                                    image: '${categoryList[index].imageFullPath}',
-                                    placeholder: Images.categoryPlaceholder,
-                                  ),
+                            color: Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+                            boxShadow: Get.isDarkMode
+                                ? null
+                                : [BoxShadow(color: Colors.grey[Get.isDarkMode ? 800 : 200]!, blurRadius: 5, spreadRadius: 1)],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: CustomImage(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                  image: '${categoryList[index].imageFullPath}',
+                                  placeholder: Images.categoryPlaceholder,
                                 ),
-                                const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-                                Padding(
-                                  padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-                                  child: Text(categoryList[index].name!,
-                                    textAlign: TextAlign.center,
-                                    style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: Dimensions.paddingSizeExtraSmall,
+                                  vertical: Dimensions.paddingSizeSmall,
                                 ),
-                              ]),
+                                child: Text(
+                                  categoryList[index].name!,
+                                  textAlign: TextAlign.center,
+                                  style: robotoMedium.copyWith(fontSize: Dimensions.fontSizeSmall),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

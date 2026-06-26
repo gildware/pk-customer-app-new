@@ -18,6 +18,59 @@ double _highlightProfileRowHeight(BuildContext context) {
   return _highlightMediaHeight(cardWidth) + 68;
 }
 
+class _HighlightSectionBadge extends StatelessWidget {
+  const _HighlightSectionBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    const gold = Color(0xFFFFC107);
+    const amber = Color(0xFFFF9800);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    Widget sparkle(IconData icon, double size, {Color? color}) {
+      return ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: (bounds) => LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: color != null ? [color, color] : const [gold, amber],
+        ).createShader(bounds),
+        child: Icon(icon, size: size, color: Colors.white),
+      );
+    }
+
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: 2,
+            top: 6,
+            child: sparkle(Icons.auto_awesome, 30),
+          ),
+          Positioned(
+            right: 28,
+            top: 0,
+            child: sparkle(Icons.star_rounded, 12, color: primary.withValues(alpha: 0.85)),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 4,
+            child: sparkle(Icons.star_rounded, 10, color: primary.withValues(alpha: 0.65)),
+          ),
+          Positioned(
+            right: 34,
+            bottom: 10,
+            child: sparkle(Icons.auto_awesome, 9, color: gold.withValues(alpha: 0.9)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HighlightAdvertisementList extends StatelessWidget {
   final List<Advertisement> items;
   final bool isVideo;
@@ -117,9 +170,9 @@ class HighlightProviderSection extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-            child: Image.asset(Images.highlightProvider, width: 50),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+            child: _HighlightSectionBadge(),
           ),
         ],
       ),
@@ -216,12 +269,7 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
   ChewieController? _chewieController;
   bool _disposed = false;
   bool _loadFailed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializePlayer();
-  }
+  bool _isInitializing = false;
 
   void _onVideoTick() {
     final controller = _videoPlayerController;
@@ -233,11 +281,24 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
     }
   }
 
-  Future<void> _initializePlayer() async {
+  Future<void> _startPlayback() async {
+    if (_chewieController != null) {
+      await _chewieController!.play();
+      return;
+    }
+    if (_isInitializing || _loadFailed) {
+      return;
+    }
+
+    setState(() => _isInitializing = true);
+
     final url = widget.advertisement.promotionalVideoFullPath?.trim() ?? '';
     if (url.isEmpty) {
       if (mounted) {
-        setState(() => _loadFailed = true);
+        setState(() {
+          _isInitializing = false;
+          _loadFailed = true;
+        });
       }
       return;
     }
@@ -254,6 +315,7 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
         if (mounted) {
           setState(() {
             _videoPlayerController = null;
+            _isInitializing = false;
             _loadFailed = true;
           });
         }
@@ -268,10 +330,54 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
 
     _chewieController = ChewieController(
       videoPlayerController: controller,
-      autoPlay: false,
+      autoPlay: true,
       aspectRatio: controller.value.aspectRatio,
     );
-    setState(() {});
+    if (mounted) {
+      setState(() => _isInitializing = false);
+    }
+  }
+
+  Widget _buildVideoPoster() {
+    final coverImage = widget.advertisement.providerCoverImageFullPath?.trim() ?? '';
+    if (coverImage.isNotEmpty) {
+      return CustomImage(
+        image: coverImage,
+        height: double.infinity,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+    return const VideoPlaceholder();
+  }
+
+  Widget _buildPlayOverlay({bool showLoading = false}) {
+    return ColoredBox(
+      color: Colors.black.withValues(alpha: 0.28),
+      child: Center(
+        child: showLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.92),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  size: 36,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+      ),
+    );
   }
 
   @override
@@ -315,30 +421,24 @@ class _AdvertisementVideoPromotionWidgetState extends State<AdvertisementVideoPr
               child: AspectRatio(
                 aspectRatio: widget.compact ? 2 : 16 / 9,
                 child: Stack(
-                  alignment: Alignment.center,
+                  fit: StackFit.expand,
                   children: [
-
-                    Positioned.fill(child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [
-                          Get.isDarkMode ? Colors.grey.shade700 : Colors.white,
-                          Get.isDarkMode ? Theme.of(context).cardColor : Colors.cyan.shade50,
-                          Get.isDarkMode ? Colors.grey.shade800 : Colors.white,
-                        ]),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
-                          topRight: Radius.circular(widget.compact ? Dimensions.radiusDefault : Dimensions.radiusLarge),
+                    if (_chewieController != null &&
+                        _chewieController!.videoPlayerController.value.isInitialized)
+                      Chewie(controller: _chewieController!)
+                    else if (_loadFailed)
+                      const VideoPlaceholder()
+                    else
+                      GestureDetector(
+                        onTap: _startPlayback,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            _buildVideoPoster(),
+                            _buildPlayOverlay(showLoading: _isInitializing),
+                          ],
                         ),
                       ),
-
-                    )),
-                    _chewieController != null &&
-                            _chewieController!.videoPlayerController.value.isInitialized
-                        ? Chewie(controller: _chewieController!)
-                        : _loadFailed
-                            ? MediaPlaceholder.video(fit: BoxFit.cover)
-                            : const CircularProgressIndicator(),
-
                   ],
                 ),
               ),

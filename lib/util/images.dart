@@ -1,9 +1,116 @@
+import 'package:get/get.dart';
+
 class Images {
   static String get logo => 'logo'.png;
   static String get webAppbarLogo => 'webAppbarLogo'.png;
-  static String get placeholder => 'placeholder'.jpg;
-  static String get categoryPlaceholder => 'placeholder'.png;
+
+  static String get placeholderLight => 'placeholder_light'.png;
+  static String get placeholderDark => 'placeholder_dark'.png;
+  static String get placeholder => Get.isDarkMode ? placeholderDark : placeholderLight;
+
+  static String get categoryPlaceholderLight => 'placeholder_category_light'.png;
+  static String get categoryPlaceholderDark => 'placeholder_category_dark'.png;
+  static String get categoryPlaceholder =>
+      Get.isDarkMode ? categoryPlaceholderDark : categoryPlaceholderLight;
   static String get servicePlaceholder => categoryPlaceholder;
+
+  static String get businessPagePlaceholderLight => placeholderLight;
+  static String get businessPagePlaceholder =>
+      Get.isDarkMode ? placeholderDark : businessPagePlaceholderLight;
+
+  static String get userPlaceHolderLight => 'user_placeholder_light'.png;
+  static String get userPlaceHolderDark => 'user_placeholder_dark'.png;
+  static String get userPlaceHolder =>
+      Get.isDarkMode ? userPlaceHolderDark : userPlaceHolderLight;
+
+  static String get adminPlaceHolderLight => 'admin_placeholder_light'.png;
+  static String get adminPlaceHolderDark => 'admin_placeholder_dark'.png;
+  static String get adminPlaceHolder =>
+      Get.isDarkMode ? adminPlaceHolderDark : adminPlaceHolderLight;
+
+  static String get videoPlaceholderLight => 'video_placeholder_light'.png;
+  static String get videoPlaceholderDark => 'video_placeholder_dark'.png;
+  static String get videoPlaceholder =>
+      Get.isDarkMode ? videoPlaceholderDark : videoPlaceholderLight;
+
+  /// Resolves any placeholder asset (media, user, admin, video) for the active theme.
+  static String resolvePlaceholder([String? asset]) {
+    final resolved = (asset == null || asset.isEmpty) ? placeholder : asset;
+
+    if (_isVideoPlaceholder(resolved)) {
+      return videoPlaceholder;
+    }
+    if (_isAdminPlaceholder(resolved)) {
+      return adminPlaceHolder;
+    }
+    if (_isUserPlaceholder(resolved)) {
+      return userPlaceHolder;
+    }
+
+    if (!Get.isDarkMode) {
+      return _resolveLightMediaPlaceholder(resolved);
+    }
+    return _resolveDarkMediaPlaceholder(resolved);
+  }
+
+  /// Backward-compatible alias.
+  static String resolveMediaPlaceholder([String? asset]) => resolvePlaceholder(asset);
+
+  static bool _isVideoPlaceholder(String asset) {
+    return asset == videoPlaceholderLight ||
+        asset == videoPlaceholderDark ||
+        asset.contains('video_placeholder');
+  }
+
+  static bool _isUserPlaceholder(String asset) {
+    return asset == userPlaceHolderLight ||
+        asset == userPlaceHolderDark ||
+        asset.endsWith('/user_placeholder.png') ||
+        asset.contains('user_placeholder');
+  }
+
+  static bool _isAdminPlaceholder(String asset) {
+    return asset == adminPlaceHolderLight ||
+        asset == adminPlaceHolderDark ||
+        asset.endsWith('/admin_placeholder.png') ||
+        asset.contains('admin_placeholder');
+  }
+
+  static String _resolveLightMediaPlaceholder(String asset) {
+    if (_isLegacyDarkPlaceholder(asset) || asset == categoryPlaceholderDark) {
+      return categoryPlaceholderLight;
+    }
+    if (_isLegacyLightBannerPlaceholder(asset)) {
+      return placeholderLight;
+    }
+    return asset;
+  }
+
+  static String _resolveDarkMediaPlaceholder(String asset) {
+    if (_isLegacyLightBannerPlaceholder(asset) ||
+        asset == placeholderLight ||
+        asset == businessPagePlaceholderLight ||
+        asset.endsWith('/business_page_placeholder.png')) {
+      return placeholderDark;
+    }
+    if (_isLegacyDarkPlaceholder(asset) || asset == categoryPlaceholderLight) {
+      return categoryPlaceholderDark;
+    }
+    return asset;
+  }
+
+  static bool _isLegacyLightBannerPlaceholder(String asset) {
+    return asset.endsWith('/placeholder.jpg') || asset == 'placeholder'.jpg;
+  }
+
+  static bool _isLegacyDarkPlaceholder(String asset) {
+    return asset.endsWith('/placeholder.png') &&
+        !asset.contains('category') &&
+        !asset.contains('admin') &&
+        !asset.contains('user') &&
+        !asset.contains('business');
+  }
+
   static String get emptyService => 'empty_service'.png;
   static String get emptyProvider => 'empty_provider'.png;
   static String get emptySearchService => 'empty_search_service'.png;
@@ -147,8 +254,6 @@ class Images {
   static String get cancelIcon => 'cancel_icon'.png;
   static String get correctIcon => 'correct_icon'.png;
   static String get couponWarning => 'coupon_warning'.png;
-  static String get adminPlaceHolder => 'admin_placeholder'.png;
-  static String get userPlaceHolder => 'user_placeholder'.png;
   static String get replaceCoupon => 'replace_coupon'.png;
   static String get onBoardingTop => 'onboard_top'.png;
   static String get onBoardingTopTwo => 'onboard_top_2'.png;
@@ -186,7 +291,6 @@ class Images {
   static String get appliedCouponPercentIcon => 'applied_coupon_percent_icon'.png;
   static String get footerBg => 'footer_bg'.png;
   static String get othersPageIcon => 'others_page'.png;
-  static String get businessPagePlaceholder => 'business_page_placeholder'.png;
   static String get approvedStatusIcon => 'approved_status_icon'.png;
 
 

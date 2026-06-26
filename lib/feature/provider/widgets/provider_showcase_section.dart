@@ -246,7 +246,7 @@ class _ShowcaseVideoPlayerState extends State<_ShowcaseVideoPlayer> {
   @override
   Widget build(BuildContext context) {
     if (_loadFailed) {
-      return MediaPlaceholder.video();
+      return const VideoPlaceholder();
     }
     if (_chewieController == null) {
       return const Center(child: CircularProgressIndicator());

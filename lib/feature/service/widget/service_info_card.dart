@@ -21,9 +21,13 @@ class ServiceInformationCard extends StatelessWidget {
             width: Dimensions.webMaxWidth,
             padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
             decoration: BoxDecoration(
-              // border: Border.all(color: Theme.of(context).colorScheme.primary),
-              color:Get.isDarkMode ? Theme.of(context).primaryColorDark:Theme.of(context).cardColor,
+              color: Get.isDarkMode
+                  ? context.customThemeColors.cardColor
+                  : Theme.of(context).cardColor,
               borderRadius: const BorderRadius.all(Radius.circular(Dimensions.paddingSizeExtraSmall)),
+              border: Get.isDarkMode
+                  ? Border.all(color: Theme.of(context).dividerColor)
+                  : null,
               boxShadow: Get.find<ThemeController>().darkTheme ? null : cardShadow,
             ),
             child:

@@ -234,7 +234,7 @@ class _EditProfileGeneralInfoState extends State<EditProfileGeneralInfo> {
                 child: ClipOval(
                   child: editProfileTabController.pickedProfileImageFile == null
                       ? CustomImage(
-                      placeholder: Images.placeholder,
+                      placeholder: Images.userPlaceHolder,
                       height: 100,
                       width: 100,
                       fit: BoxFit.cover,
