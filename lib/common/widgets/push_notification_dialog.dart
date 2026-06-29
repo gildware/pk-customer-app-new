@@ -94,6 +94,18 @@ class _NewRequestDialogState extends State<PushNotificationDialog> {
                   ));
 
                 }
+                else if(const {
+                  'incoming_call',
+                  'call_accepted',
+                  'call_declined',
+                  'call_cancelled',
+                  'call_missed',
+                  'call_ended',
+                }.contains(widget.notificationBody?.notificationType)){
+                  if(Get.isRegistered<InAppCallController>()){
+                    unawaited(Get.find<InAppCallController>().handlePushData(widget.notificationBody!.toJson()));
+                  }
+                }
 
                 else if(widget.notificationBody?.notificationType == 'privacy_policy' && widget.notificationBody?.title != null && widget.notificationBody!.title !=''){
                   Get.toNamed(RouteHelper.getPrivacyPolicyRoute());
@@ -109,6 +121,9 @@ class _NewRequestDialogState extends State<PushNotificationDialog> {
                 }
                 else if(widget.notificationBody?.notificationType == "loyalty_point"){
                   Get.toNamed(RouteHelper.getLoyaltyPointScreen(fromNotification: "fromNotification"));
+                }
+                else if(NotificationHelper.isReviewNotification(widget.notificationBody)){
+                  NotificationHelper.openReviewNotificationTarget();
                 }
                 else if(widget.notificationBody?.notificationType == "bid-withdraw"){
                   Get.toNamed(RouteHelper.getMyPostScreen(fromNotification: 'fromNotification'));

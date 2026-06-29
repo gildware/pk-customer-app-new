@@ -1,3 +1,4 @@
+import 'package:demandium/feature/booking/widget/booking_cancel_reason_dialog.dart';
 import 'package:get/get.dart';
 import 'package:demandium/util/core_export.dart';
 
@@ -69,7 +70,7 @@ class NotificationIgnoredBottomSheet extends StatelessWidget {
           Expanded(child: TextButton(
             onPressed: () {
               Get.back();
-              Get.find<BookingDetailsController>().bookingCancel(bookingId: bookingId ?? "");
+              BookingCancelReasonDialog.show(bookingId: bookingId ?? "");
             },
             style: TextButton.styleFrom(
               backgroundColor:Theme.of(Get.context!).colorScheme.primary.withValues(alpha: 0.1),
@@ -123,7 +124,7 @@ class NotificationIgnoredBottomSheet extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Get.back();
-                Get.find<BookingDetailsController>().bookingCancel(bookingId: bookingId ?? "");
+                BookingCancelReasonDialog.show(bookingId: bookingId ?? "");
               },
               style: TextButton.styleFrom(
                 backgroundColor:Theme.of(Get.context!).colorScheme.primary.withValues(alpha: 0.1),

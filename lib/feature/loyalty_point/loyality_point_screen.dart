@@ -25,12 +25,22 @@ class _LoyaltyPointScreenState extends State<LoyaltyPointScreen> {
     }
   }
 
+  void _handleBack(BuildContext context) {
+    if (widget.fromNotification == "fromNotification" || !Navigator.canPop(context)) {
+      Get.offAllNamed(RouteHelper.getMainRoute("home"));
+    } else {
+      Get.back();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<SplashController>(
       builder: (splashController) {
         _redirectIfFeatureDisabled(splashController);
         return CustomPopWidget(
+          onPopInvoked: () => _handleBack(context),
+          isNavigationOnOnPop: true,
           child: Scaffold(
             drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
 
@@ -65,13 +75,7 @@ class _LoyaltyPointScreenState extends State<LoyaltyPointScreen> {
                 child: Image.asset(Images.info,width: 20,height: 20,color: Colors.white,),
               ),
             ),
-              onBackPressed: (){
-                if(widget.fromNotification == "fromNotification"){
-                  Get.offAllNamed(RouteHelper.getMainRoute("home"));
-                }else{
-                  Get.back();
-                }
-              }
+              onBackPressed: () => _handleBack(context)
               ,bgColor: Theme.of(context).cardColor,),
             body: GetBuilder<LoyaltyPointController>(
               initState: (_){

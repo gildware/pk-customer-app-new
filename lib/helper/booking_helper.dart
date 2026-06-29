@@ -596,4 +596,50 @@ class BookingHelper {
     }
     return '';
   }
+
+  static CustomerRefundChannelBreakdown resolveRefundChannelBreakdown(BookingDetailsContent booking) {
+    final fromApi = booking.paymentDetails?.refundChannelBreakdown;
+    if (fromApi != null && fromApi.hasAnyRefundable) {
+      return fromApi;
+    }
+
+    var walletPaid = 0.0;
+    var digitalPaid = 0.0;
+
+    if (booking.partialPayments != null && booking.partialPayments!.isNotEmpty) {
+      for (final partial in booking.partialPayments!) {
+        final amount = partial.paidAmount ?? 0;
+        if (amount <= 0.009) {
+          continue;
+        }
+        final paidWith = (partial.paidWith ?? '').trim();
+        if (paidWith == 'wallet') {
+          walletPaid += amount;
+        } else if (paidWith == 'digital') {
+          digitalPaid += amount;
+        }
+      }
+    } else if (booking.isPaid == 1) {
+      final paid = resolveCustomerAmountPaid(booking);
+      final method = (booking.paymentMethod ?? '').trim();
+      if (method == 'wallet_payment') {
+        walletPaid = paid;
+      } else if (method != 'cash_after_service' && method != 'offline_payment' && paid > 0.009) {
+        digitalPaid = paid;
+      }
+    }
+
+    walletPaid = double.parse(walletPaid.toStringAsFixed(2));
+    digitalPaid = double.parse(digitalPaid.toStringAsFixed(2));
+
+    return CustomerRefundChannelBreakdown(
+      walletPaid: walletPaid,
+      digitalPaid: digitalPaid,
+      walletRefundAmount: walletPaid,
+      digitalRefundAmount: digitalPaid,
+      totalRefundable: double.parse((walletPaid + digitalPaid).toStringAsFixed(2)),
+      hasMixedPayments: walletPaid > 0.009 && digitalPaid > 0.009,
+      requiresDigitalRefundChoice: digitalPaid > 0.009,
+    );
+  }
 }

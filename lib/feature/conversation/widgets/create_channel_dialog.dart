@@ -38,6 +38,7 @@ class _ProductBottomSheetState extends State<CreateChannelDialog> {
 
         ProviderData ? provider = bookingDetails?.provider;
         Serviceman ? serviceman = bookingDetails?.serviceman;
+        final bool showServiceman = AppFeatureFlags.servicemanEnabled && serviceman != null;
 
         return Container(
           width: Dimensions.webMaxWidth,
@@ -84,9 +85,9 @@ class _ProductBottomSheetState extends State<CreateChannelDialog> {
                     ),
                     child: Column(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.center, children: [
 
-                      Text(provider != null && serviceman != null ? 'create_channel_with_provider'.tr :
+                      Text(provider != null && showServiceman ? 'create_channel_with_provider'.tr :
                         provider != null ? 'conversation_with_provider'.tr :
-                        serviceman != null ? 'conversation_with_serviceman'.tr : "",
+                        showServiceman ? 'conversation_with_serviceman'.tr : "",
                         style: robotoMedium,
                       ),
                       const SizedBox(height: Dimensions.paddingSizeLarge,),
@@ -112,14 +113,14 @@ class _ProductBottomSheetState extends State<CreateChannelDialog> {
                             child: Text('provider'.tr, textAlign: TextAlign.center, style: robotoBold.copyWith(color: Theme.of(context).textTheme.bodyLarge!.color),),
                           ),
                         const SizedBox(width: Dimensions.paddingSizeLarge),
-                        if(serviceman != null)
+                        if(showServiceman)
                           TextButton(
                             onPressed:(){
                               String name = "${serviceman.user?.firstName ??""}"
                                   " ${serviceman.user?.lastName ?? ""}";
                               String phone =serviceman.user?.phone ?? "";
                               String image = serviceman.user?.profileImageFullPath ??"";
-                              Get.find<ConversationController>().createChannel(serviceman.userId!, bookingDetails?.id ?? "",name: name,image: image,fromBookingDetailsPage: true,phone: phone);
+                              Get.find<ConversationController>().createChannel(serviceman.userId!, bookingDetails?.id ?? "",name: name,image: image,fromBookingDetailsPage: true,phone: phone, userType: "serviceman");
                             },
                             style: TextButton.styleFrom(
                               backgroundColor: Theme.of(context).disabledColor.withValues(alpha: 0.3), minimumSize:  const Size(Dimensions.paddingSizeLarge, 40),

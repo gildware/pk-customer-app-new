@@ -213,8 +213,17 @@ class RouteHelper {
   static String getEditAddressRoute(AddressModel address, bool fromCheckout) {
     return '$editAddress?page=${fromCheckout ? 'checkout' : 'address'}';
   }
-  static String getChatScreenRoute(String channelId,String name,String image,String phone,String userType, {String? fromNotification}) =>
-      '$chatScreen?channelID=$channelId&name=$name&image=$image&phone=$phone&userType=$userType&fromNotification=$fromNotification';
+  static String getChatScreenRoute(String channelId,String name,String image,String phone,String userType, {String? fromNotification}) {
+    final query = Uri(queryParameters: {
+      'channelID': channelId,
+      'name': name,
+      'image': image,
+      'phone': phone,
+      'userType': userType,
+      'fromNotification': fromNotification ?? '',
+    });
+    return '$chatScreen?${query.query}';
+  }
   static String getSettingRoute() => settingScreen;
   static String getBookingScreenRoute(bool isFromMenu) => '$bookingListScreen?isFromMenu=$isFromMenu';
   static String getInboxScreenRoute({String? fromNotification}) => '$chatInbox?fromNotification=$fromNotification';
@@ -513,6 +522,7 @@ class RouteHelper {
     GetPage(name: profileEdit, page: () => getRoute(const EditProfileScreen())),
     GetPage(
       name: customerReceivedRating,
+      binding: CustomerReceivedRatingBinding(),
       page: () => getRoute(const CustomerReceivedRatingScreen()),
     ),
     GetPage(name: notification, page: () => getRoute(const NotificationScreen())),

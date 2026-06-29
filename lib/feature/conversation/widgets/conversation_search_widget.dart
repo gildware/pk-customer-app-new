@@ -28,7 +28,7 @@ class ConversationSearchWidget extends StatelessWidget {
               FocusScope.of(context).unfocus();
             },
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 22),
+              contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
               fillColor: Theme.of(context).cardColor,
               border:  OutlineInputBorder(
                 borderRadius: const BorderRadius.horizontal(right: Radius.circular(10,),left: Radius.circular(10)),
@@ -67,7 +67,7 @@ class ConversationSearchWidget extends StatelessWidget {
                 ),
               ) : Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
-                child: Icon(Icons.search_outlined,color: Theme.of(context).hintColor, size: 22,),
+                child: Icon(Icons.search_outlined,color: Theme.of(context).hintColor, size: 18,),
               ),
             ),
           );

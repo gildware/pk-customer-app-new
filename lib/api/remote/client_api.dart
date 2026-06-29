@@ -17,9 +17,11 @@ class ApiClient extends GetxService {
   String? _guestSecret;
   late Map<String, String> _mainHeaders;
 
+  String get _resolvedBaseUrl => ApiUrlHelper.resolveBaseUrl(appBaseUrl);
+
   ApiClient({required this.appBaseUrl, required this.sharedPreferences}) {
     if (kDebugMode) {
-      printLog('API Base URL: $appBaseUrl');
+      printLog('API Base URL: $_resolvedBaseUrl');
     }
     token = SecureTokenStorage.cachedToken().isEmpty ? null : SecureTokenStorage.cachedToken();
     AddressModel? addressModel;
@@ -92,7 +94,7 @@ class ApiClient extends GetxService {
         printLog('====> API Call: $uri');
       }
       http.Response response = await http.get(
-        Uri.parse(appBaseUrl! + uri),
+        Uri.parse(_resolvedBaseUrl + uri),
         headers: headers ?? _mainHeaders,
 
       ).timeout(Duration(seconds: timeoutInSeconds));
@@ -111,7 +113,7 @@ class ApiClient extends GetxService {
 
     try {
       http.Response response = await http.post(
-        Uri.parse(appBaseUrl! + uri!),
+        Uri.parse(_resolvedBaseUrl + uri!),
         body: jsonEncode(body),
         headers: headers ?? _mainHeaders,
       ).timeout(Duration(seconds: timeoutSeconds ?? timeoutInSeconds));
@@ -127,7 +129,7 @@ class ApiClient extends GetxService {
       List<MultipartBody>? multipartBody,
       {Map<String, String>? headers,List<PlatformFile>? otherFile}) async {
 
-    http.MultipartRequest request = http.MultipartRequest('POST', Uri.parse(appBaseUrl!+uri!));
+    http.MultipartRequest request = http.MultipartRequest('POST', Uri.parse(_resolvedBaseUrl + uri!));
     request.headers.addAll(headers ?? _mainHeaders);
 
     if(otherFile != null ) {
@@ -152,7 +154,7 @@ class ApiClient extends GetxService {
 
   Future<Response> postMultipartData(String? uri, Map<String, String> body, List<MultipartBody>? multipartBody, {Map<String, String>? headers}) async {
     try {
-      http.MultipartRequest request = http.MultipartRequest('POST', Uri.parse(appBaseUrl!+uri!));
+      http.MultipartRequest request = http.MultipartRequest('POST', Uri.parse(_resolvedBaseUrl + uri!));
       request.headers.addAll(headers ?? _mainHeaders);
       for(MultipartBody multipart in multipartBody!) {
         if(kIsWeb) {
@@ -181,7 +183,7 @@ class ApiClient extends GetxService {
     printLog('====> body : ${body.toString()}');
     try {
       http.Response response = await http.put(
-        Uri.parse(appBaseUrl!+uri!),
+        Uri.parse(_resolvedBaseUrl + uri!),
         body: jsonEncode(body),
         headers: headers ?? _mainHeaders,
       ).timeout(Duration(seconds: timeoutInSeconds));
@@ -194,7 +196,7 @@ class ApiClient extends GetxService {
   Future<Response> deleteData(String? uri, {Map<String, String>? headers}) async {
     try {
       http.Response response = await http.delete(
-        Uri.parse(appBaseUrl!+uri!),
+        Uri.parse(_resolvedBaseUrl + uri!),
         headers: headers ?? _mainHeaders,
       ).timeout(Duration(seconds: timeoutInSeconds));
       return handleResponse(response, uri);

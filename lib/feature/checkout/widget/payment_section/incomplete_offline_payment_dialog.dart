@@ -1,3 +1,4 @@
+import 'package:demandium/feature/booking/widget/booking_cancel_reason_dialog.dart';
 import 'package:demandium/feature/checkout/widget/payment_section/payment_dialog.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
@@ -160,13 +161,11 @@ class _IncompleteOfflinePaymentDialogState extends State<IncompleteOfflinePaymen
               TextButton(
                 onPressed: () async {
                   Get.back();
-                  Get.dialog(const CustomLoader(), barrierDismissible: false);
-                  if(widget.booking?.isRepeatBooking == 1 ){
-                    await Get.find<BookingDetailsController>().subBookingCancel(subBookingId: widget.booking?.id ?? "");
-                  }else{
-                    await  Get.find<BookingDetailsController>().bookingCancel(bookingId: widget.booking?.id ?? "");
-                  }
-                  Get.back();
+                  await BookingCancelReasonDialog.show(
+                    bookingId: widget.booking?.id ?? "",
+                    isSubBooking: widget.booking?.isRepeatBooking == 1,
+                    booking: widget.booking,
+                  );
                 },
                 style: TextButton.styleFrom(
                   backgroundColor:   Colors.transparent,

@@ -345,7 +345,7 @@ class _ProceedToCheckoutButtonWidgetState extends State<ProceedToCheckoutButtonW
       final resolved = await AddressSessionHelper.resolveZoneIdFromCoordinates(address);
       zoneId = resolved ?? Get.find<LocationController>().getUserAddress()?.zoneId ?? '';
     }
-    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
+    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : ApiUrlHelper.resolveBaseUrl();
     int isPartial = Get.find<CartController>().walletPaymentStatus && isPartialPayment ? 1 : 0;
     String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);

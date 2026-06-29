@@ -64,6 +64,7 @@ class AppConstants {
   static const String repeatBookingDetails = '/api/v1/customer/booking/repeat';
   static const String trackBooking = '/api/v1/customer/booking/track';
   static const String bookingCancel = '/api/v1/customer/booking/status-update';
+  static const String customerCancellationReasonsUrl = '/api/v1/customer/booking/customer-cancellation-reasons';
   static const String subBookingCancel = '/api/v1/customer/booking/single-repeat-cancel';
   static const String serviceReview = '/api/v1/customer/review/submit';
   static const String bookingReviewList = '/api/v1/customer/review';
@@ -80,6 +81,8 @@ class AppConstants {
   static const String codSwitchUri = '/api/v1/customer/order/payment-method';
   static const String orderDetailsUri = '/api/v1/customer/order/details?order_id=';
   static const String notificationUri = '/api/v1/customer/notification';
+  static const String notificationUnreadCountUri = '/api/v1/customer/notification/unread-count';
+  static const String notificationMarkAllReadUri = '/api/v1/customer/notification/mark-all-read';
   static const String updateProfileUri = '/api/v1/customer/update/profile';
   static const String searchUri = '/api/v1/customer/service/search';
   static const String searchSuggestion = '/api/v1/customer/service/search-suggestion';
@@ -96,6 +99,11 @@ class AppConstants {
   static const String searchChannelListUrl = '/api/v1/customer/chat/channel-list-search';
   static const String getConversation = '/api/v1/customer/chat/conversation';
   static const String sendMessage = '/api/v1/customer/chat/send-message';
+  static const String inAppCallConfig = '/api/v1/customer/in-app-call/config';
+  static const String inAppCallPending = '/api/v1/customer/in-app-call/pending';
+  static const String inAppCallInitiate = '/api/v1/customer/in-app-call/initiate';
+  static const String inAppCallHistory = '/api/v1/customer/in-app-call/history';
+  static const String inAppCallBase = '/api/v1/customer/in-app-call';
   static const String mobileAiChatConversation = '/api/v1/customer/ai-chat/conversation';
   static const String mobileAiChatSend = '/api/v1/customer/ai-chat/send';
   static const String mobileAiChatClear = '/api/v1/customer/ai-chat/clear';

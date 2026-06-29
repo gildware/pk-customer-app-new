@@ -79,7 +79,7 @@ class ChannelItem extends StatelessWidget {
     }
 
     return conversationUser != null ? Container(
-      margin: const EdgeInsets.symmetric(vertical: 5,horizontal: 10),
+      margin: const EdgeInsets.symmetric(vertical: 2, horizontal: Dimensions.paddingSizeEight),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
           color: isRead == 0 ? Theme.of(context).primaryColor.withValues(alpha: Get.isDarkMode?0.2:0.05) : Theme.of(context).cardColor.withValues(alpha: Get.isDarkMode?0.5:1),
@@ -91,85 +91,82 @@ class ChannelItem extends StatelessWidget {
       ),
       child: Stack( children: [
 
-        Padding(padding: const EdgeInsets.symmetric(horizontal : Dimensions.paddingSizeSmall, vertical: Dimensions.paddingSizeDefault),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Padding(padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall, vertical: Dimensions.paddingSizeEight),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            ClipRRect(borderRadius: BorderRadius.circular(50),
+              child: CustomImage(height: 42, width: 42,
+                image: imageWithPath,
+                placeholder: isAdmin? Images.adminPlaceHolder : Images.userPlaceHolder,
+              ),
+            ),
 
-            Row(children: [
-              ClipRRect(borderRadius: BorderRadius.circular(50),
-                child: CustomImage(height: 55, width: 55,
-                  image: imageWithPath,
-                  placeholder: isAdmin? Images.adminPlaceHolder : Images.userPlaceHolder,
+            const SizedBox(width: Dimensions.paddingSizeSmall),
+
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+              Row(children: [
+                Expanded(
+                  child: Text(isAdmin ? "admin".tr : conversationUser.user?.userType == 'provider-admin' ? "${conversationUser.user?.provider?.companyName}" :"${ conversationUser.user?.firstName??""} ${ conversationUser.user?.lastName}",
+                    style: robotoBold.copyWith(
+                        fontSize: Dimensions.fontSizeDefault,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+
+                if( conversationUser.user?.userType == "super-admin") Padding(
+                  padding: const EdgeInsets.only(left: Dimensions.paddingSizeExtraSmall),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .2),
+                      borderRadius: const BorderRadius.all(Radius.circular(8.0)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall, vertical: 2),
+                      child: Text('support'.tr, style: robotoMedium.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: Dimensions.fontSizeExtraSmall,
+                      )),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+
+                Text(DateConverter.dateMonthYearTime(DateConverter.isoUtcStringToLocalDate(conversationUser.updatedAt!)),
+                  style: robotoRegular.copyWith(color: Theme.of(context).hintColor, fontSize: Dimensions.fontSizeExtraSmall),
+                  textDirection: TextDirection.ltr,
+                ),
+              ]),
+
+              if(lastMessage!=null) Padding(padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(lastMessage.capitalizeFirst ?? "" ,
+                        style: isRead ==0 ? robotoMedium.copyWith(
+                          color: Theme.of(context).textTheme.bodySmall!.color!.withValues(alpha: 0.7),
+                          fontSize: Dimensions.fontSizeSmall,
+                        ) : robotoRegular.copyWith(
+                          color: Theme.of(context).textTheme.bodySmall!.color!.withValues(alpha: 0.5),
+                          fontSize: Dimensions.fontSizeSmall,
+                        ),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+
+                    if(channelData.lastMessageSentUser == userName) Icon(Icons.done_all,
+                      color: isSeen ==1  && isRead == 1 ? context.tabSelectedColor : Theme.of(context).hintColor.withValues(alpha: 0.7),
+                      size: 16,
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(width: Dimensions.paddingSizeDefault,),
-
-              Expanded(child: Column(children: [
-                Column( crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-                  Row( children: [
-                    Expanded(
-                      child: Text(isAdmin ? "admin".tr : conversationUser.user?.userType == 'provider-admin' ? "${conversationUser.user?.provider?.companyName}" :"${ conversationUser.user?.firstName??""} ${ conversationUser.user?.lastName}",
-                        style: robotoBold.copyWith(
-                            fontSize: Dimensions.fontSizeLarge,
-                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7)
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 10,),
-
-                    if( conversationUser.user?.userType == "super-admin") Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: .2),
-                        borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-                      ),
-                      child: Padding(
-                        padding:  const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall,vertical: 3),
-                        child: Text('support'.tr,style: robotoMedium.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: Dimensions.fontSizeSmall,),
-                        ),
-                      ),
-                    ),
-                  ],),
-
-                  if(lastMessage!=null) Padding(padding: const EdgeInsets.only(top: Dimensions.paddingSizeExtraSmall -2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(lastMessage.capitalizeFirst ?? "" ,
-                            style: isRead ==0 ?robotoMedium.copyWith(
-                              color: Theme.of(context).textTheme.bodySmall!.color!.withValues(alpha: 0.7),
-                              fontSize: Dimensions.fontSizeDefault ,
-                            ) : robotoRegular.copyWith(
-                              color: Theme.of(context).textTheme.bodySmall!.color!.withValues(alpha: 0.5),
-                              fontSize: Dimensions.fontSizeDefault ,
-                            ),
-                            maxLines: 1, overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-
-                        const SizedBox(width: Dimensions.paddingSizeSmall,),
-
-                        channelData.lastMessageSentUser == userName ? Icon(Icons.done_all,
-                          color: isSeen ==1  && isRead == 1 ? context.tabSelectedColor : Theme.of(context).hintColor.withValues(alpha: 0.7),
-                          size: 20,
-                        ) : const SizedBox()
-                      ],
-                    ),
-                  ),
-
-                ],),
-              ],))
-            ],),
-            Text(DateConverter.dateMonthYearTime(DateConverter.isoUtcStringToLocalDate(conversationUser.updatedAt!)),
-              style: robotoRegular.copyWith(color:  Theme.of(context).hintColor, fontSize: Dimensions.fontSizeSmall + 1),
-              textDirection: TextDirection.ltr,
-            ),
-          ],),
+            ])),
+          ]),
         ),
 
         Positioned.fill(child: CustomInkWell(

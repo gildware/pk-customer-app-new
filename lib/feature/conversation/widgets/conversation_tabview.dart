@@ -22,20 +22,20 @@ class ConversationListTabview extends StatelessWidget {
                 labelStyle: robotoMedium,
                 indicatorWeight: 1.5,
                 tabAlignment: TabAlignment.start,
-                indicatorPadding: const EdgeInsets.only(right: 50),
+                indicatorPadding: const EdgeInsets.only(right: 40),
                 labelPadding: EdgeInsets.only(
                   right: conversationController.isActiveSuffixIcon && conversationController.isSearchComplete
-                      && conversationController.searchedProviderChannelList!.isNotEmpty ? 10 : 25,
+                      && conversationController.searchedProviderChannelList!.isNotEmpty ? 8 : 18,
                 ),
                 tabs:  [
                   SizedBox(
-                    height: 35,
+                    height: 28,
                     child:Center(
                       child: Row(
                         children: [
                           Text("provider".tr),
                           conversationController.isActiveSuffixIcon && conversationController.isSearchComplete  && conversationController.searchedProviderChannelList!.isNotEmpty?
-                          Container(height: 15 , width: 15,
+                          Container(height: 13 , width: 13,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle, color: context.adaptivePrimaryColor,
                             ),
@@ -51,14 +51,16 @@ class ConversationListTabview extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // SERVICEMAN_DISABLED
+                  if (AppFeatureFlags.servicemanEnabled)
                   SizedBox(
-                    height: 35,
+                    height: 28,
                     child:  Center(
                       child: Row(
                         children: [
                           Text("serviceman".tr),
                           conversationController.isActiveSuffixIcon && conversationController.isSearchComplete  && conversationController.searchedServicemanChannelList!.isNotEmpty?
-                          Container(height: 15 , width: 15,
+                          Container(height: 13 , width: 13,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle, color: context.adaptivePrimaryColor,
                             ),

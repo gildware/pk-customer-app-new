@@ -1,3 +1,4 @@
+import 'package:demandium/feature/booking/widget/booking_cancel_reason_dialog.dart';
 import 'package:demandium/common/models/popup_menu_model.dart';
 import 'package:demandium/feature/booking/view/repeat_booking_details_screen.dart';
 import 'package:demandium/feature/booking/view/web_booking_details_screen.dart';
@@ -160,30 +161,9 @@ class _ServiceLogItem extends StatelessWidget {
                                       }
                                       await _launchUrl(Uri.parse(uri));
                                     } else if(option.title == "cancel"){
-                                      Get.dialog(
-                                        ConfirmationDialog(
-                                          icon: Images.warning,
-                                          title:   'are_you_sure_to_cancel_your_order'.tr,
-                                          description: 'your_order_will_be_cancel'.tr,
-                                          noButtonText: "yes_cancel".tr,
-                                          noButtonColor: Theme.of(context).colorScheme.primary,
-                                          noTextColor: Colors.white,
-                                          yesButtonText: "not_now".tr,
-                                          yesButtonColor: Theme.of(context).colorScheme.error,
-                                          yesTextColor: Colors.white,
-                                          onYesPressed: () {
-                                            Get.back();
-                                          },
-                                          onNoPressed: () async {
-                                            Get.back();
-                                            Get.dialog(const CustomLoader(),  barrierDismissible: false);
-                                            await Get.find<BookingDetailsController>().subBookingCancel(
-                                              subBookingId: serviceList[index]!.id!,
-                                            );
-                                            Get.back();
-                                          },
-                                        ),
-                                        useSafeArea: false,
+                                      await BookingCancelReasonDialog.show(
+                                        bookingId: serviceList[index]!.id!,
+                                        isSubBooking: true,
                                       );
                                     }
 

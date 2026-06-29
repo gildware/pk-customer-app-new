@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
@@ -19,6 +20,7 @@ class NotificationHelper {
 
     final androidPlugin = flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await NotificationSoundUtil.deleteLegacyAndroidChannels(androidPlugin);
     for (final channel in NotificationSoundUtil.buildAndroidChannels()) {
       await androidPlugin?.createNotificationChannel(channel);
     }
@@ -59,6 +61,11 @@ class NotificationHelper {
                 fromNotification: "fromNotification"
             ));
           }
+          else if(_isInAppCallEvent(notificationBody.notificationType)){
+            if(Get.isRegistered<InAppCallController>()){
+              unawaited(Get.find<InAppCallController>().handlePushData(notificationBody.toJson()));
+            }
+          }
           else if(notificationBody.notificationType == 'bidding' || notificationBody.notificationType == 'bid-withdraw'){
             Get.toNamed(RouteHelper.getMyPostScreen(fromNotification: "fromNotification"));
           }
@@ -77,6 +84,9 @@ class NotificationHelper {
             if(!Get.currentRoute.contains(RouteHelper.loyaltyPoint)){
               Get.toNamed(RouteHelper.getLoyaltyPointScreen(fromNotification: "fromNotification"));
             }
+          }
+          else if(NotificationHelper.isReviewNotification(notificationBody)){
+            NotificationHelper.openReviewNotificationTarget();
           }
           else if(notificationBody.notificationType == 'booking' && notificationBody.bookingId !=null && notificationBody.bookingId!=''){
             if(notificationBody.bookingType == "repeat" && notificationBody.repeatBookingType == "single"){
@@ -151,8 +161,10 @@ class NotificationHelper {
               NotificationHelper.showNotification(message, flutterLocalNotificationsPlugin, false);
               if(message.data['user_type'] == 'provider-admin'){
                 Get.find<ConversationController>().getChannelList(1);
-              }else{
+              }else if(AppFeatureFlags.servicemanEnabled){
                 Get.find<ConversationController>().getChannelList(1, type: "serviceman");
+              }else{
+                Get.find<ConversationController>().getChannelList(1, type: "provider");
               }
             }else{
               NotificationHelper.showNotification(message, flutterLocalNotificationsPlugin, false);
@@ -184,9 +196,16 @@ class NotificationHelper {
             context: Get.context!,
               builder: (context) =>  NotificationIgnoredBottomSheet(bookingId: message.data['booking_id']),
           );
+          _refreshInAppNotificationList();
+        }
+        else if(_isInAppCallEvent(message.data['type']?.toString())) {
+          if(Get.isRegistered<InAppCallController>()){
+            unawaited(Get.find<InAppCallController>().handlePushData(Map<String, dynamic>.from(message.data)));
+          }
         }
         else{
           NotificationHelper.showNotification(message, flutterLocalNotificationsPlugin, false);
+          _refreshInAppNotificationList();
         }
       }
       else{
@@ -227,6 +246,7 @@ class NotificationHelper {
         if(message.data["type"]=="bidding" &&Get.currentRoute==RouteHelper.myPost && (message.data['post_id']!="" && message.data['post_id']!=null)){
           Get.find<CreatePostController>().getMyPostList(1,reload: true);
         }
+        _refreshInAppNotificationList();
       }
     });
 
@@ -254,6 +274,11 @@ class NotificationHelper {
                notificationBody.userType??"",
                fromNotification: "fromNotification"
            ));
+         }
+         else if(_isInAppCallEvent(notificationBody.notificationType)){
+           if(Get.isRegistered<InAppCallController>()){
+             await Get.find<InAppCallController>().handlePushData(notificationBody.toJson());
+           }
          }
          else if(notificationBody.notificationType == 'bidding' || notificationBody.notificationType == 'bid-withdraw'){
           if(!Get.currentRoute.contains(RouteHelper.myWallet)){
@@ -283,6 +308,9 @@ class NotificationHelper {
              Get.toNamed(RouteHelper.getLoyaltyPointScreen(fromNotification: "fromNotification"));
            }
          }
+         else if(NotificationHelper.isReviewNotification(notificationBody)){
+           NotificationHelper.openReviewNotificationTarget();
+         }
          else if(notificationBody.notificationType == 'logout'){
            Get.find<AuthController>().performLogout(showSuccessMessage: false);
          }
@@ -301,7 +329,15 @@ class NotificationHelper {
     });
   }
 
-  static Future<void> showNotification(RemoteMessage message, FlutterLocalNotificationsPlugin fln, bool data) async {
+  static Future<void> showNotification(
+    RemoteMessage message,
+    FlutterLocalNotificationsPlugin fln,
+    bool data, {
+    bool fromBackgroundHandler = false,
+  }) async {
+    if (GetPlatform.isIOS && message.notification != null) {
+      return;
+    }
     final title = message.data['title'] ?? message.notification?.title;
     final body = message.data['body'] ?? message.notification?.body ?? '';
     final playLoad = jsonEncode(message.data);
@@ -335,13 +371,17 @@ class NotificationHelper {
 
     if(image != null && image.isNotEmpty) {
       try{
-        await showBigPictureNotificationHiddenLargeIcon(title, body, playLoad, image, fln, notificationType);
+        await showBigPictureNotificationHiddenLargeIcon(title, body, playLoad, image, fln, notificationType, message.data);
       }catch(e) {
-        await showBigTextNotification(title, body, playLoad, orderID, fln, notificationType);
+        await showBigTextNotification(title, body, playLoad, orderID, fln, notificationType, messageData: message.data);
       }
 
     }else {
-      await showBigTextNotification(title, body, playLoad, orderID, fln, notificationType);
+      await showBigTextNotification(title, body, playLoad, orderID, fln, notificationType, messageData: message.data);
+    }
+
+    if (!fromBackgroundHandler) {
+      await _playAndroidForegroundSound(notificationType, message.data);
     }
   }
 
@@ -350,7 +390,7 @@ class NotificationHelper {
     FlutterLocalNotificationsPlugin fln,
   ) async {
     await createAndroidNotificationChannels(fln);
-    await showNotification(message, fln, false);
+    await showNotification(message, fln, false, fromBackgroundHandler: true);
   }
 
   static Future<void> showTextNotification(String title, String? body, String orderID, FlutterLocalNotificationsPlugin fln, {String? notificationType}) async {
@@ -363,17 +403,23 @@ class NotificationHelper {
     await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: orderID);
   }
 
-  static Future<void> showBigTextNotification(String title, String? body, String payload, String image, FlutterLocalNotificationsPlugin fln, String? notificationType) async {
+  static Future<void> showBigTextNotification(String title, String? body, String payload, String image, FlutterLocalNotificationsPlugin fln, String? notificationType, {Map<String, dynamic>? messageData}) async {
     final resolvedType = notificationType ?? NotificationSoundUtil.typeFromPayload(payload);
     BigTextStyleInformation bigTextStyleInformation = BigTextStyleInformation(
       body ?? "", htmlFormatBigText: true,
       contentTitle: title, htmlFormatContentTitle: true,
     );
-    final androidPlatformChannelSpecifics = NotificationSoundUtil.androidDetailsForType(
-      resolvedType,
-      withSound: _notificationSoundEnabled(),
-      styleInformation: bigTextStyleInformation,
-    );
+    final androidPlatformChannelSpecifics = messageData != null
+        ? NotificationSoundUtil.androidDetailsFromData(
+            messageData,
+            withSound: _notificationSoundEnabled(),
+            styleInformation: bigTextStyleInformation,
+          )
+        : NotificationSoundUtil.androidDetailsForType(
+            resolvedType,
+            withSound: _notificationSoundEnabled(),
+            styleInformation: bigTextStyleInformation,
+          );
 
     int randomNumber = Random().nextInt(100);
 
@@ -381,8 +427,7 @@ class NotificationHelper {
     await fln.show(id: randomNumber, title: title, body: body, notificationDetails: platformChannelSpecifics, payload: payload);
   }
 
-  static Future<void> showBigPictureNotificationHiddenLargeIcon(String title, String body, String payload, String image, FlutterLocalNotificationsPlugin fln, String? notificationType) async {
-    final resolvedType = notificationType ?? NotificationSoundUtil.typeFromPayload(payload);
+  static Future<void> showBigPictureNotificationHiddenLargeIcon(String title, String body, String payload, String image, FlutterLocalNotificationsPlugin fln, String? notificationType, Map<String, dynamic> messageData) async {
     final String largeIconPath = await _downloadAndSaveFile(image, 'largeIcon');
     final String bigPicturePath = await _downloadAndSaveFile(image, 'bigPicture');
     final BigPictureStyleInformation bigPictureStyleInformation = BigPictureStyleInformation(
@@ -390,8 +435,8 @@ class NotificationHelper {
       contentTitle: title, htmlFormatContentTitle: true,
       summaryText: body, htmlFormatSummaryText: true,
     );
-    final androidPlatformChannelSpecifics = NotificationSoundUtil.androidDetailsForType(
-      resolvedType,
+    final androidPlatformChannelSpecifics = NotificationSoundUtil.androidDetailsFromData(
+      messageData,
       withSound: _notificationSoundEnabled(),
       styleInformation: bigPictureStyleInformation,
       largeIcon: FilePathAndroidBitmap(largeIconPath),
@@ -415,6 +460,21 @@ class NotificationHelper {
       return Get.find<AuthController>().isNotificationActive();
     }
     return true;
+  }
+
+  static Future<void> _playAndroidForegroundSound(
+    String? type,
+    Map<String, dynamic> data,
+  ) async {
+    if (!GetPlatform.isAndroid || !_notificationSoundEnabled()) return;
+
+    try {
+      final resolvedType = type ?? data['type']?.toString();
+      final player = AudioPlayer();
+      await player.play(
+        AssetSource(NotificationSoundUtil.assetSoundForType(resolvedType)),
+      );
+    } catch (_) {}
   }
 
   static NotificationBody convertNotification(Map<String, dynamic> data){
@@ -442,17 +502,40 @@ class NotificationHelper {
     }
     Get.toNamed(RouteHelper.getServiceRoute(slug, fromPage: 'fromNotification'));
   }
+
+  static void openReviewNotificationTarget() {
+    Get.toNamed(RouteHelper.getCustomerReceivedRatingRoute());
+  }
+
+  static bool isReviewNotification(NotificationBody? body) {
+    return body?.notificationType?.trim().toLowerCase() == 'review';
+  }
+
+  static void _refreshInAppNotificationList() {
+    if (Get.isRegistered<NotificationController>()) {
+      Get.find<NotificationController>().refreshInboxFromPush();
+    }
+  }
+
+  static bool isInAppCallEvent(String? type) {
+    return const {
+      'incoming_call',
+      'call_accepted',
+      'call_declined',
+      'call_ended',
+      'call_cancelled',
+      'call_missed',
+    }.contains(type);
+  }
+
+  static bool _isInAppCallEvent(String? type) => isInAppCallEvent(type);
 }
 
 @pragma('vm:entry-point')
 Future<dynamic> myBackgroundMessageHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (kDebugMode) {
-    print("onBackground: ${message.notification?.title}/${message.notification?.body}/${message.notification?.titleLocKey}");
-  }
-
-  if (message.notification != null) {
-    return;
+    print("onBackground: ${message.data}");
   }
 
   final fln = FlutterLocalNotificationsPlugin();
@@ -464,5 +547,6 @@ Future<dynamic> myBackgroundMessageHandler(RemoteMessage message) async {
       iOS: iOSInitialize,
     ),
   );
+  await NotificationHelper.createAndroidNotificationChannels(fln);
   await NotificationHelper.showBackgroundNotification(message, fln);
 }

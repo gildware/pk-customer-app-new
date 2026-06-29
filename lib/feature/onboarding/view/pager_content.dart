@@ -127,30 +127,7 @@ class PagerContent extends StatelessWidget {
   }
 }
 
-void _checkPermissionAndNavigate() async {
-
+void _checkPermissionAndNavigate() {
   Get.find<SplashController>().disableShowOnboardingScreen();
-
-  LocationPermission permission = await Geolocator.checkPermission();
-  if(permission == LocationPermission.denied ) {
-    permission = await Geolocator.requestPermission();
-  }
-  if(permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-    Get.offAllNamed(RouteHelper.getAccessLocationRoute('home'));
-  }else {
-    Get.dialog(const CustomLoader(), barrierDismissible: false);
-    final address = await Get.find<LocationController>().getCurrentLocation(true, deviceCurrentLocation: true);
-    final applied = await AddressSessionHelper.applySelectedAddress(
-      address,
-      redirectRoute: RouteHelper.getMainRoute('home'),
-      canRoute: true,
-      closeOverlays: true,
-    );
-    if (!applied && Get.isDialogOpen == true) {
-      Get.back();
-    }
-    if (!applied) {
-      Get.offAllNamed(RouteHelper.getAccessLocationRoute('home'));
-    }
-  }
+  Get.offAllNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
 }

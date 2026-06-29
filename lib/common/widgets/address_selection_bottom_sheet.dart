@@ -672,7 +672,6 @@ class AddressActionButtons extends StatelessWidget {
                       address.longitude == null ||
                       address.latitude!.isEmpty ||
                       address.longitude!.isEmpty) {
-                    if (Get.isDialogOpen == true) Get.back();
                     customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);
                     return;
                   }
@@ -682,8 +681,6 @@ class AddressActionButtons extends StatelessWidget {
                     address.longitude!,
                     false,
                   );
-
-                  if (Get.isDialogOpen == true) Get.back();
 
                   if (!response.isSuccess) {
                     final message = (response.message?.trim().isNotEmpty ?? false)
@@ -702,10 +699,12 @@ class AddressActionButtons extends StatelessWidget {
                     address,
                     redirectRoute: redirectRoute ?? RouteHelper.getMainRoute('home'),
                     canRoute: true,
+                    closeOverlays: false,
                   );
                 } catch (_) {
-                  if (Get.isDialogOpen == true) Get.back();
                   customSnackBar('500'.tr, type: ToasterMessageType.error);
+                } finally {
+                  if (Get.isDialogOpen == true) Get.back();
                 }
               });
             },

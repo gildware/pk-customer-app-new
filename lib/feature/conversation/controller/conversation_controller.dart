@@ -116,7 +116,7 @@ class ConversationController extends GetxController with GetSingleTickerProvider
   void onInit(){
     super.onInit();
     conversationController.text = '';
-    tabController = TabController(vsync: this, length: 2);
+    tabController = TabController(vsync: this, length: AppFeatureFlags.servicemanEnabled ? 2 : 1);
     channelScrollController1.addListener(() {
       if (channelScrollController1.position.pixels == channelScrollController1.position.maxScrollExtent){
         if (_channelOffset! < _channelPageSize!) {
@@ -299,9 +299,9 @@ class ConversationController extends GetxController with GetSingleTickerProvider
         }
       }
 
-      if(tabController?.index == 0 && _searchedProviderChannelList!.isEmpty && _searchedServicemanChannelList!.isNotEmpty){
+      if(AppFeatureFlags.servicemanEnabled && tabController?.index == 0 && _searchedProviderChannelList!.isEmpty && _searchedServicemanChannelList!.isNotEmpty){
         tabController?.index = 1;
-      }else if(tabController?.index == 1 && _searchedProviderChannelList!.isNotEmpty && _searchedServicemanChannelList!.isEmpty){
+      }else if(AppFeatureFlags.servicemanEnabled && tabController?.index == 1 && _searchedProviderChannelList!.isNotEmpty && _searchedServicemanChannelList!.isEmpty){
         tabController?.index = 0;
       }
 

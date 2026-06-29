@@ -69,6 +69,7 @@ Future<Map<String, Map<String, String>>> init() async {
   Get.lazyPut(() => CreatePostController(createPostRepo: Get.find()));
   Get.lazyPut(() => CheckOutController(checkoutRepo: Get.find()));
   Get.lazyPut(() => ConversationController(conversationRepo: Get.find()));
+  Get.put(InAppCallController(inAppCallRepo: InAppCallRepo(apiClient: Get.find())), permanent: true);
   Get.lazyPut(() => HtmlViewController(htmlRepository: Get.find()));
   Get.lazyPut(() => MyFavoriteController(myFavoriteRepo: Get.find()));
   Get.lazyPut(() => AllSearchController(searchRepo: Get.find()));

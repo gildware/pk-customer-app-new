@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:demandium/feature/booking/widget/booking_cancel_reason_dialog.dart';
 import 'package:demandium/common/models/popup_menu_model.dart';
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/feature/booking/view/web_booking_details_screen.dart';
@@ -161,33 +162,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> with Single
                           }
                           await _launchUrl(Uri.parse(uri));
                         }else if(option.title == "cancel"){
-                          Get.dialog(
-                            ConfirmationDialog(
-                              icon: Images.deleteProfile,
-                              title: 'are_you_sure_to_cancel_this_full_booking'.tr,
-                              description: 'once_cancel_full_booking'.tr,
-                              noButtonText: "yes_cancel".tr,
-                              noButtonColor: Theme.of(context).colorScheme.primary,
-                              noTextColor: Colors.white,
-                              yesButtonText: "not_now".tr,
-                              yesButtonColor: Theme.of(context).colorScheme.error,
-                              yesTextColor: Colors.white,
-                              onYesPressed: () {
-                                Get.back();
-                              },
-                              onNoPressed: () async {
-                                Get.back();
-                                Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                if(isSubBooking){
-                                  await bookingDetailsController.subBookingCancel(subBookingId: bookingDetailsContent.id ?? "");
-                                }else{
-                                  await bookingDetailsController.bookingCancel(bookingId: bookingDetailsContent.id ?? "");
-                                }
-
-                                Get.back();
-                              },
-                            ),
-                            useSafeArea: false,
+                          await BookingCancelReasonDialog.show(
+                            bookingId: bookingDetailsContent.id ?? "",
+                            isSubBooking: isSubBooking,
+                            booking: bookingDetailsContent,
                           );
                         }
                       },
@@ -362,29 +340,10 @@ class BookingTabBar extends StatelessWidget {
                     builder: (serviceBookingController) {
                       return InkWell(
                         onTap: () {
-                          Get.dialog(
-                              ConfirmationDialog(
-                                icon: Images.warning,
-                                title: 'are_you_sure_to_cancel_your_order'.tr, description: 'your_order_will_be_cancel'.tr,
-                                noButtonText: "yes_cancel".tr,
-                                noButtonColor: Theme.of(context).colorScheme.primary,
-                                noTextColor: Colors.white,
-                                yesButtonText: "not_now".tr,
-                                yesButtonColor: Theme.of(context).colorScheme.error,
-                                yesTextColor: Colors.white,
-                                buttonFontSize: Dimensions.fontSizeSmall + 1,
-                                onNoPressed : () async  {
-                                  Get.back();
-                                  Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                  if(isSubBooking){
-                                    await bookingDetailsController.subBookingCancel(subBookingId: bookingDetailsContent.id ?? "");
-                                  }else{
-                                    await bookingDetailsController.bookingCancel(bookingId: bookingDetailsContent.id ?? "");
-                                  }
-                                  Get.back();
-                                },
-                                onYesPressed: ()=> Get.back(),
-                              ), useSafeArea: false,
+                          BookingCancelReasonDialog.show(
+                            bookingId: bookingDetailsContent.id ?? "",
+                            isSubBooking: isSubBooking,
+                            booking: bookingDetailsContent,
                           );
                         },
 

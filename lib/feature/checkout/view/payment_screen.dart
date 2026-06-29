@@ -113,14 +113,15 @@ class PaymentScreenState extends State<PaymentScreen> {
 
     printLog('url:$url');
 
+    final baseUrl = ApiUrlHelper.resolveBaseUrl();
     final isSuccess = url.contains('success') &&
-        url.contains(AppConstants.baseUrl) &&
+        url.contains(baseUrl) &&
         url.contains('flag');
     final isFailed = url.contains('fail') &&
-        url.contains(AppConstants.baseUrl) &&
+        url.contains(baseUrl) &&
         url.contains('flag');
     final isCancel = url.contains('cancel') &&
-        url.contains(AppConstants.baseUrl) &&
+        url.contains(baseUrl) &&
         url.contains('flag');
 
     if (!isSuccess && !isFailed && !isCancel) {

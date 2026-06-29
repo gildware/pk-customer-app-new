@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/feature/conversation/widgets/conversation_bubble_widget.dart';
 import 'package:demandium/feature/conversation/widgets/conversation_details_appbar.dart';
@@ -35,6 +37,7 @@ class _ConversationDetailsScreenState extends State<ConversationDetailsScreen> {
 
   String phone ='';
   String customerID = Get.find<UserController>().userInfoModel?.id?? '';
+  Timer? _incomingCallPollTimer;
 
   @override
   void initState() {
@@ -42,12 +45,25 @@ class _ConversationDetailsScreenState extends State<ConversationDetailsScreen> {
     Get.find<ConversationController>().cleanOldData();
     Get.find<ConversationController>().setChannelId(widget.channelID ?? "");
     Get.find<ConversationController>().getConversation(widget.channelID ??"", 1,isInitial:true);
+    if (Get.find<AuthController>().isLoggedIn()) {
+      Get.find<InAppCallController>().loadConfig();
+      Get.find<InAppCallController>().checkPendingIncomingCall();
+      _incomingCallPollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        Get.find<InAppCallController>().checkPendingIncomingCall();
+      });
+    }
 
     if(Get.find<SplashController>().configModel.content?.phoneNumberVisibility==0 && widget.userType.contains("provider-admin")){
       phone = "";
     }else{
       phone = "+${widget.phone}";
     }
+  }
+
+  @override
+  void dispose() {
+    _incomingCallPollTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -65,15 +81,13 @@ class _ConversationDetailsScreenState extends State<ConversationDetailsScreen> {
 
 
         endDrawer:ResponsiveHelper.isDesktop(context) ? const MenuDrawer():null,
-        appBar: ResponsiveHelper.isWeb() ?
-        PreferredSize(
-          preferredSize: Size(Dimensions.webMaxWidth, ResponsiveHelper.isDesktop(Get.context) ? Dimensions.preferredSizeWhenDesktop : Dimensions.preferredSize ),
-            child: const CustomAppBar(title: "",)) :
-        PreferredSize(
+        appBar: PreferredSize(
           preferredSize: const Size(double.maxFinite, 55),
           child: ConversationDetailsAppBar(
             fromNotification: widget.formNotification,
             name: widget.name, phone: phone, image: widget.image,
+            channelId: widget.channelID,
+            userType: widget.userType,
           ),
         ),
 

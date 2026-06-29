@@ -313,13 +313,13 @@ class _CustomPostCheckoutScreenState extends State<CustomPostCheckoutScreen> {
           String encodedAddress = base64Encode(utf8.encode(jsonEncode(addressModel.toJson())));
           String addressId = (addressModel.id == "null" || addressModel.id == null) ? "" : addressModel.id ?? "";
           String  zoneId = Get.find<LocationController>().getUserAddress()?.zoneId??"";
-          String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path${RouteHelper.orderSuccess}" : AppConstants.baseUrl;
+          String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path${RouteHelper.orderSuccess}" : ApiUrlHelper.resolveBaseUrl();
           int isPartial = cartController.walletPaymentStatus && isPartialPayment ? 1 : 0;
           String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
           String serviceLocation = "customer" ;
           final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-          url = '${AppConstants.baseUrl}/payment?payment_method=${checkoutController.selectedDigitalPaymentMethod?.gateway}&access_token=$accessToken&zone_id=$zoneId'
+          url = '${ApiUrlHelper.resolveBaseUrl()}/payment?payment_method=${checkoutController.selectedDigitalPaymentMethod?.gateway}&access_token=$accessToken&zone_id=$zoneId'
               '&callback=$callbackUrl&payment_platform=$platform&service_address=$encodedAddress&service_address_id=$addressId'
               '&is_partial=$isPartial&service_schedule=$schedule&post_id=${widget.postId}&provider_id=${widget.providerId}'
               '&service_location=$serviceLocation';

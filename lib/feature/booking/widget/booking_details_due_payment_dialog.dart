@@ -311,7 +311,7 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
       gateway: gateway,
       accessToken: accessToken,
       platform: platform,
-      callbackUrl: AppConstants.baseUrl,
+      callbackUrl: ApiUrlHelper.resolveBaseUrl(),
       bookingId: bookingId,
       paymentAmount: paymentAmount,
     );
@@ -335,12 +335,12 @@ class _BookingDuePaymentAmountDialogState extends State<BookingDuePaymentAmountD
     if (widget.isSubBooking) {
       final repeatBookingId = widget.bookingDetails.id ?? '';
       final parentBookingId = widget.bookingDetails.bookingId ?? '';
-      return '${AppConstants.baseUrl}/payment?payment_method=$gateway&access_token=$accessToken'
+      return '${ApiUrlHelper.resolveBaseUrl()}/payment?payment_method=$gateway&access_token=$accessToken'
           '&callback=$callbackUrl&payment_platform=$platform&is_repeat_single_booking=1'
           '&booking_repeat_id=$repeatBookingId&booking_id=$parentBookingId&amount=$amount';
     }
 
-    return '${AppConstants.baseUrl}/payment?payment_method=$gateway&access_token=$accessToken'
+    return '${ApiUrlHelper.resolveBaseUrl()}/payment?payment_method=$gateway&access_token=$accessToken'
         '&booking_id=$bookingId&switch_offline_to_digital=1&callback=$callbackUrl&is_partial=0'
         '&payment_platform=$platform&amount=$amount';
   }

@@ -19,8 +19,11 @@ class _CustomerReceivedRatingScreenState
   @override
   void initState() {
     super.initState();
-    Get.find<CustomerReceivedRatingController>()
-        .getReceivedRatings(1, reload: true);
+    CustomerReceivedRatingBinding().dependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<CustomerReceivedRatingController>()
+          .getReceivedRatings(1, reload: true);
+    });
   }
 
   @override

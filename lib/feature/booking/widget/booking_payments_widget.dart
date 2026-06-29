@@ -161,6 +161,11 @@ class _PaymentSummaryCard extends StatelessWidget {
     final pendingRefund = BookingHelper.resolvePendingRefundAmount(bookingDetails);
     final settlementAmount = BookingHelper.getWriteoffSettlementAmount(bookingDetails);
     final dueBalance = BookingHelper.getDueBalanceAmount(bookingDetails);
+    final refundBreakdown = BookingHelper.resolveRefundChannelBreakdown(bookingDetails);
+    final bookingStatus = (bookingDetails.bookingStatus ?? '').toLowerCase();
+    final showRefundBreakdown = refundBreakdown.hasAnyRefundable
+        && (bookingStatus == 'canceled' || bookingStatus == 'cancelled' || bookingStatus == 'refunded'
+            || pendingRefund != null && pendingRefund > 0.009);
 
     return Container(
       width: double.infinity,
@@ -239,6 +244,18 @@ class _PaymentSummaryCard extends StatelessWidget {
                 value: PriceConverter.convertPrice(pendingRefund, isShowLongPrice: true),
                 valueColor: Colors.orange.shade800,
               ),
+            if (showRefundBreakdown) ...[
+              if (refundBreakdown.hasWalletPaid)
+                _SummaryRow(
+                  title: 'paid_via_wallet'.tr,
+                  value: PriceConverter.convertPrice(refundBreakdown.walletPaid, isShowLongPrice: true),
+                ),
+              if (refundBreakdown.hasDigitalPaid)
+                _SummaryRow(
+                  title: 'paid_via_digital'.tr,
+                  value: PriceConverter.convertPrice(refundBreakdown.digitalPaid, isShowLongPrice: true),
+                ),
+            ],
             if (isWriteoffSettled && settlementAmount > 0.009)
               _SummaryRow(
                 title: 'settlement_amount'.tr,
@@ -528,6 +545,10 @@ class _RefundLedgerCard extends StatelessWidget {
               ),
             ),
           ],
+          _LedgerDetailRow(
+            title: 'refund_method'.tr,
+            value: entry.displayRefundMethodLabel,
+          ),
           if (entry.transactionId != null && entry.transactionId!.isNotEmpty)
             _LedgerDetailRow(title: 'transaction_id'.tr, value: entry.transactionId!),
           if (entry.referenceNote != null && entry.referenceNote!.isNotEmpty)

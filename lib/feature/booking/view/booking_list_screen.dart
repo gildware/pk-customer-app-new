@@ -35,7 +35,13 @@ class _BookingListScreenState extends State<BookingListScreen> {
         endDrawer:ResponsiveHelper.isDesktop(context) ? const MenuDrawer():null,
         appBar: CustomAppBar(
           isBackButtonExist: widget.isFromMenu? true : false,
-          onBackPressed: () => Get.back(),
+          onBackPressed: () {
+            if (Navigator.canPop(context)) {
+              Get.back();
+            } else {
+              Get.offAllNamed(RouteHelper.getMainRoute("home"));
+            }
+          },
           title: "my_bookings".tr,
         ),
         body: GetBuilder<ServiceBookingController>(

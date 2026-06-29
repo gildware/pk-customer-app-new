@@ -1,3 +1,4 @@
+import 'package:demandium/feature/booking/widget/booking_cancel_reason_dialog.dart';
 import 'package:demandium/common/widgets/booking_status_tags_widget.dart';
 import 'package:demandium/common/models/popup_menu_model.dart';
 import 'package:demandium/helper/booking_helper.dart';
@@ -94,31 +95,9 @@ class BookingItemCard extends StatelessWidget {
                             }
                             await _launchUrl(Uri.parse(uri));
                           } else if(option.title == "cancel"){
-                            Get.dialog(
-                              ConfirmationDialog(
-                                icon: Images.warning,
-                                title:  bookingModel.isRepeatBooking == 1 ? 'are_you_sure_to_cancel_this_full_booking'.tr : 'are_you_sure_to_cancel_your_order'.tr,
-                                description: bookingModel.isRepeatBooking == 1 ? 'once_cancel_full_booking'.tr : 'your_order_will_be_cancel'.tr,
-                                noButtonText: "yes_cancel".tr,
-                                noButtonColor: Theme.of(context).colorScheme.primary,
-                                noTextColor: Colors.white,
-                                yesButtonText: "not_now".tr,
-                                yesButtonColor: Theme.of(context).colorScheme.error,
-                                yesTextColor: Colors.white,
-                                buttonFontSize: Dimensions.fontSizeSmall + 1,
-                                onYesPressed: () {
-                                  Get.back();
-                                },
-                                onNoPressed: () async {
-                                  Get.back();
-                                  Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                  await Get.find<BookingDetailsController>().bookingCancel(
-                                    bookingId: bookingModel.id ?? "", fromListScreen: true,
-                                  );
-                                  Get.back();
-                                },
-                              ),
-                              useSafeArea: false,
+                            await BookingCancelReasonDialog.show(
+                              bookingId: bookingModel.id ?? "",
+                              fromListScreen: true,
                             );
                           }
 

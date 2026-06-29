@@ -191,13 +191,13 @@ class _ProductBottomSheetState extends State<RepeatBookingPaymentDialog> {
     String? path = html.window.location.pathname;
 
     String userId = Get.find<UserController>().userInfoModel?.id ?? "";
-    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
+    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : ApiUrlHelper.resolveBaseUrl();
     String platform = GetPlatform.isWeb ? "web" : "app" ;
     String repeatBookingId = bookingDetails.id ?? "";
     String bookingId = bookingDetails.bookingId ?? "";
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-    url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=$accessToken'
+    url = '${ApiUrlHelper.resolveBaseUrl()}/payment?payment_method=$paymentGateway&access_token=$accessToken'
         '&callback=$callbackUrl&payment_platform=$platform&is_repeat_single_booking=1&booking_repeat_id=$repeatBookingId&booking_id=$bookingId'
         '${paymentAmount != null ? '&amount=$paymentAmount' : ''}';
 

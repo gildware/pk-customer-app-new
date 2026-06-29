@@ -222,7 +222,7 @@ class CheckoutHelper {
       'new_user_info': encodedNewUserInfo,
     };
 
-    return Uri.parse(AppConstants.baseUrl).replace(
+    return Uri.parse(ApiUrlHelper.resolveBaseUrl()).replace(
       path: '/payment',
       queryParameters: queryParams,
     ).toString();

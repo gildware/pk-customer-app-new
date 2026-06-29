@@ -1,3 +1,4 @@
+import 'package:demandium/feature/booking/widget/booking_cancel_reason_dialog.dart';
 import 'package:demandium/common/models/popup_menu_model.dart';
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/feature/booking/widget/repeat/repeat_booking_details_widget.dart';
@@ -96,28 +97,9 @@ class _RepeatBookingDetailsScreenState extends State<RepeatBookingDetailsScreen>
                         }
                         await _launchUrl(Uri.parse(uri));
                       }else if(option.title == "cancel"){
-                        Get.dialog(
-                            ConfirmationDialog(
-                              icon: Images.deleteProfile,
-                              title: 'are_you_sure_to_cancel_this_full_booking'.tr,
-                              description: 'once_cancel_full_booking'.tr,
-                              noButtonText: "yes_cancel".tr,
-                              noButtonColor: Theme.of(context).colorScheme.primary,
-                              noTextColor: Colors.white,
-                              yesButtonText: "not_now".tr,
-                              yesButtonColor: Theme.of(context).colorScheme.error,
-                              yesTextColor: Colors.white,
-                              onYesPressed: () {
-                                Get.back();
-                              },
-                              onNoPressed: () async {
-                                Get.back();
-                                Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                await bookingDetailsController.bookingCancel(bookingId: bookingDetailsController.bookingDetailsContent?.id ?? "");
-                                Get.back();
-                              },
-                            ),
-                          useSafeArea: false,
+                        await BookingCancelReasonDialog.show(
+                          bookingId: bookingDetailsController.bookingDetailsContent?.id ?? "",
+                          booking: bookingDetailsController.bookingDetailsContent,
                         );
                       }
 
@@ -261,27 +243,9 @@ class RepeatBookingTabBar extends StatelessWidget {
                     builder: (serviceBookingController) {
                       return InkWell(
                         onTap: () {
-                          Get.dialog(
-                            ConfirmationDialog(
-                              icon: Images.warning,
-                              title: 'are_you_sure_to_cancel_this_full_booking'.tr,
-                              description: 'once_cancel_full_booking'.tr,
-                              noButtonText: "yes_cancel".tr,
-                              noButtonColor: Theme.of(context).colorScheme.primary,
-                              noTextColor: Colors.white,
-                              yesButtonText: "not_now".tr,
-                              yesButtonColor: Theme.of(context).colorScheme.error,
-                              yesTextColor: Colors.white,
-                              onYesPressed: () {
-                                Get.back();
-                              },
-                              onNoPressed: () async {
-                                Get.back();
-                                Get.dialog(const CustomLoader(), barrierDismissible: false);
-                                await bookingDetailsController.bookingCancel(bookingId: bookingDetailsController.bookingDetailsContent?.id ?? "");
-                                Get.back();
-                              },
-                            ),
+                          BookingCancelReasonDialog.show(
+                            bookingId: bookingDetailsController.bookingDetailsContent?.id ?? "",
+                            booking: bookingDetailsController.bookingDetailsContent,
                           );
                         },
 

@@ -220,6 +220,55 @@ class LocationController extends GetxController implements GetxService {
     return !_requireMapPolygonValidation;
   }
 
+  Position _positionFromLatLng(double latitude, double longitude) {
+    return Position(
+      latitude: latitude,
+      longitude: longitude,
+      timestamp: DateTime.now(),
+      accuracy: 1,
+      altitude: 1,
+      heading: 1,
+      speed: 1,
+      speedAccuracy: 1,
+      altitudeAccuracy: 1,
+      headingAccuracy: 1,
+    );
+  }
+
+  Position _defaultConfiguredPosition() {
+    final defaultLocation = Get.find<SplashController>().configModel.content?.defaultLocation;
+    return _positionFromLatLng(
+      defaultLocation?.latitude ?? 23.0000,
+      defaultLocation?.longitude ?? 90.0000,
+    );
+  }
+
+  Future<Position> _resolveDevicePosition({LatLng? defaultLatLng}) async {
+    if (defaultLatLng != null) {
+      return _positionFromLatLng(defaultLatLng.latitude, defaultLatLng.longitude);
+    }
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return await Geolocator.getLastKnownPosition() ?? _defaultConfiguredPosition();
+      }
+
+      try {
+        return await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 15),
+          ),
+        );
+      } on TimeoutException {
+        return await Geolocator.getLastKnownPosition() ?? _defaultConfiguredPosition();
+      }
+    } catch (_) {
+      return await Geolocator.getLastKnownPosition() ?? _defaultConfiguredPosition();
+    }
+  }
+
   Future<AddressModel> getCurrentLocation(bool fromAddress, {bool deviceCurrentLocation = false, GoogleMapController? mapController, LatLng? defaultLatLng, bool notify = true, bool isFromCheckout = false}) async {
     _isResolvingCurrentLocation = true;
     _skipNextPositionUpdate = true;
@@ -231,7 +280,6 @@ class LocationController extends GetxController implements GetxService {
     Position myPosition;
     try {
       await Geolocator.requestPermission();
-      Position newLocalData = await Geolocator.getCurrentPosition();
       if(getUserAddress() != null && !deviceCurrentLocation){
         myPosition =  Position(
           latitude: double.tryParse(getUserAddress()!.latitude!) ?? 0,
@@ -239,31 +287,11 @@ class LocationController extends GetxController implements GetxService {
           timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1,
           altitudeAccuracy: 1, headingAccuracy: 1,
         );
-      }else if(defaultLatLng !=null){
-
-        myPosition =  Position(
-            latitude:defaultLatLng.latitude,
-            longitude:defaultLatLng.longitude,
-            timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1,
-            altitudeAccuracy: 1, headingAccuracy: 1
-        );
       }else{
-        myPosition = newLocalData;
+        myPosition = await _resolveDevicePosition(defaultLatLng: defaultLatLng);
       }
     }catch(e) {
-      if(defaultLatLng != null){
-        myPosition = Position(
-            latitude:defaultLatLng.latitude,
-            longitude:defaultLatLng.longitude,
-            timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1,  altitudeAccuracy: 1, headingAccuracy: 1
-        );
-      }else{
-        myPosition = Position(
-            latitude:  Get.find<SplashController>().configModel.content?.defaultLocation?.latitude ?? 23.0000,
-            longitude: Get.find<SplashController>().configModel.content?.defaultLocation?.longitude ?? 90.0000,
-            timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1,  altitudeAccuracy: 1, headingAccuracy: 1
-        );
-      }
+      myPosition = await _resolveDevicePosition(defaultLatLng: defaultLatLng);
     }
 
     try {
@@ -943,11 +971,19 @@ class LocationController extends GetxController implements GetxService {
     }
   }
 
-  /// Clears in-memory address state when the customer session ends or switches.
-  void clearSessionData({bool notify = true}) {
+  /// Clears server-backed address list only; keeps the local session address from prefs.
+  void clearUserAddressList({bool notify = true}) {
     _addressList = null;
     _selectedAddress = null;
     _newlyAddedAddressId = null;
+    if (notify) {
+      refreshUi();
+    }
+  }
+
+  /// Clears in-memory address state when the customer session ends or switches.
+  void clearSessionData({bool notify = true}) {
+    clearUserAddressList(notify: false);
     _inZone = false;
     _zoneID = '';
     resetAddress(clearMapController: true, notify: false);

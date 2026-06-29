@@ -182,12 +182,12 @@ class _PaymentDialogState extends State<PaymentDialog> {
     String? path = RouteHelper.bookingDetailsScreen;
 
     String userId = Get.find<UserController>().userInfoModel?.id?? Get.find<SplashController>().getGuestId();
-    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
+    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : ApiUrlHelper.resolveBaseUrl();
     int isPartial = Get.find<CartController>().walletPaymentStatus && isPartialPayment ? 1 : 0;
     String platform = ResponsiveHelper.isWeb() ? "web" : "app" ;
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-    url = '${AppConstants.baseUrl}/payment?payment_method=${paymentMethod?.gateway}&access_token=$accessToken'
+    url = '${ApiUrlHelper.resolveBaseUrl()}/payment?payment_method=${paymentMethod?.gateway}&access_token=$accessToken'
         '&booking_id=$bookingId&switch_offline_to_digital=1&callback=$callbackUrl&is_partial=$isPartial&payment_platform=$platform';
 
     if (GetPlatform.isWeb) {

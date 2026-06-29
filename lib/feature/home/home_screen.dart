@@ -105,6 +105,9 @@ class HomeScreen extends StatefulWidget {
 
       if (Get.find<AuthController>().isLoggedIn()) {
         await _safeLoad(Get.find<AuthController>().updateToken());
+        if (Get.isRegistered<InAppCallController>()) {
+          await _safeLoad(Get.find<InAppCallController>().loadConfig());
+        }
       }
 
       Get.find<BookingDetailsController>().manageDialog();
@@ -294,6 +297,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       if (Get.find<AuthController>().isLoggedIn()) {
         await Get.find<UserController>().getUserInfo();
         Get.find<LocationController>().getAddressList();
+        Get.find<NotificationController>().getUnreadNotificationCount();
       }
     });
 

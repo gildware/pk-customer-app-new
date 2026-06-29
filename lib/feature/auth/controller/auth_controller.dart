@@ -216,49 +216,51 @@ class AuthController extends GetxController implements GetxService {
     String? emailPhone,
     String? password
   }) async {
-    final wasLoggedIn = authRepo.isLoggedIn();
-    if (wasLoggedIn) {
-      await resetCustomerSession(clearAddress: true);
-    } else {
-      await resetCustomerSession(clearAddress: false);
-    }
+    await resetCustomerSession(clearAddress: true);
 
-    await authRepo.saveUserToken(token);
-    await AuthSessionHelper.syncFromStorage();
+    try {
+      await authRepo.saveUserToken(token);
+      await AuthSessionHelper.syncFromStorage();
 
-    Get.find<SplashController>().updateLanguage(true);
+      Get.find<SplashController>().updateLanguage(true);
 
-    if (_isActiveRememberMe) {
-      saveUserNumberAndPassword(number: emailPhone ?? "", password: password ?? "");
-    } else {
-      clearUserNumberAndPassword();
-    }
+      if (_isActiveRememberMe) {
+        saveUserNumberAndPassword(number: emailPhone ?? "", password: password ?? "");
+      } else {
+        clearUserNumberAndPassword();
+      }
 
-    final navigationHandled = await AddressSessionHelper.navigateAfterAuth(
-      redirectRoute: redirectRoute,
-    );
-    if (navigationHandled) {
-      return;
-    }
-
-    if (Get.find<LocationController>().getUserAddress() != null) {
-      updateSavedLocalAddress();
-    }
-
-    if (redirectRoute != null) {
-      final routeData = RouteHelper.parseRedirectRouteToNavigate(redirectRoute);
-      await Get.offAllNamed(
-        routeData.path,
-        parameters: (routeData.parameters?.isEmpty ?? true) ? null : routeData.parameters,
+      final navigationHandled = await AddressSessionHelper.navigateAfterAuth(
+        redirectRoute: redirectRoute,
       );
-    } else {
-      await Get.offAllNamed(RouteHelper.getMainRoute('home'));
-    }
+      if (navigationHandled) {
+        await AddressSessionHelper.ensureLeftAuthFlow(redirectRoute: redirectRoute);
+        return;
+      }
 
-    AddressSessionHelper.markHomeRefreshPending();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(AddressSessionHelper.performPendingHomeRefresh());
-    });
+      if (Get.find<LocationController>().getUserAddress() != null) {
+        updateSavedLocalAddress();
+      }
+
+      if (redirectRoute != null) {
+        final routeData = RouteHelper.parseRedirectRouteToNavigate(redirectRoute);
+        await Get.offAllNamed(
+          routeData.path,
+          parameters: (routeData.parameters?.isEmpty ?? true) ? null : routeData.parameters,
+        );
+      } else {
+        await Get.offAllNamed(RouteHelper.getMainRoute('home'));
+      }
+
+      AddressSessionHelper.markHomeRefreshPending();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(AddressSessionHelper.performPendingHomeRefresh());
+      });
+      await AddressSessionHelper.ensureLeftAuthFlow(redirectRoute: redirectRoute);
+    } catch (e, stack) {
+      ErrorLogger.record(e, stack, reason: 'post-auth navigation');
+      await AddressSessionHelper.ensureLeftAuthFlow(redirectRoute: redirectRoute);
+    }
   }
 
   Future<void> updateSavedLocalAddress({bool saveContactPersonInfo = true}) async {
@@ -857,11 +859,13 @@ class AuthController extends GetxController implements GetxService {
   Future<void> resetCustomerSession({bool clearAddress = true}) async {
     if (clearAddress) {
       authRepo.clearSharedAddress();
+      if (Get.isRegistered<LocationController>()) {
+        Get.find<LocationController>().clearSessionData();
+      }
+    } else if (Get.isRegistered<LocationController>()) {
+      Get.find<LocationController>().clearUserAddressList();
     }
     AddressSessionHelper.clearAddressServiceabilityCache();
-    if (Get.isRegistered<LocationController>()) {
-      Get.find<LocationController>().clearSessionData();
-    }
     await DbHelper.clearAllCache();
     if (Get.isRegistered<CartController>()) {
       await Get.find<CartController>().clearLocalSession();
@@ -871,19 +875,26 @@ class AuthController extends GetxController implements GetxService {
     }
   }
 
-  Future<void> clearSharedData({Response? response}) async {
+  Future<void> clearSharedData({Response? response, bool clearAddress = true}) async {
     if (authRepo.isLoggedIn() && Get.isRegistered<CartController>()) {
       try {
         await Get.find<CartController>().removeAllCartItem();
       } catch (_) {}
     }
-    authRepo.clearSharedData(response: response);
+    authRepo.clearSharedData(response: response, clearAddress: clearAddress);
     if (Get.isRegistered<BottomNavController>()) {
       Get.find<BottomNavController>().changePage(BnbItem.homePage);
     }
     await AddressSessionHelper.regenerateGuestId();
-    await resetCustomerSession(clearAddress: false);
+    await resetCustomerSession(clearAddress: clearAddress);
     await AddressSessionHelper.resetHomeData();
+    if (!clearAddress) {
+      await AuthSessionHelper.syncFromStorage();
+      if (Get.isRegistered<LocationController>() &&
+          AddressSessionHelper.hasValidActiveAddress()) {
+        await Get.find<LocationController>().refreshSavedAddressZone();
+      }
+    }
   }
   String getUserToken() => authRepo.getUserToken();
 

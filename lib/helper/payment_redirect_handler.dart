@@ -30,7 +30,7 @@ class PaymentRedirectHandler {
     required String url,
     bool closeCurrentRoute = false,
   }) {
-    if (!url.contains(AppConstants.baseUrl) || !url.contains('flag')) {
+    if (!url.contains(ApiUrlHelper.resolveBaseUrl()) || !url.contains('flag')) {
       return;
     }
 

@@ -6,16 +6,22 @@ class NotificationRepo {
   final SharedPreferences sharedPreferences;
   NotificationRepo({required this.apiClient, required this.sharedPreferences});
 
-  Future<Response> getNotificationList( int offset) async {
+  Future<Response> getNotificationList(int offset) async {
     return await apiClient.getData('${AppConstants.notificationUri}?limit=10&offset=$offset');
   }
 
-  void saveSeenNotificationCount(int count) {
-    sharedPreferences.setInt(AppConstants.notificationCount, count);
+  Future<Response> getUnreadCount() async {
+    return await apiClient.getData(AppConstants.notificationUnreadCountUri);
   }
 
-  int getSeenNotificationCount() {
-    return sharedPreferences.getInt(AppConstants.notificationCount)!;
+  Future<Response> markAsRead(String notificationId) async {
+    return await apiClient.putData(
+      '${AppConstants.notificationUri}/$notificationId/read',
+      {},
+    );
   }
 
+  Future<Response> markAllAsRead() async {
+    return await apiClient.putData(AppConstants.notificationMarkAllReadUri, {});
+  }
 }

@@ -75,7 +75,7 @@ class _AccessLocationScreenState extends State<AccessLocationScreen> {
                                       await AddressSessionHelper.applySelectedAddress(
                                         address,
                                         redirectRoute: widget.route ?? RouteHelper.getMainRoute('home'),
-                                        canRoute: widget.route != null,
+                                        canRoute: true,
                                       );
                                       if (Get.isDialogOpen == true) Get.back();
                                     },
@@ -163,18 +163,41 @@ class BottomButton extends StatelessWidget {
           }
           _checkPermission(() async {
             Get.dialog(const CustomLoader(), barrierDismissible: false);
-            AddressModel address = await locationController.getCurrentLocation(true,  deviceCurrentLocation: true);
-            ZoneResponseModel response = await locationController.getZone(address.latitude!, address.longitude!, false);
+            try {
+              final address = await locationController.getCurrentLocation(
+                true,
+                deviceCurrentLocation: true,
+              );
 
-            if(response.isSuccess) {
+              if (address.latitude == null ||
+                  address.longitude == null ||
+                  address.latitude!.isEmpty ||
+                  address.longitude!.isEmpty) {
+                customSnackBar('pick_an_address'.tr, type: ToasterMessageType.info);
+                return;
+              }
+
+              final response = await locationController.getZone(
+                address.latitude!,
+                address.longitude!,
+                false,
+              );
+
+              if (!response.isSuccess || (response.totalServiceCount ?? 0) <= 0) {
+                Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
+                return;
+              }
+
               await AddressSessionHelper.applySelectedAddress(
                 address,
                 redirectRoute: route ?? RouteHelper.getMainRoute('home'),
-                canRoute: route != null,
+                canRoute: true,
+                closeOverlays: false,
               );
-            }else {
-              Get.back();
-              Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
+            } catch (_) {
+              customSnackBar('500'.tr, type: ToasterMessageType.error);
+            } finally {
+              if (Get.isDialogOpen == true) Get.back();
             }
           });
         },
@@ -200,7 +223,7 @@ class BottomButton extends StatelessWidget {
                       ? RouteHelper.signUp
                       : RouteHelper.getMainRoute('home')
                   : route!,
-              route != null,
+              true,
               'false',
               null,
               Get.find<LocationController>().getUserAddress()

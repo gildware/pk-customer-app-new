@@ -227,12 +227,12 @@ class _PaymentMethodListWidgetState extends State<PaymentMethodListWidget> {
     String userId = Get.find<UserController>().userInfoModel?.id ?? "";
 
 
-    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : AppConstants.baseUrl;
+    String callbackUrl = GetPlatform.isWeb ? "$protocol//$hostname:$port$path" : ApiUrlHelper.resolveBaseUrl();
 
     String platform = GetPlatform.isWeb ? "web" : "app" ;
     final accessToken = await PaymentAccessTokenHelper.forSubject(userId);
 
-    url = '${AppConstants.baseUrl}/payment?payment_method=$paymentGateway&access_token=$accessToken'
+    url = '${ApiUrlHelper.resolveBaseUrl()}/payment?payment_method=$paymentGateway&access_token=$accessToken'
         '&callback=$callbackUrl&amount=$amount&payment_platform=$platform&is_add_fund=1';
 
     if (GetPlatform.isWeb) {

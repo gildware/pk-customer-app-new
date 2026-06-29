@@ -1,3 +1,4 @@
+import 'package:demandium/common/widgets/custom_pop_widget.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 import 'package:demandium/common/widgets/address_selection_drawer.dart';
@@ -52,13 +53,24 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  void _handleBack(BuildContext context) {
+    if (widget.fromNotification == "fromNotification" || !Navigator.canPop(context)) {
+      Get.offAllNamed(RouteHelper.getMainRoute("home"));
+    } else {
+      Get.back();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ScrollController scrollController = ScrollController();
     return GetBuilder<SplashController>(
       builder: (splashController) {
         _redirectIfFeatureDisabled(splashController);
-        return Scaffold(
+        return CustomPopWidget(
+          onPopInvoked: () => _handleBack(context),
+          isNavigationOnOnPop: true,
+          child: Scaffold(
           drawer: ResponsiveHelper.isDesktop(context) ? const AddressSelectionDrawer() : null,
 
           endDrawer : ResponsiveHelper.isDesktop(context) ? const MenuDrawer() : null,
@@ -83,13 +95,7 @@ class _WalletScreenState extends State<WalletScreen> {
               child: Image.asset(Images.info, width: 20, height: 20, color: Colors.white,),
             ),
           ),
-            onBackPressed: (){
-              if(widget.fromNotification == "fromNotification"){
-                Get.offAllNamed(RouteHelper.getMainRoute("home"));
-              }else{
-                Get.back();
-              }
-            },
+            onBackPressed: () => _handleBack(context),
           ),
 
           body: RefreshIndicator(
@@ -111,6 +117,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 );
             }),
           ),
+        ),
         );
       }
     );

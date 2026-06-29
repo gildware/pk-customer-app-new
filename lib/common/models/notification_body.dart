@@ -15,9 +15,12 @@ class NotificationBody {
   String? userType;
   String? serviceSlug;
   String? serviceId;
+  String? pushNotificationId;
+  String? callId;
+  String? agoraChannelName;
 
   NotificationBody(
-      {this.title, this.body, this.bookingId, this.notificationType, this.notificationImage,this.userProfileImage,this.channelId,this.userName,this.userPhone,this.userType, this.bookingType, this.repeatBookingType, this.serviceSlug, this.serviceId});
+      {this.title, this.body, this.bookingId, this.notificationType, this.notificationImage,this.userProfileImage,this.channelId,this.userName,this.userPhone,this.userType, this.bookingType, this.repeatBookingType, this.serviceSlug, this.serviceId, this.pushNotificationId, this.callId, this.agoraChannelName});
 
   NotificationBody.fromJson(Map<String, dynamic> json) {
     title = json['title'];
@@ -35,6 +38,9 @@ class NotificationBody {
     userPhone = json['user_phone'];
     serviceSlug = json['service_slug'];
     serviceId = json['service_id'];
+    pushNotificationId = json['push_notification_id']?.toString();
+    callId = json['call_id']?.toString();
+    agoraChannelName = json['agora_channel_name']?.toString();
   }
 
   Map<String, dynamic> toJson() {
@@ -54,6 +60,9 @@ class NotificationBody {
     data['user_type'] = userType;
     data['service_slug'] = serviceSlug;
     data['service_id'] = serviceId;
+    data['push_notification_id'] = pushNotificationId;
+    data['call_id'] = callId;
+    data['agora_channel_name'] = agoraChannelName;
     return data;
   }
 }

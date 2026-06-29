@@ -866,6 +866,9 @@
   "amount_paid": "भुगतान की गई राशि",
   "due_balance": "बकाया शेष",
   "refunds_to_customer": "ग्राहक को रिफंड",
+  "refund_method": "रिफंड विधि",
+  "refund_to_wallet": "वॉलेट में रिफंड",
+  "transfer_to_customer": "ग्राहक को ट्रांसफर",
   "received_by": "प्राप्तकर्ता",
   "due_after_this_payment": "इस भुगतान के बाद बकाया",
   "advance_paid": "अग्रिम भुगतान",
@@ -1321,5 +1324,6 @@
   "ai_chat_reply_support": "मेनू → सहायता और सपोर्ट या इस चैट में सपोर्ट आइकन से संपर्क करें।",
   "ai_chat_reply_default": "मैं बुकिंग, कार्ट, बोली, भुगतान, पता और खाते में मदद कर सकता हूँ।",
   "work_showcase": "कार्य प्रदर्शनी",
-  "no_showcase_items": "अभी कोई कार्य नमूना उपलब्ध नहीं है"
+  "no_showcase_items": "अभी कोई कार्य नमूना उपलब्ध नहीं है",
+  "view_booking": "बुकिंग देखें"
 }

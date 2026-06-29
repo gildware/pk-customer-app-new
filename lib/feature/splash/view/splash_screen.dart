@@ -117,6 +117,8 @@ class SplashScreenState extends State<SplashScreen> {
           Get.offAllNamed(RouteHelper.getLanguageScreen('fromOthers'));
         } else if (Get.find<SplashController>().isShowOnboardingScreen()) {
           Get.offAllNamed(RouteHelper.onBoardScreen);
+        } else if (!Get.find<AuthController>().isLoggedIn()) {
+          Get.offAllNamed(RouteHelper.getSignInRoute(redirectUrl: RouteHelper.home));
         } else {
           final canContinue = await AddressSessionHelper.ensureAddressBeforeContinue();
           if (!mounted || !canContinue) {
@@ -195,6 +197,20 @@ class SplashScreenState extends State<SplashScreen> {
         Get.toNamed(RouteHelper.getInboxScreenRoute(fromNotification: "fromNotification"));
       } break;
 
+      case "incoming_call":
+      case "call_accepted":
+      case "call_declined":
+      case "call_cancelled":
+      case "call_missed":
+      case "call_ended": {
+        Get.offAllNamed(RouteHelper.getInitialRoute());
+        runAfterFrame(() async {
+          if (Get.isRegistered<InAppCallController>()) {
+            await Get.find<InAppCallController>().handlePushData(notificationBody.toJson());
+          }
+        });
+      } break;
+
       case "bidding": {
         Get.toNamed(RouteHelper.getMyPostScreen(fromNotification: "fromNotification"));
       } break;
@@ -227,6 +243,10 @@ class SplashScreenState extends State<SplashScreen> {
 
       case "loyalty_point": {
         Get.toNamed(RouteHelper.getLoyaltyPointScreen(fromNotification: "fromNotification"));
+      } break;
+
+      case "review": {
+        NotificationHelper.openReviewNotificationTarget();
       } break;
 
       case "service": {

@@ -866,6 +866,9 @@
   "amount_paid": "المبلغ المدفوع",
   "due_balance": "الرصيد المستحق",
   "refunds_to_customer": "المبالغ المستردة للعميل",
+  "refund_method": "طريقة الاسترداد",
+  "refund_to_wallet": "تم الاسترداد إلى المحفظة",
+  "transfer_to_customer": "تحويل للعميل",
   "received_by": "استلمها",
   "due_after_this_payment": "المستحق بعد هذا الدفع",
   "advance_paid": "المدفوع مقدماً",
@@ -1318,5 +1321,6 @@
   "ai_chat_reply_support": "تواصل معنا من القائمة → المساعدة والدعم أو أيقونة الدعم في هذه الدردشة.",
   "ai_chat_reply_default": "يمكنني المساعدة في الحجوزات والسلة والمزايدات والدفع والعنوان والحساب. جرّب السؤال عن أحدها.",
   "work_showcase": "معرض الأعمال",
-  "no_showcase_items": "لا توجد عينات عمل للعرض بعد"
+  "no_showcase_items": "لا توجد عينات عمل للعرض بعد",
+  "view_booking": "عرض الحجز"
 }

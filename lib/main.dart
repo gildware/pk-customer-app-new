@@ -22,6 +22,9 @@ Future<void> main() async {
 
   if (!kIsWeb && GetPlatform.isMobile) {
     FirebaseMessaging.onBackgroundMessage(myBackgroundMessageHandler);
+    await NotificationHelper.createAndroidNotificationChannels(
+      flutterLocalNotificationsPlugin,
+    );
   }
 
   runApp(MyApp(languages: languages));

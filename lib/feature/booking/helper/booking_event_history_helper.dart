@@ -255,7 +255,7 @@ class BookingEventHistoryHelper {
       events.add(_withTieRank(
         BookingTimelineEvent(
           title: 'payments_title'.tr,
-          description: '${'refund_of'.tr} $amount',
+          description: '${'refund_of'.tr} $amount · ${refund.displayRefundMethodLabel}',
           timestamp: refund.date,
           eventType: BookingEventType.payment,
         ),

@@ -1,4 +1,5 @@
 import 'package:demandium/common/models/popup_menu_model.dart';
+import 'package:demandium/feature/booking/model/booking_reason_model.dart';
 import 'package:demandium/feature/checkout/widget/payment_section/incomplete_offline_payment_dialog.dart';
 import 'package:demandium/feature/home/widget/referal_welcome_dialog.dart';
 import 'package:demandium/helper/booking_helper.dart';
@@ -23,6 +24,14 @@ class BookingDetailsController extends GetxController implements GetxService{
   bool _isCancelling = false;
   bool get isCancelling => _isCancelling;
 
+  List<BookingReasonModel> _customerCancellationReasons = [];
+  List<BookingReasonModel> get customerCancellationReasons => _customerCancellationReasons;
+
+  bool _isLoadingCancellationReasons = false;
+  bool get isLoadingCancellationReasons => _isLoadingCancellationReasons;
+
+  Future<List<BookingReasonModel>>? _customerCancellationReasonsRequest;
+
   BookingDetailsContent? _bookingDetailsContent;
   BookingDetailsContent? get bookingDetailsContent => _bookingDetailsContent;
 
@@ -39,37 +48,67 @@ class BookingDetailsController extends GetxController implements GetxService{
   }
 
 
-  Future<void> bookingCancel({required String bookingId, bool fromListScreen = false,})async{
+  Future<bool> bookingCancel({
+    required String bookingId,
+    required int customerCancellationReasonId,
+    String? statusChangeRemarks,
+    String? refundMethod,
+    bool fromListScreen = false,
+  }) async {
     _isCancelling = true;
     update();
-    Response? response =  await  bookingDetailsRepo.bookingCancel(bookingID: bookingId);
-    if(response.statusCode == 200 && response.body['response_code']=="status_update_success_200"){
-      _isCancelling = false;
-      customSnackBar('booking_cancelled_successfully'.tr, type : ToasterMessageType.success);
-      if(fromListScreen) {
-        Get.find<ServiceBookingController>().refreshCurrentBookingTab();
-      }else{
-        await getBookingDetails(bookingId: bookingId, reload: false);
-        Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+    Response? response = await bookingDetailsRepo.bookingCancel(
+      bookingID: bookingId,
+      customerCancellationReasonId: customerCancellationReasonId,
+      statusChangeRemarks: statusChangeRemarks,
+      refundMethod: refundMethod,
+    );
+    if (response.statusCode == 200) {
+      final responseCode = response.body['response_code']?.toString() ?? '';
+      if (responseCode == 'status_update_success_200' || responseCode == 'booking_already_canceled_200') {
+        _isCancelling = false;
+        if (responseCode == 'status_update_success_200') {
+          customSnackBar('booking_cancelled_successfully'.tr, type: ToasterMessageType.success);
+        }
+        if (fromListScreen) {
+          Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+        } else {
+          await getBookingDetails(bookingId: bookingId, reload: false);
+          Get.find<ServiceBookingController>().refreshCurrentBookingTab();
+        }
+        update();
+        return true;
       }
-
-    }else if(response.statusCode == 200 && (response.body['response_code'] == "booking_already_accepted_200"
-        || response.body['response_code'] == "booking_already_ongoing_200" || response.body['response_code'] == "booking_already_completed_200")){
-      customSnackBar(response.body['message'] ?? "");
-      await getBookingDetails(bookingId: bookingId);
-      _isCancelling = false;
-    }
-    else{
+      if (responseCode == 'booking_already_accepted_200'
+          || responseCode == 'booking_already_ongoing_200'
+          || responseCode == 'booking_already_completed_200') {
+        customSnackBar(response.body['message'] ?? '');
+        await getBookingDetails(bookingId: bookingId);
+        _isCancelling = false;
+      } else if (responseCode != 'status_update_success_200' && responseCode != 'booking_already_canceled_200') {
+        _isCancelling = false;
+        ApiChecker.checkApi(response);
+      }
+    } else {
       _isCancelling = false;
       ApiChecker.checkApi(response);
     }
     update();
+    return false;
   }
 
-  Future<void> subBookingCancel({required String subBookingId})async{
+  Future<bool> subBookingCancel({
+    required String subBookingId,
+    required int customerCancellationReasonId,
+    String? statusChangeRemarks,
+  }) async {
     _isCancelling = true;
     update();
-    Response? response =  await  bookingDetailsRepo.subBookingCancel(bookingID: subBookingId);
+    Response? response = await bookingDetailsRepo.subBookingCancel(
+      bookingID: subBookingId,
+      customerCancellationReasonId: customerCancellationReasonId,
+      statusChangeRemarks: statusChangeRemarks,
+    );
     if(response.statusCode == 200 ){
       _isCancelling = false;
 
@@ -78,11 +117,59 @@ class BookingDetailsController extends GetxController implements GetxService{
         getBookingDetails(bookingId: _bookingDetailsContent?.id ?? "", reload : false );
       }
       customSnackBar('booking_cancelled_successfully'.tr, type : ToasterMessageType.success);
+      update();
+      return true;
     } else{
       _isCancelling = false;
       ApiChecker.checkApi(response);
     }
     update();
+    return false;
+  }
+
+  Future<List<BookingReasonModel>> getCustomerCancellationReasons({bool forceReload = false}) async {
+    if (_customerCancellationReasons.isNotEmpty && !forceReload) {
+      return _customerCancellationReasons;
+    }
+
+    if (_customerCancellationReasonsRequest != null && !forceReload) {
+      return _customerCancellationReasonsRequest!;
+    }
+
+    _isLoadingCancellationReasons = true;
+    update();
+
+    _customerCancellationReasonsRequest = _fetchCustomerCancellationReasons();
+    try {
+      return await _customerCancellationReasonsRequest!;
+    } finally {
+      _customerCancellationReasonsRequest = null;
+    }
+  }
+
+  Future<List<BookingReasonModel>> _fetchCustomerCancellationReasons() async {
+    try {
+      final response = await bookingDetailsRepo.getCustomerCancellationReasons();
+      if (response.statusCode == 200) {
+        final raw = response.body['content'];
+        if (raw is List) {
+          _customerCancellationReasons = raw
+              .whereType<Map>()
+              .map((item) => BookingReasonModel.fromJson(Map<String, dynamic>.from(item)))
+              .toList();
+        } else {
+          _customerCancellationReasons = [];
+        }
+      } else {
+        _customerCancellationReasons = [];
+      }
+    } catch (_) {
+      _customerCancellationReasons = [];
+    }
+
+    _isLoadingCancellationReasons = false;
+    update();
+    return _customerCancellationReasons;
   }
 
   Future<void> getBookingDetails({required String bookingId, bool reload = true})async{

@@ -2,6 +2,7 @@ import 'package:demandium/common/model/booking_status_ui_model.dart';
 import 'package:demandium/common/models/user_model.dart';
 import 'package:demandium/helper/booking_helper.dart';
 import 'package:demandium/util/core_export.dart';
+import 'package:get/get.dart';
 
 class BookingDetailsModel {
   String? responseCode;
@@ -1247,6 +1248,7 @@ class BookingPaymentDetailsSummary {
   double? refundableAmount;
   double? refundableRemaining;
   double? pendingRefund;
+  CustomerRefundChannelBreakdown? refundChannelBreakdown;
 
   BookingPaymentDetailsSummary({
     this.total,
@@ -1268,6 +1270,7 @@ class BookingPaymentDetailsSummary {
     this.refundableAmount,
     this.refundableRemaining,
     this.pendingRefund,
+    this.refundChannelBreakdown,
   });
 
   BookingPaymentDetailsSummary.fromJson(Map<String, dynamic> json) {
@@ -1292,7 +1295,48 @@ class BookingPaymentDetailsSummary {
     refundableAmount = double.tryParse(json['refundable_amount']?.toString() ?? '');
     refundableRemaining = double.tryParse(json['refundable_remaining']?.toString() ?? '');
     pendingRefund = double.tryParse(json['pending_refund']?.toString() ?? '');
+    refundChannelBreakdown = json['refund_channel_breakdown'] is Map
+        ? CustomerRefundChannelBreakdown.fromJson(
+            Map<String, dynamic>.from(json['refund_channel_breakdown']),
+          )
+        : null;
   }
+}
+
+class CustomerRefundChannelBreakdown {
+  final double walletPaid;
+  final double digitalPaid;
+  final double walletRefundAmount;
+  final double digitalRefundAmount;
+  final double totalRefundable;
+  final bool hasMixedPayments;
+  final bool requiresDigitalRefundChoice;
+
+  const CustomerRefundChannelBreakdown({
+    this.walletPaid = 0,
+    this.digitalPaid = 0,
+    this.walletRefundAmount = 0,
+    this.digitalRefundAmount = 0,
+    this.totalRefundable = 0,
+    this.hasMixedPayments = false,
+    this.requiresDigitalRefundChoice = false,
+  });
+
+  factory CustomerRefundChannelBreakdown.fromJson(Map<String, dynamic> json) {
+    return CustomerRefundChannelBreakdown(
+      walletPaid: double.tryParse(json['wallet_paid']?.toString() ?? '') ?? 0,
+      digitalPaid: double.tryParse(json['digital_paid']?.toString() ?? '') ?? 0,
+      walletRefundAmount: double.tryParse(json['wallet_refund_amount']?.toString() ?? '') ?? 0,
+      digitalRefundAmount: double.tryParse(json['digital_refund_amount']?.toString() ?? '') ?? 0,
+      totalRefundable: double.tryParse(json['total_refundable']?.toString() ?? '') ?? 0,
+      hasMixedPayments: json['has_mixed_payments'] == true,
+      requiresDigitalRefundChoice: json['requires_digital_refund_choice'] == true,
+    );
+  }
+
+  bool get hasWalletPaid => walletPaid > 0.009;
+  bool get hasDigitalPaid => digitalPaid > 0.009;
+  bool get hasAnyRefundable => totalRefundable > 0.009 || walletPaid > 0.009 || digitalPaid > 0.009;
 }
 
 class BookingPaymentLedger {
@@ -1356,6 +1400,8 @@ class BookingRefundLedgerEntry {
   double? amount;
   String? transactionId;
   String? referenceNote;
+  String? refundMethod;
+  String? refundMethodLabel;
 
   BookingRefundLedgerEntry({
     this.serial,
@@ -1363,7 +1409,25 @@ class BookingRefundLedgerEntry {
     this.amount,
     this.transactionId,
     this.referenceNote,
+    this.refundMethod,
+    this.refundMethodLabel,
   });
+
+  String get displayRefundMethodLabel {
+    if (refundMethodLabel != null && refundMethodLabel!.trim().isNotEmpty) {
+      return refundMethodLabel!.trim();
+    }
+    if (refundMethod == 'transfer') {
+      return 'transfer_to_customer'.tr;
+    }
+    if (refundMethod == 'wallet') {
+      return 'refund_to_wallet'.tr;
+    }
+    if (transactionId != null && transactionId!.trim().isNotEmpty) {
+      return 'transfer_to_customer'.tr;
+    }
+    return 'refund_to_wallet'.tr;
+  }
 
   BookingRefundLedgerEntry.fromJson(Map<String, dynamic> json) {
     serial = int.tryParse(json['serial']?.toString() ?? '');
@@ -1371,6 +1435,8 @@ class BookingRefundLedgerEntry {
     amount = double.tryParse(json['amount']?.toString() ?? '');
     transactionId = json['transaction_id'];
     referenceNote = json['reference_note'];
+    refundMethod = json['refund_method'];
+    refundMethodLabel = json['refund_method_label'];
   }
 }
 

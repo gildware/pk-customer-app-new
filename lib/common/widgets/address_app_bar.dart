@@ -109,6 +109,12 @@ class AddressAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         InkWell(
           hoverColor: Colors.transparent,
+          onTap: () => Get.toNamed(RouteHelper.getInboxScreenRoute()),
+          child: const Icon(Icons.chat_bubble_outline_rounded, size: 25, color: Colors.white),
+        ),
+        const SizedBox(width: Dimensions.paddingSizeDefault),
+        InkWell(
+          hoverColor: Colors.transparent,
           onTap: () => Get.toNamed(RouteHelper.getCartRoute()),
           child: CartWidget(
             color: Colors.white,
@@ -116,11 +122,38 @@ class AddressAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
         const SizedBox(width: Dimensions.paddingSizeDefault),
-        InkWell(
-          hoverColor: Colors.transparent,
-          onTap: () => Get.toNamed(RouteHelper.getNotificationRoute()),
-          child: const Icon(Icons.notifications, size: 25, color: Colors.white),
-        ),
+        GetBuilder<NotificationController>(builder: (notificationController) {
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              InkWell(
+                hoverColor: Colors.transparent,
+                onTap: () => Get.toNamed(RouteHelper.getNotificationRoute()),
+                child: const Icon(Icons.notifications, size: 25, color: Colors.white),
+              ),
+              if (notificationController.unseenNotificationCount > 0)
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    height: 18,
+                    width: 18,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.red),
+                    child: FittedBox(
+                      child: Text(
+                        notificationController.unseenNotificationCount > 99
+                            ? '99+'
+                            : notificationController.unseenNotificationCount.toString(),
+                        style: robotoRegular.copyWith(fontSize: 10, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }),
       ]),
     );
   }

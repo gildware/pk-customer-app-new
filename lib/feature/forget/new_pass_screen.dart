@@ -55,7 +55,11 @@ class _NewPassScreenState extends State<NewPassScreen> {
         endDrawer:ResponsiveHelper.isDesktop(context) ? const MenuDrawer():null,
         appBar: CustomAppBar(title:'change_password'.tr, onBackPressed: (){
           Get.find<AuthController>().updateVerificationCode('');
-          Get.back();
+          if (Navigator.canPop(context)) {
+            Get.back();
+          } else {
+            Get.offAllNamed(RouteHelper.getSignInRoute());
+          }
         },),
         body: GetBuilder<AuthController>(builder: (controller){
           return SafeArea(child: FooterBaseView(

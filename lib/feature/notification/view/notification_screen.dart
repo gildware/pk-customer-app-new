@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:demandium/common/widgets/custom_pop_widget.dart';
-import 'package:demandium/common/widgets/image_dialog.dart';
 import 'package:demandium/util/core_export.dart';
 import 'package:get/get.dart';
 import 'package:demandium/feature/notification/widget/notification_shimmer.dart';
@@ -14,6 +14,25 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  Timer? _inboxPollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    Get.find<NotificationController>().getNotifications(1);
+    _inboxPollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (Get.isRegistered<NotificationController>()) {
+        Get.find<NotificationController>().refreshInboxFromPush();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _inboxPollTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ScrollController scrollController = ScrollController();
@@ -26,9 +45,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: CustomAppBar(title: "notifications".tr, isBackButtonExist: true,),
           body: GetBuilder<NotificationController>(
-            initState: (state){
-              Get.find<NotificationController>().getNotifications(1);
-            },
             builder: (controller) {
               return FooterBaseView(
                   isScrollView:true,
@@ -73,14 +89,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                     elevation: 0,
                                     child: ListView.builder(
                                       itemBuilder: (context, index1) {
+                                        final item = controller.notificationList[index0][index1] as NotificationData;
                                         return InkWell(
-                                          onTap: () => showDialog(context: context, builder: (ctx)  =>
-                                            ImageDialog(
-                                              imageUrl:'${controller.notificationList[index0][index1].coverImageFullPath ?? ""}',
-                                              title: controller.notificationList[index0][index1].title.toString().trim(),
-                                              subTitle: "${controller.notificationList[index0][index1].description}",
-                                            )
-                                          ),
+                                          onTap: () => controller.handleInboxNotificationTap(item),
                                           child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeSmall,vertical: Dimensions.paddingSizeSmall),
                                               child: Column(
@@ -92,7 +103,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                                       ClipRRect(
                                                         borderRadius: BorderRadius.circular(50),
                                                         child: CustomImage(
-                                                          image:'${controller.notificationList[index0][index1].coverImageFullPath ?? ""}',
+                                                          image:'${item.coverImageFullPath ?? ""}',
                                                           height: 30, width: 30, fit: BoxFit.cover,
                                                         ),
                                                       ),
@@ -101,24 +112,45 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                                         child: Column(
                                                           crossAxisAlignment: CrossAxisAlignment.start,
                                                           children: [
-                                                            Text(controller.notificationList[index0][index1].title.toString().trim(),
-                                                                style: robotoMedium.copyWith(color: Theme.of(context).
-                                                                textTheme.bodyLarge!.color!.withValues(alpha: 0.7) ,
-                                                                    fontSize: Dimensions.fontSizeDefault
-                                                                )),
+                                                            Row(
+                                                              children: [
+                                                                if (item.isRead != true)
+                                                                  Container(
+                                                                    width: 8,
+                                                                    height: 8,
+                                                                    margin: const EdgeInsets.only(right: 6),
+                                                                    decoration: BoxDecoration(
+                                                                      color: Theme.of(context).colorScheme.primary,
+                                                                      shape: BoxShape.circle,
+                                                                    ),
+                                                                  ),
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    item.title.toString().trim(),
+                                                                    style: robotoMedium.copyWith(
+                                                                      color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: item.isRead == true ? 0.7 : 1),
+                                                                      fontSize: Dimensions.fontSizeDefault,
+                                                                      fontWeight: item.isRead == true ? FontWeight.w500 : FontWeight.w700,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
                                                             const SizedBox(height: Dimensions.paddingSizeSmall,),
-                                                            Text("${controller.notificationList[index0][index1].description ?? ""}",
-                                                                maxLines: 2,
-                                                                style: robotoRegular.copyWith(color: Theme.of(context).
-                                                                textTheme.bodyLarge!.color!.withValues(alpha: 0.5) ,
-                                                                    fontSize: Dimensions.fontSizeDefault
-                                                                )),
+                                                            Text(
+                                                              '${item.description ?? ""}',
+                                                              maxLines: 2,
+                                                              style: robotoRegular.copyWith(
+                                                                color: Theme.of(context).textTheme.bodyLarge!.color!.withValues(alpha: 0.5),
+                                                                fontSize: Dimensions.fontSizeDefault,
+                                                              ),
+                                                            ),
                                                           ],
                                                         ),
                                                       ),
                                                       SizedBox(
                                                           height: 40, width: 60,
-                                                          child: Text(DateConverter.convertStringTimeToDate(DateConverter.isoUtcStringToLocalDate(controller.notificationList[index0][index1].createdAt)))),
+                                                          child: Text(DateConverter.convertStringTimeToDate(DateConverter.isoUtcStringToLocalDate(item.createdAt ?? '')))),
                                                     ],
                                                   ),
                                                 ],

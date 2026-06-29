@@ -205,7 +205,7 @@ class AuthRepo {
     return SecureTokenStorage.cachedToken().isNotEmpty;
   }
 
-  bool clearSharedData({Response? response}) {
+  bool clearSharedData({Response? response, bool clearAddress = true}) {
     if(GetPlatform.isAndroid && !GetPlatform.isWeb){
       final address = Get.find<LocationController>().getUserAddress();
       final zoneId = address?.zoneId?.trim();
@@ -219,17 +219,41 @@ class AuthRepo {
     sharedPreferences.remove(AppConstants.token);
     sharedPreferences.remove(AppConstants.referredBottomSheet);
     sharedPreferences.remove(AppConstants.isContinueZone);
-    clearSharedAddress();
+    if (clearAddress) {
+      clearSharedAddress();
+    } else {
+      _syncHeadersKeepingAddress();
+    }
     Get.find<AllSearchController>().removeHistory();
     Get.find<UserController>().setUserInfoModelData(null);
     sharedPreferences.setStringList(AppConstants.searchHistory, []);
     apiClient.token = null;
-    if(response !=null && response.body['response_code'] != null && response.statusCode == 401 && response.body['response_code'] == "zone_404"){
-      if (Get.isRegistered<LocationController>()) {
-        Get.find<LocationController>().refreshSavedAddressZone();
-      }
+    if (!clearAddress &&
+        response != null &&
+        response.body is Map &&
+        response.statusCode == 401 &&
+        response.body['response_code'] == 'zone_404' &&
+        Get.isRegistered<LocationController>()) {
+      Get.find<LocationController>().refreshSavedAddressZone();
     }
     return true;
+  }
+
+  void _syncHeadersKeepingAddress() {
+    String? zoneId;
+    try {
+      final addressJson = sharedPreferences.getString(AppConstants.userAddress);
+      if (addressJson != null && addressJson.isNotEmpty) {
+        zoneId = AddressModel.fromJson(jsonDecode(addressJson)).zoneId;
+      }
+    } catch (_) {}
+
+    apiClient.updateHeader(
+      null,
+      zoneId,
+      sharedPreferences.getString(AppConstants.languageCode),
+      sharedPreferences.getString(AppConstants.guestId),
+    );
   }
 
   Future<void> preloadRememberMeCredentials() async {

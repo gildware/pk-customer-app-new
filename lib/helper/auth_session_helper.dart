@@ -26,7 +26,10 @@ class AuthSessionHelper {
 
     _authRecoveryInFlight = true;
     try {
-      await Get.find<AuthController>().clearSharedData(response: response);
+      await Get.find<AuthController>().clearSharedData(
+        response: response,
+        clearAddress: false,
+      );
 
       if (Get.isRegistered<BottomNavController>()) {
         Get.find<BottomNavController>().changePage(BnbItem.homePage);

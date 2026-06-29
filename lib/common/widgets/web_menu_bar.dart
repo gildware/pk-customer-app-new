@@ -162,10 +162,28 @@ class WebMenuBar extends StatelessWidget implements PreferredSizeWidget {
         }),
 
         const SizedBox(width: Dimensions.paddingSizeSmall),
-        MenuButtonWebIcon( icon: Images.notification, isCart: false, onTap: () {
-          _navigateWithAddress(RouteHelper.getNotificationRoute(), () {
-            Get.toNamed(RouteHelper.getNotificationRoute());
-          });
+        MenuButtonWebIcon(
+          icon: Images.chatImage,
+          isCart: false,
+          onTap: () {
+            _navigateWithAddress(RouteHelper.getInboxScreenRoute(), () {
+              Get.toNamed(RouteHelper.getInboxScreenRoute());
+            });
+          },
+        ),
+
+        const SizedBox(width: Dimensions.paddingSizeSmall),
+        GetBuilder<NotificationController>(builder: (notificationController) {
+          return MenuButtonWebIcon(
+            icon: Images.notification,
+            isCart: false,
+            badgeCount: notificationController.unseenNotificationCount,
+            onTap: () {
+              _navigateWithAddress(RouteHelper.getNotificationRoute(), () {
+                Get.toNamed(RouteHelper.getNotificationRoute());
+              });
+            },
+          );
         }),
 
         const SizedBox(width: Dimensions.paddingSizeSmall),
@@ -220,8 +238,9 @@ class WebMenuBar extends StatelessWidget implements PreferredSizeWidget {
 class MenuButtonWebIcon extends StatelessWidget {
   final String? icon;
   final bool isCart;
+  final int badgeCount;
   final Function() onTap;
-  const MenuButtonWebIcon({super.key, required this.icon, this.isCart = false, required this.onTap});
+  const MenuButtonWebIcon({super.key, required this.icon, this.isCart = false, this.badgeCount = 0, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +262,23 @@ class MenuButtonWebIcon extends StatelessWidget {
               ),
             ),
           ) : const SizedBox();
-        }) : const SizedBox()]),
+        }) : (badgeCount > 0 ? Positioned(
+          top: -7,
+          right: -7,
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            height: 15,
+            width: 15,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary),
+            child: FittedBox(
+              child: Text(
+                badgeCount > 99 ? '99+' : badgeCount.toString(),
+                style: robotoRegular.copyWith(fontSize: 10, color: light.cardColor),
+              ),
+            ),
+          ),
+        ) : const SizedBox())]),
 
         const SizedBox(width: Dimensions.paddingSizeExtraSmall),
       ]),

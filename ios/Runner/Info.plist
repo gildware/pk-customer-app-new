@@ -65,6 +65,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>This app requires access to the camera to upload customer profile picture.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access for in-app voice calls with your service provider.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>This app needs access to location to manage coverage area to get a service from service provider</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -93,6 +95,9 @@
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>

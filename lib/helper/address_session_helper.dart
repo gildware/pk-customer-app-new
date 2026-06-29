@@ -380,7 +380,7 @@ class AddressSessionHelper {
     required String route,
   }) async {
     if (Get.isBottomSheetOpen == true) {
-      return;
+      Get.back();
     }
 
     _postAuthAddressPickerScheduled = true;
@@ -389,6 +389,33 @@ class AddressSessionHelper {
       _postAuthAddressPickerScheduled = false;
       unawaited(openAddressPicker(mandatory: true, redirectRoute: route));
     });
+  }
+
+  static bool _isAuthFlowRoute() {
+    final route = Get.currentRoute.split('?').first;
+    return route == RouteHelper.signIn ||
+        route == RouteHelper.signUp ||
+        route == RouteHelper.verification ||
+        route == RouteHelper.sendOtpScreen;
+  }
+
+  /// Ensures OTP/sign-in routes are replaced when post-auth navigation did not run.
+  static Future<void> ensureLeftAuthFlow({String? redirectRoute}) async {
+    if (!_isAuthFlowRoute()) {
+      return;
+    }
+    await presentMandatoryAddressPickerAfterNavigation(
+      route: redirectRoute ?? RouteHelper.getMainRoute('home'),
+    );
+  }
+
+  static void clearActiveSessionAddress() {
+    if (Get.isRegistered<LocationController>()) {
+      Get.find<LocationController>().clearSessionData();
+    }
+    if (Get.isRegistered<AuthRepo>()) {
+      Get.find<AuthRepo>().clearSharedAddress();
+    }
   }
 
   static Future<bool> isPointInsideServiceZones(LatLng point) async {
@@ -414,6 +441,8 @@ class AddressSessionHelper {
     String? redirectRoute,
     bool canRoute = true,
     bool closeOverlays = true,
+    bool showError = true,
+    bool redirectOnNonServiceable = true,
   }) async {
     final locationController = Get.find<LocationController>();
 
@@ -431,7 +460,9 @@ class AddressSessionHelper {
     }
 
     if (!await isPointInsideServiceZones(LatLng(lat, lng))) {
-      customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      if (showError) {
+        customSnackBar('service_not_available_in_this_area'.tr, type: ToasterMessageType.error);
+      }
       return false;
     }
 
@@ -447,19 +478,23 @@ class AddressSessionHelper {
     }
 
     if (!zoneResponse.isSuccess) {
-      final message = (zoneResponse.message?.trim().isNotEmpty ?? false)
-          ? zoneResponse.message!
-          : '500'.tr;
-      customSnackBar(message.tr, type: ToasterMessageType.error);
+      if (showError) {
+        final message = (zoneResponse.message?.trim().isNotEmpty ?? false)
+            ? zoneResponse.message!
+            : '500'.tr;
+        customSnackBar(message.tr, type: ToasterMessageType.error);
+      }
       return false;
     }
 
     if ((zoneResponse.totalServiceCount ?? 0) <= 0) {
-      await locationController.saveUserAddress(address);
-      if (closeOverlays && (Get.isDialogOpen == true || Get.isBottomSheetOpen == true)) {
-        Get.back();
+      if (redirectOnNonServiceable) {
+        await locationController.saveUserAddress(address);
+        if (closeOverlays && (Get.isDialogOpen == true || Get.isBottomSheetOpen == true)) {
+          Get.back();
+        }
+        Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
       }
-      Get.offNamed(RouteHelper.getAreaNotServiceableRoute());
       return false;
     }
 
@@ -525,10 +560,7 @@ class AddressSessionHelper {
         markHomeRefreshPending();
         return false;
       }
-      if (valid && !isServiceableAddress(locationController.getUserAddress())) {
-        Get.offAllNamed(RouteHelper.getAreaNotServiceableRoute());
-        return true;
-      }
+      clearActiveSessionAddress();
     }
 
     final savedAddresses = locationController.addressList;
@@ -541,18 +573,22 @@ class AddressSessionHelper {
           redirectRoute: route,
           canRoute: true,
           closeOverlays: false,
+          showError: false,
+          redirectOnNonServiceable: false,
         );
         if (applied) {
           return true;
         }
       } else {
         final preferred = pickPreferredSavedAddress(savedAddresses);
-        if (preferred != null && hasValidActiveAddress()) {
+        if (preferred != null) {
           final applied = await applySelectedAddress(
             preferred,
             redirectRoute: route,
             canRoute: true,
             closeOverlays: false,
+            showError: false,
+            redirectOnNonServiceable: false,
           );
           if (applied) {
             return true;

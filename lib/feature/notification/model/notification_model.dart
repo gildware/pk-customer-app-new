@@ -66,6 +66,11 @@ class NotificationData {
   String? coverImageFullPath;
   String? createdAt;
   String? updatedAt;
+  bool? isRead;
+  String? notificationType;
+  String? bookingId;
+  String? bookingType;
+  String? repeatType;
 
   NotificationData(
       {this.id,
@@ -74,7 +79,12 @@ class NotificationData {
         this.coverImage,
         this.coverImageFullPath,
         this.createdAt,
-        this.updatedAt});
+        this.updatedAt,
+        this.isRead,
+        this.notificationType,
+        this.bookingId,
+        this.bookingType,
+        this.repeatType});
 
   NotificationData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -84,6 +94,11 @@ class NotificationData {
     coverImageFullPath = json['cover_image_full_path'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
+    isRead = json['is_read'] == true;
+    notificationType = json['notification_type']?.toString();
+    bookingId = json['booking_id']?.toString();
+    bookingType = json['booking_type']?.toString();
+    repeatType = json['repeat_type']?.toString();
   }
 
   Map<String, dynamic> toJson() {
@@ -95,6 +110,11 @@ class NotificationData {
     data['cover_image_full_path'] = coverImageFullPath;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
+    data['is_read'] = isRead;
+    data['notification_type'] = notificationType;
+    data['booking_id'] = bookingId;
+    data['booking_type'] = bookingType;
+    data['repeat_type'] = repeatType;
     return data;
   }
 }
